@@ -9,6 +9,7 @@ import React from 'react';
 import { Inbox, SendIcon, Notebook, Trash, MessageCircleMore, Edit3 } from 'lucide-react';
 import { BaseActionWorkspace } from '../../../../shared/components/workspace/BaseActionWorkspace';
 import { ACCOUNT_ROUTES } from '../../../../app/routes/routeConstants';
+import { MessagesPollingProvider } from '../../api/messages/MessagesPollingProvider';
 
 /** Navigation targets for Message Center tabs (Account or embedded, e.g. Patient Portal notifications). */
 export type MessageCenterRoutes = {
@@ -36,6 +37,7 @@ interface MessageProps {
 const Message: React.FC<MessageProps> = ({ theme, messageRoutes }) => {
   const r = messageRoutes ?? DEFAULT_MESSAGE_ROUTES;
   return (
+    <MessagesPollingProvider>
     <BaseActionWorkspace
       title="Message Center"
       icon={<MessageCircleMore className="w-6 h-6" />}
@@ -75,6 +77,7 @@ const Message: React.FC<MessageProps> = ({ theme, messageRoutes }) => {
         },
       ]}
     />
+    </MessagesPollingProvider>
   );
 };
 

@@ -119,24 +119,17 @@ export const MySpace: React.FC<MySpaceProps> = ({ isDark, isMobile, className })
     enabled: !!activeFacilityId && activeFacilityId > 0,
   });
 
-  const assignMutation = useAssignMySpace({
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: staffSpaceAssignmentKeys.all });
-    },
-  });
-
-  const releaseMutation = useReleaseMySpace({
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: staffSpaceAssignmentKeys.all });
-    },
-  });
+  const assignMutation = useAssignMySpace();
+  const releaseMutation = useReleaseMySpace();
 
   const createSpaceMutation = useCreateFacilitySpace({
     onSuccess: () => {
       setShowAddRoom(false);
       setNewRoom({ name: '', type: 'consultation', floor: '', building: '' });
-      queryClient.invalidateQueries({ queryKey: staffSpaceAssignmentKeys.all });
       queryClient.invalidateQueries({ queryKey: facilitySpaceKeys.all });
+      queryClient.invalidateQueries({
+        queryKey: staffSpaceAssignmentKeys.occupancy(occupancyFilters),
+      });
     },
   });
 

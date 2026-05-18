@@ -15,10 +15,19 @@
  * @requires axios
  */
 
-import { useMutation, useQuery, type UseQueryOptions } from '@tanstack/react-query';
+import {
+  useMutation,
+  useQuery,
+  useQueryClient,
+  type QueryClient,
+  type QueryKey,
+  type UseQueryOptions,
+} from '@tanstack/react-query';
 import type { AxiosError } from 'axios';
 import { axiosInstance } from '../../../../../app/api/axiosConfig';
 import { useToast } from '../../../../../app/store/contexts/toast/useToast';
+import { getStaffId } from '../../../../../app/store/utils/contextSelectors';
+import { useAppSelector } from '../../../../../app/store/hooks/useApp';
 import type {
   ApiErrorResponse,
   AssignSpaceParams,
@@ -31,6 +40,9 @@ import type {
   MutationCallbacks,
   OccupancyFilters,
   OccupancyResponse,
+  SpaceWithAssignment,
+  StaffSpaceAssignment,
+  StaffSpaceAssignmentStatus,
   ReleaseSpaceByAdminRequest,
   ReleaseSpaceParams,
   ReleaseSpaceRequest,
@@ -60,6 +72,88 @@ export const staffSpaceAssignmentKeys = {
   occupancy: (filters: OccupancyFilters) => [...staffSpaceAssignmentKeys.all, 'occupancy', filters] as const,
 };
 
+/** No interval/window polling — fetch once, then rely on optimistic mutations. */
+const OCCUPANCY_QUERY_DEFAULTS = {
+  staleTime: Infinity,
+  gcTime: 1000 * 60 * 30,
+  refetchOnWindowFocus: false,
+  refetchOnReconnect: false,
+  refetchInterval: false as const,
+} as const;
+
+type OccupancyMutationContext = {
+  previousOccupancy: [QueryKey, OccupancyResponse | undefined][];
+};
+
+const isOccupancyQuery = (query: { queryKey: QueryKey }) => query.queryKey[1] === 'occupancy';
+
+const patchAllOccupancyCaches = (
+  queryClient: QueryClient,
+  patch: (spaces: SpaceWithAssignment[]) => SpaceWithAssignment[]
+) => {
+  queryClient.setQueriesData<OccupancyResponse>(
+    { queryKey: staffSpaceAssignmentKeys.all, predicate: isOccupancyQuery },
+    (old) => {
+      if (!old?.data) return old;
+      return { ...old, data: patch(old.data) };
+    }
+  );
+};
+
+const snapshotOccupancyCaches = (queryClient: QueryClient): OccupancyMutationContext['previousOccupancy'] =>
+  queryClient.getQueriesData<OccupancyResponse>({
+    queryKey: staffSpaceAssignmentKeys.all,
+    predicate: isOccupancyQuery,
+  });
+
+const restoreOccupancyCaches = (
+  queryClient: QueryClient,
+  snapshots: OccupancyMutationContext['previousOccupancy']
+) => {
+  for (const [key, data] of snapshots) {
+    queryClient.setQueryData(key, data);
+  }
+};
+
+const applyAssignmentToOccupancy = (
+  queryClient: QueryClient,
+  assignment: StaffSpaceAssignment
+) => {
+  patchAllOccupancyCaches(queryClient, (spaces) =>
+    spaces.map((space) => {
+      if (space.id === assignment.space_id) {
+        return { ...space, current_assignment: assignment };
+      }
+      if (
+        space.current_assignment?.staff_id === assignment.staff_id &&
+        space.id !== assignment.space_id
+      ) {
+        return { ...space, current_assignment: null };
+      }
+      return space;
+    })
+  );
+};
+
+const buildOptimisticAssignment = (
+  facilityId: number,
+  spaceId: number,
+  staffId: number
+): StaffSpaceAssignment => ({
+  id: Date.now(),
+  facility_id: facilityId,
+  space_id: spaceId,
+  staff_id: staffId,
+  assigned_by_user_id: null,
+  released_by_user_id: null,
+  assigned_at: new Date().toISOString(),
+  released_at: null,
+  note: null,
+  status: StaffSpaceAssignmentStatus.ACTIVE,
+  created_at: new Date().toISOString(),
+  updated_at: new Date().toISOString(),
+});
+
 /* -------------------------------------------------------------------------- */
 /*                              QUERY HOOKS                                   */
 /* -------------------------------------------------------------------------- */
@@ -87,6 +181,7 @@ export const useGetCurrentSpace = (
       return response.data;
     },
     enabled: !!query.facility_id,
+    ...OCCUPANCY_QUERY_DEFAULTS,
     ...options,
   });
 };
@@ -125,9 +220,7 @@ export const useGetCurrentOccupancy = (
       }
       return failureCount < 2;
     },
-    staleTime: 1000 * 30, // 30 seconds
-    gcTime: 1000 * 60 * 5, // 5 minutes
-    refetchOnWindowFocus: true,
+    ...OCCUPANCY_QUERY_DEFAULTS,
     ...options,
   });
 };
@@ -218,18 +311,52 @@ export const useAssignMySpace = (
   callbacks: MutationCallbacks<AssignmentResponse, AxiosError<ApiErrorResponse>> = {}
 ) => {
   const { showToast } = useToast();
+  const queryClient = useQueryClient();
+  const staffId = useAppSelector(getStaffId);
 
-  return useMutation<AssignmentResponse, AxiosError<ApiErrorResponse>, AssignSpaceRequest>({
+  return useMutation<
+    AssignmentResponse,
+    AxiosError<ApiErrorResponse>,
+    AssignSpaceRequest,
+    OccupancyMutationContext
+  >({
     mutationFn: async (data: AssignSpaceRequest) => {
       const response = await axiosInstance.post<AssignmentResponse>('/staff/space/assign', data);
       return response.data;
     },
+    onMutate: async (data) => {
+      if (!staffId) return { previousOccupancy: [] };
+
+      await queryClient.cancelQueries({ queryKey: staffSpaceAssignmentKeys.all });
+      const previousOccupancy = snapshotOccupancyCaches(queryClient);
+      const optimistic = buildOptimisticAssignment(data.facility_id, data.space_id, staffId);
+
+      patchAllOccupancyCaches(queryClient, (spaces) =>
+        spaces.map((space) => {
+          if (space.id === data.space_id) {
+            return { ...space, current_assignment: optimistic };
+          }
+          if (space.current_assignment?.staff_id === staffId) {
+            return { ...space, current_assignment: null };
+          }
+          return space;
+        })
+      );
+
+      return { previousOccupancy };
+    },
     onSuccess: (data) => {
+      if (data.data) {
+        applyAssignmentToOccupancy(queryClient, data.data);
+      }
       const successMessage = data.message || 'Space assigned successfully!';
       showToast('success', successMessage, 8000);
       callbacks.onSuccess?.(data);
     },
-    onError: (error: AxiosError<ApiErrorResponse>) => {
+    onError: (error: AxiosError<ApiErrorResponse>, _variables, context) => {
+      if (context?.previousOccupancy) {
+        restoreOccupancyCaches(queryClient, context.previousOccupancy);
+      }
       const apiMessage = error.response?.data?.message || error.message || 'Failed to assign space.';
 
       let errorDetails = '';
@@ -269,18 +396,52 @@ export const useAssignSpaceByAdmin = (
   callbacks: MutationCallbacks<AssignmentResponse, AxiosError<ApiErrorResponse>> = {}
 ) => {
   const { showToast } = useToast();
+  const queryClient = useQueryClient();
 
-  return useMutation<AssignmentResponse, AxiosError<ApiErrorResponse>, AssignSpaceRequest>({
+  return useMutation<
+    AssignmentResponse,
+    AxiosError<ApiErrorResponse>,
+    AssignSpaceRequest,
+    OccupancyMutationContext
+  >({
     mutationFn: async (data: AssignSpaceRequest) => {
       const response = await axiosInstance.post<AssignmentResponse>('/admin/staff/space/assign', data);
       return response.data;
     },
+    onMutate: async (data) => {
+      const targetStaffId = data.staff_id;
+      if (!targetStaffId) return { previousOccupancy: [] };
+
+      await queryClient.cancelQueries({ queryKey: staffSpaceAssignmentKeys.all });
+      const previousOccupancy = snapshotOccupancyCaches(queryClient);
+      const optimistic = buildOptimisticAssignment(data.facility_id, data.space_id, targetStaffId);
+
+      patchAllOccupancyCaches(queryClient, (spaces) =>
+        spaces.map((space) => {
+          if (space.id === data.space_id) {
+            return { ...space, current_assignment: optimistic };
+          }
+          if (space.current_assignment?.staff_id === targetStaffId) {
+            return { ...space, current_assignment: null };
+          }
+          return space;
+        })
+      );
+
+      return { previousOccupancy };
+    },
     onSuccess: (data) => {
+      if (data.data) {
+        applyAssignmentToOccupancy(queryClient, data.data);
+      }
       const successMessage = data.message || 'Space assigned successfully!';
       showToast('success', successMessage, 8000);
       callbacks.onSuccess?.(data);
     },
-    onError: (error: AxiosError<ApiErrorResponse>) => {
+    onError: (error: AxiosError<ApiErrorResponse>, _variables, context) => {
+      if (context?.previousOccupancy) {
+        restoreOccupancyCaches(queryClient, context.previousOccupancy);
+      }
       const apiMessage = error.response?.data?.message || error.message || 'Failed to assign space.';
 
       let errorDetails = '';
@@ -315,18 +476,44 @@ export const useReleaseMySpace = (
   callbacks: MutationCallbacks<AssignmentResponse, AxiosError<ApiErrorResponse>> = {}
 ) => {
   const { showToast } = useToast();
+  const queryClient = useQueryClient();
+  const staffId = useAppSelector(getStaffId);
 
-  return useMutation<AssignmentResponse, AxiosError<ApiErrorResponse>, ReleaseSpaceRequest>({
+  return useMutation<
+    AssignmentResponse,
+    AxiosError<ApiErrorResponse>,
+    ReleaseSpaceRequest,
+    OccupancyMutationContext
+  >({
     mutationFn: async (data: ReleaseSpaceRequest) => {
       const response = await axiosInstance.post<AssignmentResponse>('/staff/space/release', data);
       return response.data;
+    },
+    onMutate: async () => {
+      if (!staffId) return { previousOccupancy: [] };
+
+      await queryClient.cancelQueries({ queryKey: staffSpaceAssignmentKeys.all });
+      const previousOccupancy = snapshotOccupancyCaches(queryClient);
+
+      patchAllOccupancyCaches(queryClient, (spaces) =>
+        spaces.map((space) =>
+          space.current_assignment?.staff_id === staffId
+            ? { ...space, current_assignment: null }
+            : space
+        )
+      );
+
+      return { previousOccupancy };
     },
     onSuccess: (data) => {
       const successMessage = data.message || 'Space released successfully!';
       showToast('success', successMessage, 8000);
       callbacks.onSuccess?.(data);
     },
-    onError: (error: AxiosError<ApiErrorResponse>) => {
+    onError: (error: AxiosError<ApiErrorResponse>, _variables, context) => {
+      if (context?.previousOccupancy) {
+        restoreOccupancyCaches(queryClient, context.previousOccupancy);
+      }
       const apiMessage = error.response?.data?.message || error.message || 'Failed to release space.';
       showToast('error', apiMessage, 8000);
       callbacks.onError?.(error);
@@ -354,18 +541,41 @@ export const useReleaseSpaceByAdmin = (
   callbacks: MutationCallbacks<AssignmentResponse, AxiosError<ApiErrorResponse>> = {}
 ) => {
   const { showToast } = useToast();
+  const queryClient = useQueryClient();
 
-  return useMutation<AssignmentResponse, AxiosError<ApiErrorResponse>, ReleaseSpaceByAdminRequest>({
+  return useMutation<
+    AssignmentResponse,
+    AxiosError<ApiErrorResponse>,
+    ReleaseSpaceByAdminRequest,
+    OccupancyMutationContext
+  >({
     mutationFn: async (data: ReleaseSpaceByAdminRequest) => {
       const response = await axiosInstance.post<AssignmentResponse>('/admin/staff/space/release', data);
       return response.data;
+    },
+    onMutate: async (data) => {
+      await queryClient.cancelQueries({ queryKey: staffSpaceAssignmentKeys.all });
+      const previousOccupancy = snapshotOccupancyCaches(queryClient);
+
+      patchAllOccupancyCaches(queryClient, (spaces) =>
+        spaces.map((space) =>
+          space.current_assignment?.staff_id === data.staff_id
+            ? { ...space, current_assignment: null }
+            : space
+        )
+      );
+
+      return { previousOccupancy };
     },
     onSuccess: (data) => {
       const successMessage = data.message || 'Space released successfully!';
       showToast('success', successMessage, 8000);
       callbacks.onSuccess?.(data);
     },
-    onError: (error: AxiosError<ApiErrorResponse>) => {
+    onError: (error: AxiosError<ApiErrorResponse>, _variables, context) => {
+      if (context?.previousOccupancy) {
+        restoreOccupancyCaches(queryClient, context.previousOccupancy);
+      }
       const apiMessage = error.response?.data?.message || error.message || 'Failed to release space.';
       showToast('error', apiMessage, 8000);
       callbacks.onError?.(error);

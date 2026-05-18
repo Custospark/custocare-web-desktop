@@ -584,10 +584,13 @@ export const useComposeState = ({
       const att = message.attachments.find(a => a.id === id);
       setMessage(prev => ({ ...prev, attachments: prev.attachments.filter(a => a.id !== id) }));
       if (att?.uploadedAttachmentId) {
-        removeAttachment.mutate({ attachmentId: att.uploadedAttachmentId });
+        removeAttachment.mutate({
+          attachmentId: att.uploadedAttachmentId,
+          messageId: draftMessageId ?? undefined,
+        });
       }
     },
-    [message.attachments, removeAttachment],
+    [message.attachments, removeAttachment, draftMessageId],
   );
 
   /* ── drag & drop ──────────────────────────────────────────── */

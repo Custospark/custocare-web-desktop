@@ -46,6 +46,19 @@ import {
   StaffPresenceStatus,
 } from './StaffPresenceTypes';
 
+/** No interval/window polling — fetch once, then rely on optimistic mutations. */
+const PRESENCE_QUERY_DEFAULTS = {
+  staleTime: Infinity,
+  gcTime: 1000 * 60 * 30,
+  refetchOnWindowFocus: false,
+  refetchOnReconnect: false,
+  refetchInterval: false as const,
+} as const;
+
+type PresenceMutationContext = {
+  previousPresence?: MyPresenceResponse;
+};
+
 /* -------------------------------------------------------------------------- */
 /*                               QUERY KEYS                                   */
 /* -------------------------------------------------------------------------- */
@@ -169,9 +182,7 @@ export const useGetMyPresence = (
       }
       return failureCount < 2;
     },
-    staleTime: 1000 * 30, // 30 seconds
-    gcTime: 1000 * 60 * 5, // 5 minutes
-    refetchOnWindowFocus: true,
+    ...PRESENCE_QUERY_DEFAULTS,
     ...options,
   });
 };
@@ -199,10 +210,7 @@ export const useGetFacilityPresence = (
     },
     enabled: !!facilityId,
     retry: 2,
-    staleTime: 1000 * 15, // 15 seconds (presence changes frequently)
-    gcTime: 1000 * 60 * 2, // 2 minutes
-    refetchOnWindowFocus: true,
-    refetchInterval: 1000 * 60 * 5, // Auto-refresh every 5 minutes
+    ...PRESENCE_QUERY_DEFAULTS,
     ...options,
   });
 };
@@ -273,9 +281,7 @@ export const useGetEligibleForForwarding = (
       }
       return failureCount < 2;
     },
-    staleTime: 1000 * 60, // 1 minute (eligibility can change frequently)
-    gcTime: 1000 * 60 * 10, // 10 minutes
-    refetchOnWindowFocus: true,
+    ...PRESENCE_QUERY_DEFAULTS,
     ...options,
   });
 };
@@ -320,7 +326,12 @@ export const useSetMyPresence = (
   const staffId = useCurrentStaffId();
   const queryClient = useQueryClient();
 
-  return useMutation<SetMyPresenceResponse, AxiosError<ApiErrorResponse>, Omit<SetPresenceRequest, 'facility_id'>>({
+  return useMutation<
+    SetMyPresenceResponse,
+    AxiosError<ApiErrorResponse>,
+    Omit<SetPresenceRequest, 'facility_id'>,
+    PresenceMutationContext
+  >({
     mutationFn: async (data) => {
       const payload: SetPresenceRequest = {
         ...data,
@@ -375,13 +386,15 @@ export const useSetMyPresence = (
       // Update cache with real API data
       queryClient.setQueryData(staffPresenceKeys.myPresence(facilityId, staffId), data);
       
-      // Invalidate related queries
-      queryClient.invalidateQueries({ queryKey: staffPresenceKeys.eligibleForForwarding(facilityId) });
-      queryClient.invalidateQueries({ queryKey: staffPresenceKeys.facilityPresence(facilityId) });
-      
       callbacks.onSuccess?.(data);
     },
-    onError: (error) => {
+    onError: (error, _variables, context) => {
+      if (context?.previousPresence !== undefined) {
+        queryClient.setQueryData(
+          staffPresenceKeys.myPresence(facilityId, staffId),
+          context.previousPresence
+        );
+      }
 
       const apiMessage = error.response?.data?.message || error.message || 'Failed to update presence.';
 
@@ -396,10 +409,6 @@ export const useSetMyPresence = (
       showToast('error', displayMessage, 8000);
 
       callbacks.onError?.(error);
-    },
-    onSettled: () => {
-      // Always refetch to ensure we have latest data
-      queryClient.invalidateQueries({ queryKey: staffPresenceKeys.myPresence(facilityId, staffId) });
     },
   });
 };
@@ -419,7 +428,12 @@ export const useEndMyPresence = (
   const staffId = useCurrentStaffId();
   const queryClient = useQueryClient();
 
-  return useMutation<SetMyPresenceResponse, AxiosError<ApiErrorResponse>, { note?: string }>({
+  return useMutation<
+    SetMyPresenceResponse,
+    AxiosError<ApiErrorResponse>,
+    { note?: string },
+    PresenceMutationContext
+  >({
     mutationFn: async ({ note } = {}) => {
       const response = await axiosInstance.post<SetMyPresenceResponse>('/staff/presence/end', {
         facility_id: facilityId,
@@ -465,13 +479,15 @@ export const useEndMyPresence = (
       // Update cache with real data
       queryClient.setQueryData(staffPresenceKeys.myPresence(facilityId, staffId), data);
       
-      // Invalidate related queries
-      queryClient.invalidateQueries({ queryKey: staffPresenceKeys.eligibleForForwarding(facilityId) });
-      queryClient.invalidateQueries({ queryKey: staffPresenceKeys.facilityPresence(facilityId) });
-      
       callbacks.onSuccess?.(data);
     },
-    onError: (error) => {
+    onError: (error, _variables, context) => {
+      if (context?.previousPresence !== undefined) {
+        queryClient.setQueryData(
+          staffPresenceKeys.myPresence(facilityId, staffId),
+          context.previousPresence
+        );
+      }
 
       const apiMessage = error.response?.data?.message || error.message || 'Failed to end presence session.';
       showToast('error', apiMessage, 8000);

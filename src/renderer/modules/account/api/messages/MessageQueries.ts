@@ -73,40 +73,31 @@ import type {
 } from './MessageTypes';
 
 import { formatValidationErrors, extractErrorMessage } from '../settings/preferences/PreferencesQueries';
+import { useMessagesModuleActive } from './useMessagesModuleActive';
+import { messageKeys } from './messageKeys';
+import {
+  adjustFolderStats,
+  getMessageRowForOptimistic,
+  patchMessageDetail,
+  patchMessageInAllLists,
+  removeMessageFromAllLists,
+  restoreMessageCachesWithUser,
+  snapshotMessageCaches,
+  type MessageCacheSnapshot,
+} from './messageCacheUtils';
+
+export { messageKeys };
 
 /* -------------------------------------------------------------------------- */
 /*                            Cache / Realtime Policy                          */
 /* -------------------------------------------------------------------------- */
 
-/**
- * You requested "real-time" data with minimal caching.
- * We keep a short cache window (~20 seconds) to reduce UI flicker and load,
- * while still refetching frequently.
- */
-const REALTIME_STALE_TIME_MS = 20_000;
-const REALTIME_GC_TIME_MS = 20_000;
-const REALTIME_REFETCH_INTERVAL_MS = 20_000;
-
-/* -------------------------------------------------------------------------- */
-/*                                    Keys                                     */
-/* -------------------------------------------------------------------------- */
-
-export const messageKeys = {
-  all: ['messages'] as const,
-
-  /**
-   * Folder list keys are scoped by userId + params to avoid cross-user cache bleeding.
-   */
-  lists: () => [...messageKeys.all, 'list'] as const,
-  list: (userId: number | string, params: GetMessagesParams) =>
-    [...messageKeys.lists(), userId, params] as const,
-
-  stats: () => [...messageKeys.all, 'stats'] as const,
-  statsByUser: (userId: number | string) => [...messageKeys.stats(), userId] as const,
-
-  details: () => [...messageKeys.all, 'detail'] as const,
-  detail: (userId: number | string, id: number) => [...messageKeys.details(), userId, id] as const,
-};
+/** Option A: fetch once, slow backup poll, optimistic mutations with rollback. */
+const MESSAGE_GC_TIME_MS = 30 * 60 * 1000;
+const MESSAGE_LIST_STALE_MS = 5 * 60 * 1000;
+const MESSAGE_STATS_STALE_MS = 60 * 1000;
+const MESSAGE_STATS_POLL_MS = 60_000;
+const MESSAGE_LIST_POLL_MS = 120_000;
 
 /* -------------------------------------------------------------------------- */
 /*                                  Auth Helper                                */
@@ -130,6 +121,7 @@ export const useGetMessages = (
   >,
 ): UseQueryResult<GetMessagesResponse, AxiosError<ApiErrorResponse>> => {
   const userId = useOptionalAuthUserId();
+  const messagesModuleActive = useMessagesModuleActive();
 
   return useQuery<GetMessagesResponse, AxiosError<ApiErrorResponse>>({
     queryKey: messageKeys.list(userId ?? 0, params),
@@ -138,12 +130,10 @@ export const useGetMessages = (
       return res.data;
     },
 
-    // short caching window
-    staleTime: REALTIME_STALE_TIME_MS,
-    gcTime: REALTIME_GC_TIME_MS,
-
-    // keep fresh by polling (can be overridden by passing options)
-    refetchInterval: REALTIME_REFETCH_INTERVAL_MS,
+    staleTime: MESSAGE_LIST_STALE_MS,
+    gcTime: MESSAGE_GC_TIME_MS,
+    refetchInterval: messagesModuleActive ? MESSAGE_LIST_POLL_MS : false,
+    refetchIntervalInBackground: true,
     refetchOnWindowFocus: true,
 
     ...options,
@@ -187,8 +177,10 @@ export const useGetMessageStats = (
       const res = await axiosInstance.get<MessageFolderStats>('messages/stats');
       return res.data;
     },
-    staleTime: REALTIME_STALE_TIME_MS,
-    gcTime: REALTIME_GC_TIME_MS,
+    staleTime: MESSAGE_STATS_STALE_MS,
+    gcTime: MESSAGE_GC_TIME_MS,
+    refetchInterval: MESSAGE_STATS_POLL_MS,
+    refetchIntervalInBackground: true,
     refetchOnWindowFocus: true,
     ...options,
     enabled: !!userId && (options?.enabled ?? true),
@@ -214,25 +206,20 @@ export const useGetMessageDetail = (
       const res = await axiosInstance.get<ShowMessageResponse>(`messages/${id}`);
       return res.data;
     },
-    staleTime: REALTIME_STALE_TIME_MS,
-    gcTime: REALTIME_GC_TIME_MS,
-    refetchInterval: REALTIME_REFETCH_INTERVAL_MS,
+    staleTime: MESSAGE_LIST_STALE_MS,
+    gcTime: MESSAGE_GC_TIME_MS,
     refetchOnWindowFocus: true,
     ...options,
     enabled: !!userId && id > 0 && (options?.enabled ?? true),
   });
 };
 
-/* -------------------------------------------------------------------------- */
-/*                          Internal helper: invalidation                      */
-/* -------------------------------------------------------------------------- */
-
-const invalidateMessageData = async (qc: ReturnType<typeof useQueryClient>) => {
-  // Invalidate all lists + stats (short cache already helps, but we force correctness)
-  await Promise.all([
-    qc.invalidateQueries({ queryKey: messageKeys.lists() }),
-    qc.invalidateQueries({ queryKey: messageKeys.stats() }),
-  ]);
+const useMessageMutationUserId = (): number | string => {
+  const userId = useOptionalAuthUserId();
+  if (!userId) {
+    throw new Error('User must be authenticated to mutate messages.');
+  }
+  return userId;
 };
 
 /* -------------------------------------------------------------------------- */
@@ -251,22 +238,38 @@ export const useStoreMessage = (
 ) => {
   const { showToast } = useToast();
   const qc = useQueryClient();
+  const userId = useMessageMutationUserId();
 
-  return useMutation<StoreMessageResponse, AxiosError<ApiErrorResponse>, StoreMessageRequest>({
+  return useMutation<
+    StoreMessageResponse,
+    AxiosError<ApiErrorResponse>,
+    StoreMessageRequest,
+    MessageCacheSnapshot
+  >({
     mutationFn: async (payload) => {
       const res = await axiosInstance.post<StoreMessageResponse>('messages', payload);
       return res.data;
     },
+    onMutate: async (payload) => {
+      await qc.cancelQueries({ queryKey: messageKeys.all });
+      const snapshot = snapshotMessageCaches(qc, userId);
+      if (payload.save_draft) {
+        adjustFolderStats(qc, userId, [{ folder: 'drafts', totalDelta: 1 }]);
+      } else if (!payload.scheduled_send_at) {
+        adjustFolderStats(qc, userId, [{ folder: 'sent', totalDelta: 1 }]);
+      }
+      return snapshot;
+    },
     onSuccess: async (data) => {
-      // small, friendly status-based toast
       if (data.status === 'draft_saved') showToast('success', 'Draft saved.', 5000);
       if (data.status === 'sent') showToast('success', 'Message sent.', 5000);
       if (data.status === 'scheduled') showToast('success', 'Message scheduled.', 6000);
 
-      await invalidateMessageData(qc);
+      await qc.invalidateQueries({ queryKey: messageKeys.lists() });
       callbacks.onSuccess?.(data);
     },
-    onError: (error) => {
+    onError: (error, _variables, context) => {
+      if (context) restoreMessageCachesWithUser(qc, userId, context);
       const base = extractErrorMessage(error, 'Failed to submit message.');
       const details = formatValidationErrors(error.response?.data?.errors);
       showToast('error', details ? `${base} (${details})` : base, 9000);
@@ -283,22 +286,48 @@ export const useUpdateMessage = (
 ) => {
   const { showToast } = useToast();
   const qc = useQueryClient();
+  const userId = useMessageMutationUserId();
 
   return useMutation<
     UpdateMessageResponse,
     AxiosError<ApiErrorResponse>,
-    { id: number; data: UpdateMessageRequest }
+    { id: number; data: UpdateMessageRequest },
+    MessageCacheSnapshot
   >({
     mutationFn: async ({ id, data }) => {
       const res = await axiosInstance.put<UpdateMessageResponse>(`messages/${id}`, data);
       return res.data;
     },
+    onMutate: async ({ id, data }) => {
+      await qc.cancelQueries({ queryKey: messageKeys.all });
+      const snapshot = snapshotMessageCaches(qc, userId);
+      patchMessageInAllLists(qc, id, (row) => ({
+        ...row,
+        message: {
+          ...row.message,
+          subject: data.subject ?? row.message.subject,
+          body: data.body ?? row.message.body,
+          updated_at: new Date().toISOString(),
+        },
+      }));
+      patchMessageDetail(qc, userId, id, (detail) => ({
+        ...detail,
+        message: {
+          ...detail.message,
+          subject: data.subject ?? detail.message.subject,
+          body: data.body ?? detail.message.body,
+          updated_at: new Date().toISOString(),
+        },
+      }));
+      return snapshot;
+    },
     onSuccess: async (data) => {
       showToast('success', 'Draft updated.', 5000);
-      await invalidateMessageData(qc);
+      patchMessageInAllLists(qc, data.message.id, (row) => ({ ...row, message: data.message }));
       callbacks.onSuccess?.(data);
     },
-    onError: (error) => {
+    onError: (error, _variables, context) => {
+      if (context) restoreMessageCachesWithUser(qc, userId, context);
       const base = extractErrorMessage(error, 'Failed to update message.');
       const details = formatValidationErrors(error.response?.data?.errors);
       showToast('error', details ? `${base} (${details})` : base, 9000);
@@ -315,18 +344,41 @@ export const useTrashMessage = (
 ) => {
   const { showToast } = useToast();
   const qc = useQueryClient();
+  const userId = useMessageMutationUserId();
 
-  return useMutation<TrashMessageResponse, AxiosError<ApiErrorResponse>, { id: number }>({
+  return useMutation<
+    TrashMessageResponse,
+    AxiosError<ApiErrorResponse>,
+    { id: number },
+    MessageCacheSnapshot
+  >({
     mutationFn: async ({ id }) => {
       const res = await axiosInstance.delete<TrashMessageResponse>(`messages/${id}`);
       return res.data;
     },
+    onMutate: async ({ id }) => {
+      await qc.cancelQueries({ queryKey: messageKeys.all });
+      const snapshot = snapshotMessageCaches(qc, userId);
+      const row = getMessageRowForOptimistic(qc, id);
+      removeMessageFromAllLists(qc, id);
+      if (row && row.folder !== 'trash') {
+        adjustFolderStats(qc, userId, [
+          {
+            folder: row.folder,
+            totalDelta: -1,
+            unreadDelta: row.is_read ? 0 : -1,
+          },
+          { folder: 'trash', totalDelta: 1 },
+        ]);
+      }
+      return snapshot;
+    },
     onSuccess: async (data) => {
       showToast('success', 'Moved to trash.', 4000);
-      await invalidateMessageData(qc);
       callbacks.onSuccess?.(data);
     },
-    onError: (error) => {
+    onError: (error, _variables, context) => {
+      if (context) restoreMessageCachesWithUser(qc, userId, context);
       showToast('error', extractErrorMessage(error, 'Failed to move to trash.'), 9000);
       callbacks.onError?.(error);
     },
@@ -341,18 +393,35 @@ export const useRestoreMessage = (
 ) => {
   const { showToast } = useToast();
   const qc = useQueryClient();
+  const userId = useMessageMutationUserId();
 
-  return useMutation<RestoreMessageResponse, AxiosError<ApiErrorResponse>, { id: number }>({
+  return useMutation<
+    RestoreMessageResponse,
+    AxiosError<ApiErrorResponse>,
+    { id: number },
+    MessageCacheSnapshot
+  >({
     mutationFn: async ({ id }) => {
       const res = await axiosInstance.post<RestoreMessageResponse>(`messages/${id}/restore`);
       return res.data;
     },
+    onMutate: async ({ id }) => {
+      await qc.cancelQueries({ queryKey: messageKeys.all });
+      const snapshot = snapshotMessageCaches(qc, userId);
+      removeMessageFromAllLists(qc, id);
+      adjustFolderStats(qc, userId, [
+        { folder: 'trash', totalDelta: -1 },
+        { folder: 'inbox', totalDelta: 1 },
+      ]);
+      return snapshot;
+    },
     onSuccess: async (data) => {
       showToast('success', 'Message restored.', 5000);
-      await invalidateMessageData(qc);
+      await qc.invalidateQueries({ queryKey: messageKeys.lists() });
       callbacks.onSuccess?.(data);
     },
-    onError: (error) => {
+    onError: (error, _variables, context) => {
+      if (context) restoreMessageCachesWithUser(qc, userId, context);
       showToast('error', extractErrorMessage(error, 'Failed to restore message.'), 9000);
       callbacks.onError?.(error);
     },
@@ -367,18 +436,34 @@ export const usePermanentDeleteMessage = (
 ) => {
   const { showToast } = useToast();
   const qc = useQueryClient();
+  const userId = useMessageMutationUserId();
 
-  return useMutation<PermanentDeleteResponse, AxiosError<ApiErrorResponse>, { id: number }>({
+  return useMutation<
+    PermanentDeleteResponse,
+    AxiosError<ApiErrorResponse>,
+    { id: number },
+    MessageCacheSnapshot
+  >({
     mutationFn: async ({ id }) => {
       const res = await axiosInstance.delete<PermanentDeleteResponse>(`messages/${id}/permanent`);
       return res.data;
     },
+    onMutate: async ({ id }) => {
+      await qc.cancelQueries({ queryKey: messageKeys.all });
+      const snapshot = snapshotMessageCaches(qc, userId);
+      const row = getMessageRowForOptimistic(qc, id);
+      removeMessageFromAllLists(qc, id);
+      if (row?.folder === 'trash') {
+        adjustFolderStats(qc, userId, [{ folder: 'trash', totalDelta: -1 }]);
+      }
+      return snapshot;
+    },
     onSuccess: async (data) => {
       showToast('success', 'Message permanently deleted.', 6000);
-      await invalidateMessageData(qc);
       callbacks.onSuccess?.(data);
     },
-    onError: (error) => {
+    onError: (error, _variables, context) => {
+      if (context) restoreMessageCachesWithUser(qc, userId, context);
       showToast('error', extractErrorMessage(error, 'Failed to permanently delete.'), 9000);
       callbacks.onError?.(error);
     },
@@ -393,18 +478,31 @@ export const useEmptyTrash = (
 ) => {
   const { showToast } = useToast();
   const qc = useQueryClient();
+  const userId = useMessageMutationUserId();
 
-  return useMutation<EmptyTrashResponse, AxiosError<ApiErrorResponse>, void>({
+  return useMutation<EmptyTrashResponse, AxiosError<ApiErrorResponse>, void, MessageCacheSnapshot>({
     mutationFn: async () => {
       const res = await axiosInstance.delete<EmptyTrashResponse>('messages/trash/empty');
       return res.data;
     },
+    onMutate: async () => {
+      await qc.cancelQueries({ queryKey: messageKeys.all });
+      const snapshot = snapshotMessageCaches(qc, userId);
+      qc.setQueriesData<GetMessagesResponse>(
+        { queryKey: messageKeys.lists(), predicate: (q) => q.queryKey.includes('trash') },
+        (old) => (old ? { ...old, data: [], total: 0 } : old),
+      );
+      qc.setQueryData<MessageFolderStats>(messageKeys.statsByUser(userId), (old) =>
+        old ? { ...old, trash: { total: 0, unread: 0 } } : old,
+      );
+      return snapshot;
+    },
     onSuccess: async (data) => {
       showToast('success', `Trash emptied (${data.deleted} deleted).`, 7000);
-      await invalidateMessageData(qc);
       callbacks.onSuccess?.(data);
     },
-    onError: (error) => {
+    onError: (error, _variables, context) => {
+      if (context) restoreMessageCachesWithUser(qc, userId, context);
       showToast('error', extractErrorMessage(error, 'Failed to empty trash.'), 9000);
       callbacks.onError?.(error);
     },
@@ -419,18 +517,35 @@ export const useSendDraftMessage = (
 ) => {
   const { showToast } = useToast();
   const qc = useQueryClient();
+  const userId = useMessageMutationUserId();
 
-  return useMutation<SendDraftResponse, AxiosError<ApiErrorResponse>, { id: number }>({
+  return useMutation<
+    SendDraftResponse,
+    AxiosError<ApiErrorResponse>,
+    { id: number },
+    MessageCacheSnapshot
+  >({
     mutationFn: async ({ id }) => {
       const res = await axiosInstance.post<SendDraftResponse>(`messages/${id}/send`);
       return res.data;
     },
+    onMutate: async ({ id }) => {
+      await qc.cancelQueries({ queryKey: messageKeys.all });
+      const snapshot = snapshotMessageCaches(qc, userId);
+      removeMessageFromAllLists(qc, id);
+      adjustFolderStats(qc, userId, [
+        { folder: 'drafts', totalDelta: -1 },
+        { folder: 'sent', totalDelta: 1 },
+      ]);
+      return snapshot;
+    },
     onSuccess: async (data) => {
       showToast('success', 'Draft sent.', 5000);
-      await invalidateMessageData(qc);
+      await qc.invalidateQueries({ queryKey: messageKeys.lists() });
       callbacks.onSuccess?.(data);
     },
-    onError: (error) => {
+    onError: (error, _variables, context) => {
+      if (context) restoreMessageCachesWithUser(qc, userId, context);
       showToast('error', extractErrorMessage(error, 'Failed to send draft.'), 9000);
       callbacks.onError?.(error);
     },
@@ -442,10 +557,35 @@ export const useSendDraftMessage = (
  */
 export const useMarkReadMessage = () => {
   const qc = useQueryClient();
-  return useMutation<ReadStateResponse, AxiosError<ApiErrorResponse>, { id: number }>({
+  const userId = useMessageMutationUserId();
+
+  return useMutation<
+    ReadStateResponse,
+    AxiosError<ApiErrorResponse>,
+    { id: number },
+    MessageCacheSnapshot
+  >({
     mutationFn: async ({ id }) => (await axiosInstance.patch<ReadStateResponse>(`messages/${id}/read`)).data,
-    onSuccess: async () => {
-      await invalidateMessageData(qc);
+    onMutate: async ({ id }) => {
+      await qc.cancelQueries({ queryKey: messageKeys.all });
+      const snapshot = snapshotMessageCaches(qc, userId);
+      const row = getMessageRowForOptimistic(qc, id);
+      patchMessageInAllLists(qc, id, (item) => ({
+        ...item,
+        is_read: true,
+        read_at: new Date().toISOString(),
+      }));
+      patchMessageDetail(qc, userId, id, (detail) => ({
+        ...detail,
+        state: { ...detail.state, is_read: true, read_at: new Date().toISOString() },
+      }));
+      if (row && !row.is_read) {
+        adjustFolderStats(qc, userId, [{ folder: row.folder, unreadDelta: -1 }]);
+      }
+      return snapshot;
+    },
+    onError: (_error, _variables, context) => {
+      if (context) restoreMessageCachesWithUser(qc, userId, context);
     },
   });
 };
@@ -455,10 +595,35 @@ export const useMarkReadMessage = () => {
  */
 export const useMarkUnreadMessage = () => {
   const qc = useQueryClient();
-  return useMutation<ReadStateResponse, AxiosError<ApiErrorResponse>, { id: number }>({
+  const userId = useMessageMutationUserId();
+
+  return useMutation<
+    ReadStateResponse,
+    AxiosError<ApiErrorResponse>,
+    { id: number },
+    MessageCacheSnapshot
+  >({
     mutationFn: async ({ id }) => (await axiosInstance.patch<ReadStateResponse>(`messages/${id}/unread`)).data,
-    onSuccess: async () => {
-      await invalidateMessageData(qc);
+    onMutate: async ({ id }) => {
+      await qc.cancelQueries({ queryKey: messageKeys.all });
+      const snapshot = snapshotMessageCaches(qc, userId);
+      const row = getMessageRowForOptimistic(qc, id);
+      patchMessageInAllLists(qc, id, (item) => ({
+        ...item,
+        is_read: false,
+        read_at: null,
+      }));
+      patchMessageDetail(qc, userId, id, (detail) => ({
+        ...detail,
+        state: { ...detail.state, is_read: false, read_at: null },
+      }));
+      if (row?.is_read) {
+        adjustFolderStats(qc, userId, [{ folder: row.folder, unreadDelta: 1 }]);
+      }
+      return snapshot;
+    },
+    onError: (_error, _variables, context) => {
+      if (context) restoreMessageCachesWithUser(qc, userId, context);
     },
   });
 };
@@ -468,10 +633,34 @@ export const useMarkUnreadMessage = () => {
  */
 export const useToggleStarMessage = () => {
   const qc = useQueryClient();
-  return useMutation<StarToggleResponse, AxiosError<ApiErrorResponse>, { id: number }>({
+  const userId = useMessageMutationUserId();
+
+  return useMutation<
+    StarToggleResponse,
+    AxiosError<ApiErrorResponse>,
+    { id: number },
+    MessageCacheSnapshot
+  >({
     mutationFn: async ({ id }) => (await axiosInstance.patch<StarToggleResponse>(`messages/${id}/star`)).data,
-    onSuccess: async () => {
-      await invalidateMessageData(qc);
+    onMutate: async ({ id }) => {
+      await qc.cancelQueries({ queryKey: messageKeys.all });
+      const snapshot = snapshotMessageCaches(qc, userId);
+      patchMessageInAllLists(qc, id, (item) => ({
+        ...item,
+        is_starred: !item.is_starred,
+        starred_at: !item.is_starred ? new Date().toISOString() : null,
+      }));
+      return snapshot;
+    },
+    onSuccess: (data, { id }) => {
+      patchMessageInAllLists(qc, id, (item) => ({
+        ...item,
+        is_starred: data.starred,
+        starred_at: data.starred ? new Date().toISOString() : null,
+      }));
+    },
+    onError: (_error, _variables, context) => {
+      if (context) restoreMessageCachesWithUser(qc, userId, context);
     },
   });
 };
@@ -481,10 +670,34 @@ export const useToggleStarMessage = () => {
  */
 export const useArchiveMessage = () => {
   const qc = useQueryClient();
-  return useMutation<ArchiveStateResponse, AxiosError<ApiErrorResponse>, { id: number }>({
+  const userId = useMessageMutationUserId();
+
+  return useMutation<
+    ArchiveStateResponse,
+    AxiosError<ApiErrorResponse>,
+    { id: number },
+    MessageCacheSnapshot
+  >({
     mutationFn: async ({ id }) => (await axiosInstance.patch<ArchiveStateResponse>(`messages/${id}/archive`)).data,
-    onSuccess: async () => {
-      await invalidateMessageData(qc);
+    onMutate: async ({ id }) => {
+      await qc.cancelQueries({ queryKey: messageKeys.all });
+      const snapshot = snapshotMessageCaches(qc, userId);
+      const row = getMessageRowForOptimistic(qc, id);
+      removeMessageFromAllLists(qc, id);
+      if (row && row.folder !== 'archive') {
+        adjustFolderStats(qc, userId, [
+          {
+            folder: row.folder,
+            totalDelta: -1,
+            unreadDelta: row.is_read ? 0 : -1,
+          },
+          { folder: 'archive', totalDelta: 1 },
+        ]);
+      }
+      return snapshot;
+    },
+    onError: (_error, _variables, context) => {
+      if (context) restoreMessageCachesWithUser(qc, userId, context);
     },
   });
 };
@@ -494,10 +707,30 @@ export const useArchiveMessage = () => {
  */
 export const useUnarchiveMessage = () => {
   const qc = useQueryClient();
-  return useMutation<ArchiveStateResponse, AxiosError<ApiErrorResponse>, { id: number }>({
+  const userId = useMessageMutationUserId();
+
+  return useMutation<
+    ArchiveStateResponse,
+    AxiosError<ApiErrorResponse>,
+    { id: number },
+    MessageCacheSnapshot
+  >({
     mutationFn: async ({ id }) => (await axiosInstance.patch<ArchiveStateResponse>(`messages/${id}/unarchive`)).data,
+    onMutate: async ({ id }) => {
+      await qc.cancelQueries({ queryKey: messageKeys.all });
+      const snapshot = snapshotMessageCaches(qc, userId);
+      removeMessageFromAllLists(qc, id);
+      adjustFolderStats(qc, userId, [
+        { folder: 'archive', totalDelta: -1 },
+        { folder: 'inbox', totalDelta: 1 },
+      ]);
+      return snapshot;
+    },
     onSuccess: async () => {
-      await invalidateMessageData(qc);
+      await qc.invalidateQueries({ queryKey: messageKeys.lists() });
+    },
+    onError: (_error, _variables, context) => {
+      if (context) restoreMessageCachesWithUser(qc, userId, context);
     },
   });
 };
@@ -507,15 +740,30 @@ export const useUnarchiveMessage = () => {
  */
 export const useAddMessageLabel = () => {
   const qc = useQueryClient();
+  const userId = useMessageMutationUserId();
+
   return useMutation<
     LabelActionResponse,
     AxiosError<ApiErrorResponse>,
-    { id: number; data: AddLabelRequest }
+    { id: number; data: AddLabelRequest },
+    MessageCacheSnapshot
   >({
     mutationFn: async ({ id, data }) =>
       (await axiosInstance.post<LabelActionResponse>(`messages/${id}/labels`, data)).data,
-    onSuccess: async () => {
-      await invalidateMessageData(qc);
+    onMutate: async ({ id, data }) => {
+      await qc.cancelQueries({ queryKey: messageKeys.all });
+      const snapshot = snapshotMessageCaches(qc, userId);
+      patchMessageInAllLists(qc, id, (item) => ({
+        ...item,
+        message: {
+          ...item.message,
+          labels: [...(item.message.labels ?? []), { id: Date.now(), message_id: id, user_id: Number(userId), label: data.label, created_at: new Date().toISOString() }],
+        },
+      }));
+      return snapshot;
+    },
+    onError: (_error, _variables, context) => {
+      if (context) restoreMessageCachesWithUser(qc, userId, context);
     },
   });
 };
@@ -525,15 +773,30 @@ export const useAddMessageLabel = () => {
  */
 export const useRemoveMessageLabel = () => {
   const qc = useQueryClient();
+  const userId = useMessageMutationUserId();
+
   return useMutation<
     LabelActionResponse,
     AxiosError<ApiErrorResponse>,
-    { id: number; label: string }
+    { id: number; label: string },
+    MessageCacheSnapshot
   >({
     mutationFn: async ({ id, label }) =>
       (await axiosInstance.delete<LabelActionResponse>(`messages/${id}/labels/${encodeURIComponent(label)}`)).data,
-    onSuccess: async () => {
-      await invalidateMessageData(qc);
+    onMutate: async ({ id, label }) => {
+      await qc.cancelQueries({ queryKey: messageKeys.all });
+      const snapshot = snapshotMessageCaches(qc, userId);
+      patchMessageInAllLists(qc, id, (item) => ({
+        ...item,
+        message: {
+          ...item.message,
+          labels: (item.message.labels ?? []).filter((l) => l.label !== label),
+        },
+      }));
+      return snapshot;
+    },
+    onError: (_error, _variables, context) => {
+      if (context) restoreMessageCachesWithUser(qc, userId, context);
     },
   });
 };
@@ -545,6 +808,7 @@ export const useRemoveMessageLabel = () => {
  */
 export const useUploadMessageAttachment = () => {
   const qc = useQueryClient();
+  const userId = useMessageMutationUserId();
 
   return useMutation<
     UploadAttachmentResponse,
@@ -573,8 +837,14 @@ export const useUploadMessageAttachment = () => {
 
       return res.data;
     },
-    onSuccess: async () => {
-      await invalidateMessageData(qc);
+    onSuccess: async (data, { id }) => {
+      patchMessageDetail(qc, userId, id, (detail) => ({
+        ...detail,
+        message: {
+          ...detail.message,
+          attachments: [...(detail.message.attachments ?? []), data.attachment],
+        },
+      }));
     },
   });
 };
@@ -584,15 +854,47 @@ export const useUploadMessageAttachment = () => {
  */
 export const useRemoveMessageAttachment = () => {
   const qc = useQueryClient();
+  const userId = useMessageMutationUserId();
+
   return useMutation<
     RemoveAttachmentResponse,
     AxiosError<ApiErrorResponse>,
-    { attachmentId: number }
+    { attachmentId: number; messageId?: number },
+    MessageCacheSnapshot
   >({
     mutationFn: async ({ attachmentId }) =>
       (await axiosInstance.delete<RemoveAttachmentResponse>(`messages/attachments/${attachmentId}`)).data,
-    onSuccess: async () => {
-      await invalidateMessageData(qc);
+    onMutate: async ({ attachmentId, messageId }) => {
+      const resolvedMessageId =
+        messageId ??
+        qc
+          .getQueriesData<GetMessagesResponse>({ queryKey: messageKeys.lists() })
+          .flatMap(([, data]) => data?.data ?? [])
+          .find((row) => row.message.attachments?.some((a) => a.id === attachmentId))?.message?.id;
+
+      if (!resolvedMessageId) {
+        return { previousLists: [], previousDetails: [] };
+      }
+      await qc.cancelQueries({ queryKey: messageKeys.all });
+      const snapshot = snapshotMessageCaches(qc, userId);
+      patchMessageInAllLists(qc, resolvedMessageId, (item) => ({
+        ...item,
+        message: {
+          ...item.message,
+          attachments: (item.message.attachments ?? []).filter((a) => a.id !== attachmentId),
+        },
+      }));
+      patchMessageDetail(qc, userId, resolvedMessageId, (detail) => ({
+        ...detail,
+        message: {
+          ...detail.message,
+          attachments: (detail.message.attachments ?? []).filter((a) => a.id !== attachmentId),
+        },
+      }));
+      return snapshot;
+    },
+    onError: (_error, _variables, context) => {
+      if (context) restoreMessageCachesWithUser(qc, userId, context);
     },
   });
 };
@@ -727,15 +1029,42 @@ export const useBulkMessageAction = (
 ) => {
   const { showToast } = useToast();
   const qc = useQueryClient();
+  const userId = useMessageMutationUserId();
 
-  return useMutation<BulkActionResponse, AxiosError<ApiErrorResponse>, BulkActionRequest>({
+  return useMutation<
+    BulkActionResponse,
+    AxiosError<ApiErrorResponse>,
+    BulkActionRequest,
+    MessageCacheSnapshot
+  >({
     mutationFn: async (payload) => (await axiosInstance.post<BulkActionResponse>('messages/bulk', payload)).data,
+    onMutate: async (payload) => {
+      await qc.cancelQueries({ queryKey: messageKeys.all });
+      const snapshot = snapshotMessageCaches(qc, userId);
+      for (const id of payload.message_ids) {
+        if (payload.action === 'trash') {
+          removeMessageFromAllLists(qc, id);
+        }
+        if (payload.action === 'markRead') {
+          patchMessageInAllLists(qc, id, (item) => ({ ...item, is_read: true }));
+        }
+        if (payload.action === 'markUnread') {
+          patchMessageInAllLists(qc, id, (item) => ({ ...item, is_read: false }));
+        }
+        if (payload.action === 'permanentDelete') {
+          removeMessageFromAllLists(qc, id);
+        }
+      }
+      return snapshot;
+    },
     onSuccess: async (data) => {
       showToast('success', `Bulk action complete: ${data.action} (${data.affected}).`, 7000);
-      await invalidateMessageData(qc);
+      await qc.invalidateQueries({ queryKey: messageKeys.lists() });
+      await qc.invalidateQueries({ queryKey: messageKeys.stats() });
       callbacks.onSuccess?.(data);
     },
-    onError: (error) => {
+    onError: (error, _variables, context) => {
+      if (context) restoreMessageCachesWithUser(qc, userId, context);
       showToast('error', extractErrorMessage(error, 'Bulk action failed.'), 9000);
       callbacks.onError?.(error);
     },
