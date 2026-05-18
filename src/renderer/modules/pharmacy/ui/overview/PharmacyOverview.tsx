@@ -29,7 +29,7 @@ export const PharmacyOverview: React.FC<PharmacyOverviewProps> = ({ theme }) => 
     <div className="space-y-3">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold">Pharmacy intelligence</h1>
+          <h1 className="text-2xl font-semibold">Pharmacy Intelligence</h1>
           <p className={`mt-1 text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
             Live volumes, trends, and operational signals for the dispensary
           </p>

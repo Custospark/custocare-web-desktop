@@ -10,6 +10,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { AMBULANCE_ROUTES } from '../../../../app/routes/routeConstants';
 import { useAmbulanceDashboard } from '../../api/overview/useAmbulanceDashboardQueries';
+import LoadingSkeleton from '../../../../shared/components/Loading/LoadingSkeletons';
 
 interface AmbulanceOverviewProps {
   theme: 'light' | 'dark';
@@ -33,6 +34,17 @@ const AmbulanceOverview = ({ theme }: AmbulanceOverviewProps) => {
     setLastRefreshed(new Date());
     void refetch();
   };
+
+  if (isLoading) {
+    return (
+      <LoadingSkeleton
+        variant="dashboard"
+        message="Loading fleet intelligence..."
+        theme={isDark ? 'dark' : 'light'}
+        className="min-h-screen"
+      />
+    );
+  }
 
   const summary = data?.summary;
   const tripTotals = data?.trip_activity?.totals;
@@ -83,7 +95,7 @@ const AmbulanceOverview = ({ theme }: AmbulanceOverviewProps) => {
               <Truck className="h-5 w-5 text-blue-500" />
               <p className="text-sm font-semibold">Total Vehicles</p>
             </div>
-            <p className="mt-3 text-2xl font-bold">{isLoading ? '...' : summary?.total_vehicles?.value ?? 0}</p>
+            <p className="mt-3 text-2xl font-bold">{summary?.total_vehicles?.value ?? 0}</p>
           </div>
           <div className={`rounded-xl border p-5 ${cardClass}`}>
             <div className="flex items-center gap-2">
@@ -91,7 +103,7 @@ const AmbulanceOverview = ({ theme }: AmbulanceOverviewProps) => {
               <p className="text-sm font-semibold">Available</p>
             </div>
             <p className="mt-3 text-2xl font-bold">
-              {isLoading ? '...' : summary?.available_vehicles?.value ?? 0}
+              {summary?.available_vehicles?.value ?? 0}
             </p>
           </div>
           <div className={`rounded-xl border p-5 ${cardClass}`}>
@@ -100,7 +112,7 @@ const AmbulanceOverview = ({ theme }: AmbulanceOverviewProps) => {
               <p className="text-sm font-semibold">Active Trips</p>
             </div>
             <p className="mt-3 text-2xl font-bold">
-              {isLoading ? '...' : summary?.active_trips?.value ?? 0}
+              {summary?.active_trips?.value ?? 0}
             </p>
           </div>
           <div className={`rounded-xl border p-5 ${cardClass}`}>
@@ -109,9 +121,9 @@ const AmbulanceOverview = ({ theme }: AmbulanceOverviewProps) => {
               <p className="text-sm font-semibold">Completed Today</p>
             </div>
             <p className="mt-3 text-2xl font-bold">
-              {isLoading ? '...' : summary?.completed_trips_today?.value ?? 0}
+              {summary?.completed_trips_today?.value ?? 0}
             </p>
-            {!isLoading && summary?.completed_trips_today?.change_pct != null && (
+            {summary?.completed_trips_today?.change_pct != null && (
               <p className={`mt-2 text-xs ${mutedTextClass}`}>
                 {summary.completed_trips_today.change_pct}% vs yesterday
               </p>
@@ -123,11 +135,11 @@ const AmbulanceOverview = ({ theme }: AmbulanceOverviewProps) => {
           <div className={`rounded-xl border p-5 ${cardClass}`}>
             <p className="text-sm font-semibold">Weekly Trip Throughput</p>
             <p className="mt-3 text-2xl font-bold">
-              {isLoading ? '...' : `${tripTotals?.completed_week ?? 0} completed`}
+              {`${tripTotals?.completed_week ?? 0} completed`}
             </p>
             <p className={`mt-2 text-xs ${mutedTextClass}`}>
-              Dispatched: {isLoading ? '...' : tripTotals?.dispatched_week ?? 0} · Cancelled:{' '}
-              {isLoading ? '...' : tripTotals?.cancelled_week ?? 0}
+              Dispatched: {tripTotals?.dispatched_week ?? 0} · Cancelled:{' '}
+              {tripTotals?.cancelled_week ?? 0}
             </p>
           </div>
 
@@ -137,7 +149,7 @@ const AmbulanceOverview = ({ theme }: AmbulanceOverviewProps) => {
               {fleetStatus.map((row) => (
                 <div key={row.status} className="flex justify-between">
                   <span className={mutedTextClass}>{row.label}</span>
-                  <span className="font-semibold">{isLoading ? '...' : row.count}</span>
+                  <span className="font-semibold">{row.count}</span>
                 </div>
               ))}
             </div>
@@ -148,9 +160,9 @@ const AmbulanceOverview = ({ theme }: AmbulanceOverviewProps) => {
               <AlertTriangle className="h-5 w-5 text-rose-500" />
               <p className="text-sm font-semibold">Maintenance</p>
             </div>
-            <p className="mt-3 text-2xl font-bold">{isLoading ? '...' : summary?.maintenance_vehicles?.value ?? 0}</p>
+            <p className="mt-3 text-2xl font-bold">{summary?.maintenance_vehicles?.value ?? 0}</p>
             <p className={`mt-2 text-xs ${mutedTextClass}`}>
-              {isLoading ? 'Loading...' : summary?.maintenance_vehicles?.change_label}
+              {summary?.maintenance_vehicles?.change_label}
             </p>
           </div>
         </div>

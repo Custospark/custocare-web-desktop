@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Activity, AlertTriangle, FlaskConical, Microscope, RefreshCw, Receipt } from 'lucide-react';
 import { useLaboratoryDashboard } from '../../api/overview/useLaboratoryDashboardQueries';
+import LoadingSkeleton from '../../../../shared/components/Loading/LoadingSkeletons';
 import { LaboratoryRevenueTrendChart } from './LaboratoryRevenueTrendChart';
 import { LaboratoryTopServicesChart } from './LaboratoryTopServicesChart';
 
@@ -25,6 +26,17 @@ const LaboratoryOverview = ({ theme }: LaboratoryOverviewProps) => {
     setLastRefreshed(new Date());
     void refetch();
   };
+
+  if (isLoading) {
+    return (
+      <LoadingSkeleton
+        variant="dashboard"
+        message="Loading laboratory intelligence..."
+        theme={isDark ? 'dark' : 'light'}
+        className="min-h-screen"
+      />
+    );
+  }
 
   const summary = data?.summary;
   const requestTotals = data?.request_activity?.totals;
@@ -76,7 +88,7 @@ const LaboratoryOverview = ({ theme }: LaboratoryOverviewProps) => {
               <FlaskConical className="h-5 w-5 text-blue-500" />
               <p className="text-sm font-semibold">Pending Requests</p>
             </div>
-            <p className="mt-3 text-2xl font-bold">{isLoading ? '...' : summary?.pending_requests?.value ?? 0}</p>
+            <p className="mt-3 text-2xl font-bold">{summary?.pending_requests?.value ?? 0}</p>
           </div>
           <div className={`rounded-xl border p-5 ${cardClass}`}>
             <div className="flex items-center gap-2">
@@ -84,7 +96,7 @@ const LaboratoryOverview = ({ theme }: LaboratoryOverviewProps) => {
               <p className="text-sm font-semibold">Completed Results</p>
             </div>
             <p className="mt-3 text-2xl font-bold">
-              {isLoading ? '...' : summary?.completed_results_today?.value ?? 0}
+              {summary?.completed_results_today?.value ?? 0}
             </p>
           </div>
           <div className={`rounded-xl border p-5 ${cardClass}`}>
@@ -93,7 +105,7 @@ const LaboratoryOverview = ({ theme }: LaboratoryOverviewProps) => {
               <p className="text-sm font-semibold">Billable Charges</p>
             </div>
             <p className="mt-3 text-2xl font-bold">
-              {isLoading ? '...' : Number(summary?.revenue_today?.value ?? 0).toLocaleString()}
+              {Number(summary?.revenue_today?.value ?? 0).toLocaleString()}
             </p>
           </div>
           <div className={`rounded-xl border p-5 ${cardClass}`}>
@@ -102,7 +114,7 @@ const LaboratoryOverview = ({ theme }: LaboratoryOverviewProps) => {
               <p className="text-sm font-semibold">Turnaround Time</p>
             </div>
             <p className="mt-3 text-2xl font-bold">
-              {isLoading ? '...' : `${Number(summary?.avg_turnaround_hours?.value ?? 0).toFixed(1)}h`}
+              {`${Number(summary?.avg_turnaround_hours?.value ?? 0).toFixed(1)}h`}
             </p>
           </div>
         </div>
@@ -111,10 +123,10 @@ const LaboratoryOverview = ({ theme }: LaboratoryOverviewProps) => {
           <div className={`rounded-xl border p-5 ${cardClass}`}>
             <p className="text-sm font-semibold">Weekly Request Throughput</p>
             <p className="mt-3 text-2xl font-bold">
-              {isLoading ? '...' : `${requestTotals?.completed_week ?? 0}/${requestTotals?.requested_week ?? 0}`}
+              {`${requestTotals?.completed_week ?? 0}/${requestTotals?.requested_week ?? 0}`}
             </p>
             <p className={`mt-2 text-xs ${mutedTextClass}`}>
-              Completion rate: {isLoading ? '...' : `${requestTotals?.completion_rate_pct ?? 0}%`}
+              Completion rate: {`${requestTotals?.completion_rate_pct ?? 0}%`}
             </p>
           </div>
 
@@ -123,15 +135,15 @@ const LaboratoryOverview = ({ theme }: LaboratoryOverviewProps) => {
             <div className="mt-3 space-y-2 text-sm">
               <div className="flex justify-between">
                 <span className={mutedTextClass}>Normal</span>
-                <span className="font-semibold">{isLoading ? '...' : resultFlags?.normal ?? 0}</span>
+                <span className="font-semibold">{resultFlags?.normal ?? 0}</span>
               </div>
               <div className="flex justify-between">
                 <span className={mutedTextClass}>Abnormal</span>
-                <span className="font-semibold">{isLoading ? '...' : resultFlags?.abnormal ?? 0}</span>
+                <span className="font-semibold">{resultFlags?.abnormal ?? 0}</span>
               </div>
               <div className="flex justify-between">
                 <span className={mutedTextClass}>Critical</span>
-                <span className="font-semibold">{isLoading ? '...' : resultFlags?.critical ?? 0}</span>
+                <span className="font-semibold">{resultFlags?.critical ?? 0}</span>
               </div>
             </div>
           </div>
@@ -141,13 +153,13 @@ const LaboratoryOverview = ({ theme }: LaboratoryOverviewProps) => {
               <AlertTriangle className="h-5 w-5 text-rose-500" />
               <p className="text-sm font-semibold">Operational Health</p>
             </div>
-            <p className="mt-3 text-2xl font-bold">{isLoading ? '...' : performance?.overall_grade ?? '--'}</p>
-            <p className={`mt-2 text-xs ${mutedTextClass}`}>{isLoading ? 'Loading...' : performance?.overall_label}</p>
+            <p className="mt-3 text-2xl font-bold">{performance?.overall_grade ?? '--'}</p>
+            <p className={`mt-2 text-xs ${mutedTextClass}`}>{performance?.overall_label}</p>
             <p className={`mt-1 text-xs ${mutedTextClass}`}>
-              Verification: {isLoading ? '...' : `${performance?.verification_rate_pct ?? 0}%`}
+              Verification: {`${performance?.verification_rate_pct ?? 0}%`}
             </p>
             <p className={`mt-1 text-xs ${mutedTextClass}`}>
-              Open critical: {isLoading ? '...' : performance?.critical_open_count ?? 0}
+              Open critical: {performance?.critical_open_count ?? 0}
             </p>
           </div>
         </div>

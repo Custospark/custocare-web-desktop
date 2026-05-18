@@ -12,6 +12,7 @@ import {
 } from 'recharts';
 import { TrendingUp } from 'lucide-react';
 import type { InventoryTrendsBlock } from '../../api/overview/pharmacyDashboardTypes';
+import { formatDashboardFootnote } from './formatDashboardCopy';
 
 interface InventoryTrendsChartProps {
   theme: 'light' | 'dark';
@@ -47,6 +48,7 @@ export const InventoryTrendsChart: React.FC<InventoryTrendsChartProps> = ({
   };
 
   const footer = trends?.footer;
+  const footnote = formatDashboardFootnote(footer?.note);
 
   if (isLoading && !trends) {
     return (
@@ -158,8 +160,8 @@ export const InventoryTrendsChart: React.FC<InventoryTrendsChartProps> = ({
           </p>
         </div>
       </div>
-      {footer?.note && (
-        <p className={`mt-3 text-xs ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>{footer.note}</p>
+      {footnote && (
+        <p className={`mt-3 text-xs ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>{footnote}</p>
       )}
     </div>
   );

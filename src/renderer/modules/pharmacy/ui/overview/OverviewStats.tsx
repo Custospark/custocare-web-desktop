@@ -8,6 +8,7 @@ import {
   TrendingUp,
 } from 'lucide-react';
 import type { PharmacyDashboardSummary } from '../../api/overview/pharmacyDashboardTypes';
+import { formatDashboardChangeLabel } from './formatDashboardCopy';
 
 interface OverviewStatsProps {
   theme: 'light' | 'dark';
@@ -49,7 +50,10 @@ export const OverviewStats: React.FC<OverviewStatsProps> = ({ theme, refreshKey,
         label: 'Total stock SKUs',
         value: formatInt(summary.total_stock_items.value),
         change: summary.total_stock_items.change_pct ?? null,
-        changeLabel: summary.total_stock_items.change_label || 'vs start of month (est.)',
+        changeLabel: formatDashboardChangeLabel(
+          summary.total_stock_items.change_label,
+          'vs start of month (est.)',
+        ),
         icon: Package,
         iconColor: isDark ? 'text-blue-400' : 'text-blue-600',
         iconBg: isDark ? 'bg-blue-900/30' : 'bg-blue-50',
@@ -59,7 +63,10 @@ export const OverviewStats: React.FC<OverviewStatsProps> = ({ theme, refreshKey,
         value: formatInt(summary.low_stock_alerts.value),
         change: summary.low_stock_alerts.change ?? null,
         changeIsAbsolute: true,
-        changeLabel: summary.low_stock_alerts.change_label || 'at or below reorder',
+        changeLabel: formatDashboardChangeLabel(
+          summary.low_stock_alerts.change_label,
+          'at or below reorder',
+        ),
         icon: AlertTriangle,
         iconColor: isDark ? 'text-red-400' : 'text-red-600',
         iconBg: isDark ? 'bg-red-900/30' : 'bg-red-50',
@@ -69,7 +76,7 @@ export const OverviewStats: React.FC<OverviewStatsProps> = ({ theme, refreshKey,
         value: formatInt(summary.dispensed_today.value),
         change: summary.dispensed_today.change_pct ?? null,
         changeLabel: [
-          summary.dispensed_today.change_label,
+          formatDashboardChangeLabel(summary.dispensed_today.change_label, 'vs yesterday'),
           summary.dispensed_today.secondary_label,
         ]
           .filter(Boolean)
@@ -81,7 +88,10 @@ export const OverviewStats: React.FC<OverviewStatsProps> = ({ theme, refreshKey,
       {
         label: 'Pending checkouts',
         value: formatInt(summary.pending_checkouts.value),
-        changeLabel: summary.pending_checkouts.change_label || 'billing cycles',
+        changeLabel: formatDashboardChangeLabel(
+          summary.pending_checkouts.change_label,
+          'billing cycles awaiting settlement',
+        ),
         icon: ShoppingCart,
         iconColor: isDark ? 'text-orange-400' : 'text-orange-600',
         iconBg: isDark ? 'bg-orange-900/30' : 'bg-orange-50',
@@ -90,7 +100,10 @@ export const OverviewStats: React.FC<OverviewStatsProps> = ({ theme, refreshKey,
         label: 'Revenue today (dispensed)',
         value: formatMoney(summary.revenue_today.value),
         change: summary.revenue_today.change_pct_vs_avg_daily ?? null,
-        changeLabel: summary.revenue_today.change_label || 'vs 30-day avg daily',
+        changeLabel: formatDashboardChangeLabel(
+          summary.revenue_today.change_label,
+          'vs 30-day daily average',
+        ),
         icon: TrendingUp,
         iconColor: isDark ? 'text-emerald-400' : 'text-emerald-600',
         iconBg: isDark ? 'bg-emerald-900/30' : 'bg-emerald-50',

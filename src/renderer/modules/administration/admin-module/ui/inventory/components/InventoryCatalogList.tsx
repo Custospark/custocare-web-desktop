@@ -647,7 +647,7 @@ export const InventoryCatalogList: React.FC<Props> = ({
           </div>
 
           {/* Rows */}
-          {paginationData.currentItems.map((item, index) => {
+          {paginationData.currentItems.map((item) => {
             const category = itemCategoryOptions.find(
               (c) => c.value === item.item_category
             );
@@ -903,7 +903,7 @@ export const InventoryCatalogList: React.FC<Props> = ({
           )}
         >
           <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
-          {paginationData.currentItems.map((item, index) => {
+          {paginationData.currentItems.map((item) => {
               const category = itemCategoryOptions.find(
                 (c) => c.value === item.item_category
               );
