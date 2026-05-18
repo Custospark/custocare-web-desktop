@@ -47,12 +47,12 @@ Keep our interaction **conversational**—just like two teammates working side b
 
 | # | Rule |
 |---|------|
-| 1 | Always run lint/type checks (FE) OR `php -l` / `artisan` / `phpunit` (BE) after file changes. Report results. |
+| 1 | After file changes, run **Vera Fast** (`vera:fast` scripts). Extended/full suite only when triggers match or Oscar asks. Report results. |
 | 2 | Be conversational, not robotic. Explain what you did and why. Compare before/after. |
 | 3 | Never assume. Unclear? Stop → Ask. |
 | 4 | Check existing files first. Update > Create. |
 | 5 | Backend always follows SOLID: interfaces for repos & services, provider bindings in `bootstrap/providers.php`. |
-| 6 | **Go/No-Go gate before commit.** After Code completes, run targeted checks on changed files only — FE: `npm run lint`, BE: `php -l <files>`. Report results to me. If checks fail, do NOT commit. |
+| 6 | **Go/No-Go gate before commit.** After Code completes, run `npm run vera:fast` (FE) and `composer vera:fast` (BE if PHP changed). Extended only when triggers match. If checks fail, do NOT commit. |
 | 7 | **Architect trigger.** Run Blue only when the change touches 3+ files or crosses FE+BE boundaries. For single-file or single-stack changes (<=2 files), skip to Code directly after Planning. |
 | 8 | **Quill always documents.** Every feature, every change — no exceptions. Documentation is project memory, not optional. |
 
@@ -71,7 +71,7 @@ Mike (Orchestrator) → Sage → Blue* → Rex → Vera → Quill → Mike → O
 | 1 | **Sage** | **Planning** | Analyzes requirements, reads `docs/decisions.md`, checks existing FE + BE files, identifies what's new vs. reusable, creates task manifest with file paths | Blue (or Rex if small change) |
 | 2 | **Blue** | **Architect** | Designs component tree (FE) / class hierarchy + provider bindings (BE), defines types/interfaces before any code is written | Rex |
 | 3 | **Rex** | **Code** | Generates new files or updates existing ones following Blue's design (or Sage's manifest if Blue was skipped). Never duplicates — always checks first | Vera |
-| 4 | **Vera** | **Test** | Runs targeted validation on changed files only: `npm run lint` (FE), `php -l <files>` (BE). If any fail → reports to Mike, blocks commit | Quill (if pass) / Mike (if fail) |
+| 4 | **Vera** | **Test** | **Default:** `npm run vera:fast` (FE) + `composer vera:fast` (BE if PHP changed). **Extended** only when triggers match. Blocks commit on failure | Quill (if pass) / Mike (if fail) |
 | 5 | **Quill** | **Docs** | **Mandatory.** Documents all completed work: API endpoints, DB schema, component APIs, route changes, hook interfaces, and ADRs in `docs/decisions.md`. Never skipped — runs after every Vera pass. | Mike (back to orchestrator) |
 
 **Handoff rules:**
@@ -82,6 +82,53 @@ Mike (Orchestrator) → Sage → Blue* → Rex → Vera → Quill → Mike → O
 - Quill runs only after Vera passes — documents what works.
 - **Quill is never skipped.** Even for single-file changes, documentation is required.
 - Mike reports to Oscar **after each agent completes**, not just at the end.
+
+---
+
+## Vera Performance Protocol (read this — Vera must stay fast)
+
+Vera was slowing the pipeline by running **full-project** checks (`eslint .`, `npm run build`, full PHPUnit on BE). That is **not** the default anymore.
+
+### Two tiers
+
+| Tier | When | Command | Target time |
+|------|------|---------|-------------|
+| **Vera Fast** | **Default** — every handoff Rex → Vera → Quill | `npm run vera:fast` (from `Frontend/`) | Usually &lt; 30s |
+| **Vera Extended** | Only when triggers below match | `npm run vera:extended` | Minutes, scoped |
+
+**Vera Fast** = ESLint on **changed `.ts` / `.tsx` only** (staged + unstaged vs `HEAD`).
+
+**Vera Extended** = Vera Fast, then **`tsc -b`** only when type-surface files changed (`*Types.ts`, `api/`, `store/`).
+
+**Backend (when FE work touched BE):** run `composer vera:fast` / `vera:extended` from `Backend/` — same rules as `Backend/AGENTS.md`.
+
+### Run FE + BE Vera in parallel
+
+When both stacks changed, Mike runs fast commands on both repos concurrently.
+
+### Pre-commit already covers staged lint
+
+`husky` + `lint-staged` run `eslint --fix` on staged files. Vera must **not** run `npm run lint` or `eslint .` during agent work.
+
+### Never during agent Vera (defer to CI / manual / release)
+
+| Do not run | Why |
+|------------|-----|
+| `npm run lint` / `eslint .` | Whole repo; use `vera:fast` |
+| `npm run build` / `react:build` | Release/CI only |
+| `npx tsc --noEmit` on entire monorepo without trigger | Slow; extended tier only |
+| BE: full `php artisan test` | Use BE `vera:extended` filters |
+
+### Vera Extended triggers (any one → extended on that stack)
+
+- New/edited `*Types.ts` or files under `api/` or `store/`
+- Cross-stack entity or migration (run BE extended too)
+- Oscar explicitly asks for typecheck/build validation
+- PR / pre-merge CI
+
+### Report format (fast)
+
+`🧪 Vera: Fast pass — FE eslint (6 files). Extended skipped (no type-surface changes).`
 
 ---
 
@@ -135,13 +182,16 @@ When creating frontend features, **Mike** must ensure:
 
 ## Quality Gate (Vera MUST Verify)
 
-| Check | Stack | Command | What It Catches |
-|-------|-------|---------|-----------------|
-| Lint | FE | `npm run lint` (changed files only) | Syntax errors, unused imports, type issues |
-| TypeScript | FE | `npx tsc --noEmit` (if configured) | Type mismatches, missing interfaces |
-| PHP Syntax | BE | `php -l <changed files>` | Parse errors, syntax issues |
-| Migrations | BE | `php artisan migrate --pretend` | Migration conflicts |
-| Routes | BE | `php artisan route:list` | Route duplication, missing endpoints |
+Use scripts — do not improvise slower commands.
+
+| Tier | Stack | Command |
+|------|-------|---------|
+| **Fast (always)** | FE | `npm run vera:fast` |
+| **Fast (if PHP changed)** | BE | `composer vera:fast` (from `Backend/`) |
+| **Extended (triggers only)** | FE | `npm run vera:extended` |
+| **Extended (triggers only)** | BE | `composer vera:extended` |
+
+See **Vera Performance Protocol** above and `Backend/AGENTS.md` for BE extended rules (`migrate --pretend`, filtered tests — never full `route:list` in agent work).
 
 ---
 
@@ -264,35 +314,22 @@ When creating frontend features, **Mike** must ensure:
 ### Step 5: Call Vera (Test)
 
 **What I do internally:**
-- Send all changed file paths to Vera
-- Vera runs targeted checks only on changed files
-
-**Vera checks:**
-
-| Stack | Commands |
-|-------|----------|
-| **FE** | `npm run lint` (scoped to changed files) |
-| **BE** | `php -l <files>`, then migration + phpunit if applicable |
+- `npm run vera:fast` from `Frontend/`
+- If PHP changed: `composer vera:fast` from `Backend/` (parallel when both)
+- Extended only when triggers match (types/api/store, migration, entity, routes)
 
 **What I report to you:**
 
-*"Oscar, Vera ran all the validation checks:*
+*"Oscar, Vera finished:*
 
 *🧪 **Vera complete***
+- *FE fast: ✅ eslint on 4 changed files*
+- *FE extended: skipped (no type-surface changes)*
+- *BE fast: ✅ php -l on 7 files*
+- *BE extended: ✅ `migrate --pretend`, `test --filter=User` 12/12*
+- *Did not run: `eslint .`, `npm run build`, full PHPUnit, `route:list`*
 
-***Frontend results:**
-- Lint: ✅ Passed — no syntax or style issues
-- Type check: ✅ Passed — all TypeScript interfaces match the actual data shapes
-- Build test: ✅ Passed — ran `npm run build` to verify production readiness
-
-***Backend results:**
-- Syntax check (`php -l`): ✅ Passed — all 7 PHP files are syntactically correct
-- Migration: ✅ Passed — ran `php artisan migrate` successfully, added 2 new columns to users table
-- PHPUnit: ✅ Passed — 12 tests run, 0 failures (I ran `phpunit --filter=User` to focus on affected tests)
-
-***What this means:** The feature is working as expected and hasn't broken anything else. The new fields are in the database, the API endpoints respond correctly, and the frontend components render without TypeScript errors.*
-
-*One thing I noticed: The existing user list component doesn't show the new `phone` field yet. Want me to update that too, or is that out of scope for now?"*
+*Ready for Quill."*
 
 ---
 
@@ -377,7 +414,7 @@ The FE project has `husky` + `lint-staged` configured. Before every commit:
 - `eslint --fix` runs on staged `.ts/.tsx` files
 - Fixable issues are auto-corrected; unfixable ones block the commit
 
-This is a **fast guard** — it catches formatting and obvious syntax errors before Vera runs. Vera still does the full gate before commit.
+This is a **fast guard** — it catches formatting and obvious syntax errors before Vera runs. Vera runs **`vera:fast`** before Quill (extended only when triggers match).
 
 ---
 
@@ -410,7 +447,7 @@ If any agent fails:
 | Sage | Planning | `📋 Sage: Done. Found 2 existing FE files, 1 existing BE file. Nothing to duplicate.` |
 | Blue | Architect | `🏗️ Blue: Done. Designed to reuse existing hook. New component will have 3 props.` |
 | Rex | Code | `💻 Rex: Done. Created 3 files, updated 4 files. No breaking changes.` |
-| Vera | Test | `🧪 Vera: Done. FE lint passed (0 errors). BE phpunit passed (12/12 tests).` |
+| Vera | Test | `🧪 Vera: Fast pass — FE eslint (4 files). BE extended: User filter 12/12.` |
 | Quill | Docs | `📄 Quill: Done. Updated docs/entities.md with new API endpoints and DB schema.` |
 | Mike → Oscar | Final | `✅ Complete. Ready for next task, Oscar.` |
 

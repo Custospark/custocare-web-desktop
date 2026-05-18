@@ -20,6 +20,8 @@
     "dev:electron": "npm run transpile:electron && cross-env NODE_ENV=development electron .",
     "react:build": "tsc -b && vite build",
     "lint": "eslint .",
+    "vera:fast": "node scripts/vera-fast.mjs",
+    "vera:extended": "node scripts/vera-extended.mjs",
     "preview": "vite preview",
     "transpile:electron": "node --max-old-space-size=8192 --stack-size=16384 ./node_modules/typescript/bin/tsc --project src/tsconfig.json",
     "build:mac": "npm run transpile:electron && npm run react:build && npx electron-builder --mac --arm64",
