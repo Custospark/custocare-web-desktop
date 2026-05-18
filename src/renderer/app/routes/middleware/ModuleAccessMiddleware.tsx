@@ -30,6 +30,7 @@ import { ROUTES } from './../routeConstants';
 import { PLATFORM_ADMIN_ROUTES } from './../constants/platform-administration.paths';
 import LoadingSkeleton from '../../../shared/components/Loading/LoadingSkeletons';
 import { isInPatientMode } from '../../store/utils/contextSelectors';
+import { FOCUS_MODE_ROUTE_ACCESS } from '../../../modules/administration/onboarding/routes/focusModeRouteAccess';
 
 // ============================================================================
 // TYPES AND INTERFACES
@@ -49,7 +50,8 @@ interface ModuleAccessConfig {
  */
 interface RouteAccessCheck {
   requiresValidation: boolean;        // Whether this route needs validation
-  requiredModuleCode: string | null;  // The module code required (if any)
+  requiredModuleCode: string | null;  // Primary module code (display / logging)
+  requiredModuleCodes: string[];      // All codes that grant access (any match)
   moduleName: string;                 // Display name of the module
   isRestricted: boolean;              // Whether this is a restricted route
   isAccountRoute: boolean;            // Whether this is an account route
@@ -156,6 +158,11 @@ const MODULE_CODE_TO_DISPLAY_NAME = MODULE_ACCESS_CONFIG.reduce(
     return acc;
   },
   {} as Record<string, string>
+);
+
+/** Longest prefix first so nested focus paths resolve correctly */
+const FOCUS_ROUTE_ACCESS_BY_PREFIX_LENGTH = [...FOCUS_MODE_ROUTE_ACCESS].sort(
+  (a, b) => b.prefix.length - a.prefix.length,
 );
 
 // ============================================================================
@@ -276,6 +283,27 @@ const isPatientAccessibleRoute = (pathname: string): boolean => {
 };
 
 /**
+ * Resolves focus-mode URL prefixes to required module codes.
+ */
+const getFocusRouteAccess = (
+  pathname: string,
+): { moduleCodes: string[]; displayName: string } | null => {
+  const normalized = normalizePath(pathname);
+
+  for (const config of FOCUS_ROUTE_ACCESS_BY_PREFIX_LENGTH) {
+    const prefix = normalizePath(config.prefix);
+    if (normalized === prefix || normalized.startsWith(`${prefix}/`)) {
+      return {
+        moduleCodes: [...config.moduleCodes],
+        displayName: config.displayName,
+      };
+    }
+  }
+
+  return null;
+};
+
+/**
  * Gets the required module code for a path
  * 
  * @param pathname - The pathname to check
@@ -356,6 +384,7 @@ const analyzeRouteAccess = (pathname: string): RouteAccessCheck => {
     return {
       requiresValidation: false,
       requiredModuleCode: null,
+      requiredModuleCodes: [],
       moduleName: '',
       isRestricted: false,
       isAccountRoute,
@@ -368,8 +397,22 @@ const analyzeRouteAccess = (pathname: string): RouteAccessCheck => {
     return {
       requiresValidation: false,
       requiredModuleCode: null,
+      requiredModuleCodes: [],
       moduleName: '',
       isRestricted: false,
+      isAccountRoute,
+      isPlatformAdminRoute,
+    };
+  }
+
+  const focusAccess = getFocusRouteAccess(normalized);
+  if (focusAccess) {
+    return {
+      requiresValidation: true,
+      requiredModuleCode: focusAccess.moduleCodes[0] ?? null,
+      requiredModuleCodes: focusAccess.moduleCodes,
+      moduleName: focusAccess.displayName,
+      isRestricted: true,
       isAccountRoute,
       isPlatformAdminRoute,
     };
@@ -381,6 +424,7 @@ const analyzeRouteAccess = (pathname: string): RouteAccessCheck => {
   return {
     requiresValidation: true,
     requiredModuleCode,
+    requiredModuleCodes: requiredModuleCode ? [requiredModuleCode] : [],
     moduleName,
     isRestricted: requiredModuleCode !== null,
     isAccountRoute,
@@ -411,27 +455,22 @@ const formatModuleName = (moduleCode: string): string => {
  */
 const validateModuleAccess = (
   accessibleModuleCodes: string[],
-  requiredModuleCode: string | null,
+  requiredModuleCodes: string[],
   isPlatformAdminRoute: boolean,
 ): boolean => {
-  // No module required -> always accessible
-  if (!requiredModuleCode) {
+  if (requiredModuleCodes.length === 0) {
     return true;
   }
-  
-  // Account module is always accessible to everyone
-  if (requiredModuleCode === 'account') {
+
+  if (requiredModuleCodes.includes('account')) {
     return true;
   }
-  
-  // Platform admin routes require the platform_administration module
+
   if (isPlatformAdminRoute) {
     return accessibleModuleCodes.includes('platform_administration');
   }
-  
-  // For all other routes, check if user has the required module
-  // This works for staff, patient, and all Spatie roles
-  return accessibleModuleCodes.includes(requiredModuleCode);
+
+  return requiredModuleCodes.some((code) => accessibleModuleCodes.includes(code));
 };
 
 // ============================================================================
@@ -596,13 +635,13 @@ export const ModuleAccessMiddleware: React.FC = () => {
   );
   
   const hasModuleAccess = useMemo(() => {
-    if (!routeAnalysis.requiresValidation || !routeAnalysis.requiredModuleCode) {
+    if (!routeAnalysis.requiresValidation || routeAnalysis.requiredModuleCodes.length === 0) {
       return true;
     }
     return validateModuleAccess(
-      accessibleModuleCodes, 
-      routeAnalysis.requiredModuleCode, 
-      routeAnalysis.isPlatformAdminRoute
+      accessibleModuleCodes,
+      routeAnalysis.requiredModuleCodes,
+      routeAnalysis.isPlatformAdminRoute,
     );
   }, [routeAnalysis, accessibleModuleCodes]);
   
@@ -725,14 +764,19 @@ export const ModuleAccessMiddleware: React.FC = () => {
   // Render loading state
   if (accessState.status === 'checking' || accessState.status === 'redirecting') {
     return (
-      <LoadingSkeleton
-        variant="dashboard"
-        message={accessState.message || 'Checking permissions...'}
-        theme={theme}
-      />
+      <div
+        className={`min-h-screen w-full ${theme === 'dark' ? 'bg-gray-900' : 'bg-gray-50'}`}
+      >
+        <LoadingSkeleton
+          variant="dashboard"
+          message={accessState.message || 'Checking permissions...'}
+          theme={theme}
+          className="min-h-screen"
+        />
+      </div>
     );
   }
-  
+
   // Render access denied screen
   if (accessState.status === 'denied') {
     return (

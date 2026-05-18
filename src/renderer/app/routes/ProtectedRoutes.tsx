@@ -29,6 +29,12 @@ import LoadingRedirect from '../../shared/components/Loading/LoadingRedirect';
 import { CLINICAL_ROUTES, MEDICAL_RECORDS_ROUTES, CUSTOCARE_HUB_ROUTES, AMBULANCE_ROUTES, REFERRAL_ROUTES } from './routeConstants';
 import FacilityAdminBillingCycle from '../../modules/billling/ui/billling/FacilityAdminBillingCycle';
 import { facilityAdminBillingCycleRoutes } from './modules/adminstration/billing-cycle.routes';
+import { FocusModeRoutes } from '../../modules/administration/onboarding/routes/FocusModeRoutes';
+
+export interface ProtectedRoutesOptions {
+  theme?: 'light' | 'dark';
+  patientName?: string | null;
+}
 
 // Lazy load modules
 const MedicalRecordsModule = React.lazy(
@@ -49,9 +55,15 @@ const ModuleAccessMiddleware = React.lazy(() => import('./middleware/ModuleAcces
 const PlatformAdministrationModule = React.lazy(() => import('../../modules/platform-administration/PlatformAdministrationModule'));
 const CustocareHubModule = React.lazy(() => import('../../modules/custocare-hub/ui/CustocareHubModule'));
 
-export const ProtectedRoutes = () => [
+export const ProtectedRoutes = ({
+  theme = 'light',
+  patientName = null,
+}: ProtectedRoutesOptions = {}) => [
   <Route key="protected-routes" element={<AuthMiddlewareRoute />}>
     <Route key="restricted-module-codes" element={<ModuleAccessMiddleware />}>
+      {/* Focus mode — auth + module access, outside main Layout */}
+      {...FocusModeRoutes({ theme, patientName })}
+
       <Route key="layout" element={<Layout />}>
         <Route key="protected-theme" element={<ProtectedThemeOutlet />}>
           {onboardingAndDashboardRoutes}
@@ -72,7 +84,7 @@ export const ProtectedRoutes = () => [
                 <LoadingRedirect 
                   to={MEDICAL_RECORDS_ROUTES.OVERVIEW} 
                   replace 
-                  variant="table" 
+                  variant="dashboard" 
                   message="Loading Patient Intelligence..." 
                 />
               } 
@@ -109,7 +121,7 @@ export const ProtectedRoutes = () => [
                 <LoadingRedirect
                   to={CLINICAL_ROUTES.OVERVIEW}
                   replace
-                  variant="table"
+                  variant="dashboard"
                   message="Loading Clinical Intelligence..."
                 />
               }
@@ -133,7 +145,7 @@ export const ProtectedRoutes = () => [
                 <LoadingRedirect
                   to={LABORATORY_ROUTES.OVERVIEW}
                   replace
-                  variant="table"
+                  variant="dashboard"
                   message="Loading Laboratory Intelligence..."
                 />
               }
@@ -170,7 +182,7 @@ export const ProtectedRoutes = () => [
                 <LoadingRedirect
                   to={AMBULANCE_ROUTES.OVERVIEW}
                   replace
-                  variant="table"
+                  variant="dashboard"
                   message="Loading Fleet Intelligence..."
                 />
               }
@@ -194,7 +206,7 @@ export const ProtectedRoutes = () => [
                 <LoadingRedirect
                   to={REFERRAL_ROUTES.OVERVIEW}
                   replace
-                  variant="table"
+                  variant="dashboard"
                   message="Loading Referral Intelligence..."
                 />
               }
@@ -305,7 +317,7 @@ export const ProtectedRoutes = () => [
                 <LoadingRedirect
                   to={CUSTOCARE_HUB_ROUTES.LEARNING_CENTER}
                   replace
-                  variant="table"
+                  variant="dashboard"
                   message="Loading Custocare Hub..."
                 />
               }
@@ -329,7 +341,7 @@ export const ProtectedRoutes = () => [
                 <LoadingRedirect 
                   to={ACCOUNT_ROUTES.SETTINGS_PROFILE} 
                   replace 
-                  variant="form" 
+                  variant="dashboard" 
                   message="Loading Account Settings..." 
                 />
               } 
@@ -353,7 +365,7 @@ export const ProtectedRoutes = () => [
                 <LoadingRedirect 
                   to={PLATFORM_ADMIN_ROUTES.FACILITIES} 
                   replace 
-                  variant="table" 
+                  variant="dashboard" 
                   message="Loading Platform Administration..." 
                 />
               } 

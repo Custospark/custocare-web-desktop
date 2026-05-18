@@ -413,7 +413,11 @@ const LoadingSkeleton: React.FC<LoadingSkeletonProps> = ({
   // └─────────────────────────────────────────────────────────────────────────┘
   if (variant === 'dashboard') {
     return (
-      <div className={cn('p-4 lg:p-8 space-y-6', className)} role="status" aria-busy="true">
+      <div
+        className={cn('p-4 lg:p-8 space-y-6 w-full', colors.bg.primary, className)}
+        role="status"
+        aria-busy="true"
+      >
         {/* Header Section */}
         <div className="flex items-center justify-between">
           <div className="space-y-2 flex-1">

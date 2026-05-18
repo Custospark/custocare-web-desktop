@@ -4,7 +4,6 @@ import { useSelector } from 'react-redux';
 import { OnboardingRoutes } from '../../modules/administration/onboarding/routes/OnboardingRoutes';
 import { ProtectedRoutes } from './ProtectedRoutes';
 import { ErrorRoutes } from './ErrorRoutes';
-import { FocusModeRoutes } from '../../modules/administration/onboarding/routes/FocusModeRoutes';
 import { selectTheme } from '../store/slices/uiSlice';
 import { selectActivePatient } from '../store/slices/visitSlice';
 
@@ -14,8 +13,9 @@ import { selectActivePatient } from '../store/slices/visitSlice';
  * Architecture:
  * 1. Public routes (AuthRoutes)
  * 2. Protected routes (ProtectedRoutes)
- * 3. Focus Mode routes (outside main layout)
- * 4. Error routes (ErrorRoutes)
+ * 3. Error routes (ErrorRoutes)
+ *
+ * Focus mode routes live inside ProtectedRoutes (auth + module access, no Layout).
  */
 function AppRoutes() {
   // Get theme from Redux store
@@ -27,11 +27,8 @@ function AppRoutes() {
       {/* Authentication Routes */}
       {...OnboardingRoutes()}
       
-      {/* Focus Mode Routes - Outside main layout, independent */}
-      {...FocusModeRoutes({ theme, patientName: activePatient?.name ?? null })}
-      
-      {/* Protected Routes - With main layout */}
-      {...ProtectedRoutes()}
+      {/* Protected Routes (includes focus mode + main layout) */}
+      {...ProtectedRoutes({ theme, patientName: activePatient?.name ?? null })}
       
       {/* Error Routes */}
       {...ErrorRoutes()}

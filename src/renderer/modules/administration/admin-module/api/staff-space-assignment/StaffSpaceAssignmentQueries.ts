@@ -28,27 +28,27 @@ import { axiosInstance } from '../../../../../app/api/axiosConfig';
 import { useToast } from '../../../../../app/store/contexts/toast/useToast';
 import { getStaffId } from '../../../../../app/store/utils/contextSelectors';
 import { useAppSelector } from '../../../../../app/store/hooks/useApp';
-import type {
-  ApiErrorResponse,
-  AssignSpaceParams,
-  AssignSpaceRequest,
-  AvailableSpacesFilters,
-  AvailableSpacesResponse,
-  CurrentSpaceQuery,
-  CurrentSpaceResponse,
-  FacilityId,
-  MutationCallbacks,
-  OccupancyFilters,
-  OccupancyResponse,
-  SpaceWithAssignment,
-  StaffSpaceAssignment,
+import {
   StaffSpaceAssignmentStatus,
-  ReleaseSpaceByAdminRequest,
-  ReleaseSpaceParams,
-  ReleaseSpaceRequest,
-  StaffForAssignmentFilters,
-  StaffForAssignmentResponse,
-  AssignmentResponse,
+  type ApiErrorResponse,
+  type AssignSpaceParams,
+  type AssignSpaceRequest,
+  type AvailableSpacesFilters,
+  type AvailableSpacesResponse,
+  type CurrentSpaceQuery,
+  type CurrentSpaceResponse,
+  type FacilityId,
+  type MutationCallbacks,
+  type OccupancyFilters,
+  type OccupancyResponse,
+  type SpaceWithAssignment,
+  type StaffSpaceAssignment,
+  type ReleaseSpaceByAdminRequest,
+  type ReleaseSpaceParams,
+  type ReleaseSpaceRequest,
+  type StaffForAssignmentFilters,
+  type StaffForAssignmentResponse,
+  type AssignmentResponse,
 } from './StaffSpaceAssignmentTypes';
 
 /* -------------------------------------------------------------------------- */

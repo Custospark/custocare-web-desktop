@@ -83,11 +83,29 @@ export function WithAuthProp<P extends WithAuthProp>({
 export const SuspenseWrapper: React.FC<{
   children: React.ReactNode;
   variant?: 'dashboard' | 'table' | 'detail';
-}> = ({ children, variant = 'dashboard' }) => (
-  <Suspense fallback={<LoadingSkeleton variant={variant} />}>
-    {children}
-  </Suspense>
-);
+  message?: string;
+}> = ({ children, variant = 'dashboard', message }) => {
+  const theme = useSelector((state: RootState) => state.ui.theme as ThemeMode);
+
+  return (
+    <Suspense
+      fallback={
+        <div
+          className={`min-h-screen w-full ${theme === 'dark' ? 'bg-gray-900' : 'bg-gray-50'}`}
+        >
+          <LoadingSkeleton
+            variant={variant}
+            theme={theme}
+            message={message}
+            className="min-h-screen"
+          />
+        </div>
+      }
+    >
+      {children}
+    </Suspense>
+  );
+};
 
 /**
  * Protected Theme Outlet - provides theme context to child routes
