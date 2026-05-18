@@ -21,6 +21,7 @@ import { ScrollToTop } from './shared/components/ScrollToTop/ScrollToTop'; // �
 
 import './App.css';
 import { BillingTray } from './modules/medical-records/ui/visit-action-center/billing-space';
+import { useReverbListener } from './app/hooks/useReverbListener';
 
 /**
  * Root Application Component
@@ -37,6 +38,11 @@ import { BillingTray } from './modules/medical-records/ui/visit-action-center/bi
  * - Auto-update UI components are mounted once
  * - No app reinitialization on route changes
  */
+function ReverbInit() {
+  useReverbListener();
+  return null;
+}
+
 function App() {
   return (
     <ToastProvider>
@@ -44,6 +50,7 @@ function App() {
         <ErrorBoundary>
           <Provider store={store}>
             <QueryClientProvider client={queryClient}>
+              <ReverbInit />
               <Router>
                 <ScrollToTop /> {/* ← Add ScrollToTop here - MUST be inside Router */}
                 <NavigationBridge /> {/* ← registers imperativeNavigate.tS, must be inside <Router> */}

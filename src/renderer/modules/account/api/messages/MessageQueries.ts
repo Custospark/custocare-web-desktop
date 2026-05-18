@@ -189,7 +189,6 @@ export const useGetMessageStats = (
     },
     staleTime: REALTIME_STALE_TIME_MS,
     gcTime: REALTIME_GC_TIME_MS,
-    refetchInterval: REALTIME_REFETCH_INTERVAL_MS,
     refetchOnWindowFocus: true,
     ...options,
     enabled: !!userId && (options?.enabled ?? true),
