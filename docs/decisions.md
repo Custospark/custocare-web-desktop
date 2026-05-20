@@ -61,3 +61,18 @@
 - Facility data comes from Redux `activeContextSlice` using the existing `selectActiveFacility` selector (same source as all clinical previews). No backend changes needed.
 - Staff name comes from `selectUserDisplayName` (Redux auth slice) — priority: display_name > full_name > name. This is the currently logged-in user, not a separate "registered_by" field from the backend (which would require a BE change).
 - Hidden DOM rendering (`className="hidden"`) keeps the printout in the DOM for `react-to-print` cloning without visual clutter in the modal.
+
+---
+
+## 2026-05-20: Fixed Allergies Count in MRPatientRecords (Double-Wrapped Response)
+
+**Context:** The `MRPatientRecords` component (Patient Encounter Hub → Patient Records) showed "No historical data" even when allergies existed, and the Known Allergies stat always displayed 0. The backend `AllergyCollection` resource wraps data in a nested structure — `GET /patients/{id}/allergies` returns `{ data: { data: Allergy[], meta: {...} } }`.
+
+**Decision:**
+- Replaced raw `allergiesQuery.data?.data?.length` (which resolves to `undefined` because `data` is an object, not an array) with `normalizeAllergyResponse()` — the same utility already used by `MRClinicalCare.tsx`.
+- This utility handles both nested (`data.data`) and flat (`data`) response shapes and returns a `NormalizedAllergiesPayload` with `meta.total` for the correct count.
+
+**Files changed:** `MRPatientRecords.tsx` — added import + 2 usages (medicalHistoryStatus memo and stats memo).
+
+**Trade-offs:**
+- `normalizeAllergyResponse` is in the allergies-form-components barrel, which is a UI-path utility. Ideal would be a shared API-level type fix, but this unblocks the display bug without cascading type changes to other consumers that may rely on the current (incorrect) type.

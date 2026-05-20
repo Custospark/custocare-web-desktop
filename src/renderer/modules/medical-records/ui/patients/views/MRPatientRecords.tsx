@@ -11,6 +11,7 @@ import { selectActiveVisitId, selectActiveVisitPatientId } from '../../../../../
 import { useGetActiveVisitClinicalNotes } from '../../../api/clinical-notes/clinicalNoteQueries';
 import { useGetActiveVisitDiagnoses } from '../../../api/diagnosis/diagnosisQueries';
 import { useGetAllergies } from '../../../api/allergies/AllergyQueries';
+import { normalizeAllergyResponse } from '../../visit-action-center/clinical-forms/allergies-form-components';
 
 export type MRPatientRecordsPresentation = 'clinical-encounter' | 'nursing' | 'laboratory' | 'ambulance' | 'referral';
 
@@ -318,8 +319,9 @@ export const MRPatientRecords: React.FC<MRPatientRecordsProps> = ({
 
   // Determine medical history status
   const medicalHistoryStatus = useMemo(() => {
-    const allergiesCount = allergiesQuery.data?.data?.length || 0;
-    
+    const normalizedAllergies = normalizeAllergyResponse(allergiesQuery.data);
+    const allergiesCount = normalizedAllergies.meta.total;
+
     if (activePatientId) {
       if (allergiesCount > 0) {
         return {
@@ -351,9 +353,10 @@ export const MRPatientRecords: React.FC<MRPatientRecordsProps> = ({
 
   // Quick stats based on real data
   const stats = useMemo(() => {
-    const allergiesCount = allergiesQuery.data?.data?.length || 0;
+    const normalizedAllergies = normalizeAllergyResponse(allergiesQuery.data);
+    const allergiesCount = normalizedAllergies.meta.total;
     const hasActiveVisit = !!activeVisitId;
-    
+
     return {
       hasActiveVisit,
       activeVisitId: activeVisitId || 'none',
