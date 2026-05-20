@@ -567,6 +567,7 @@ export const ConsultationsForm: React.FC<ConsultationsFormProps> = ({
         consultation={activeConsultation}
         values={previewValues}
         initialAction={previewAction}
+        theme={theme}
       />
 
       {/* Custom Dialog Component */}
@@ -583,6 +584,7 @@ export const ConsultationsForm: React.FC<ConsultationsFormProps> = ({
           showInput={dialogState.showInput}
           inputLabel={dialogState.inputLabel}
           inputPlaceholder={dialogState.inputPlaceholder}
+          theme={theme}
         />
       )}
     </>

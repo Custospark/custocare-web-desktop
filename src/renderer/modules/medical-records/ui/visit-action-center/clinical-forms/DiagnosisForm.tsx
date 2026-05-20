@@ -533,6 +533,7 @@ export const DiagnosisForm: React.FC<DiagnosisFormProps> = ({
         diagnosis={activeDiagnosis}
         values={previewValues}
         initialAction={previewAction}
+        theme={theme}
       />
 
       {/* Custom Dialog Component */}
@@ -549,6 +550,7 @@ export const DiagnosisForm: React.FC<DiagnosisFormProps> = ({
           showInput={dialogState.showInput}
           inputLabel={dialogState.inputLabel}
           inputPlaceholder={dialogState.inputPlaceholder}
+          theme={theme}
         />
       )}
     </>

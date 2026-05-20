@@ -1,5 +1,3 @@
-// src/renderer/shared/components/ConfirmationDialog.tsx
-
 import React from 'react';
 import { X, AlertTriangle, CheckCircle, Info } from 'lucide-react';
 import { cn } from '../../../utils/classNameUtils';
@@ -18,6 +16,7 @@ interface ConfirmationDialogProps {
   inputLabel?: string;
   inputPlaceholder?: string;
   inputValue?: string;
+  theme?: 'light' | 'dark';
 }
 
 export const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({
@@ -33,8 +32,10 @@ export const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({
   inputLabel,
   inputPlaceholder = 'Enter reason...',
   inputValue: externalInputValue,
+  theme = 'light',
 }) => {
   const [internalInputValue, setInternalInputValue] = React.useState('');
+  const isDark = theme === 'dark';
 
   const handleConfirm = () => {
     if (showInput) {
@@ -69,32 +70,41 @@ export const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({
   const getIconBg = () => {
     switch (type) {
       case 'warning':
-        return 'bg-amber-100';
+        return isDark ? 'bg-amber-900/30' : 'bg-amber-100';
       case 'error':
-        return 'bg-red-100';
+        return isDark ? 'bg-red-900/30' : 'bg-red-100';
       case 'success':
-        return 'bg-green-100';
+        return isDark ? 'bg-green-900/30' : 'bg-green-100';
       default:
-        return 'bg-blue-100';
+        return isDark ? 'bg-blue-900/30' : 'bg-blue-100';
     }
   };
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50">
-      <div className="mx-4 w-full max-w-md rounded-2xl bg-white shadow-xl dark:bg-slate-900">
+      <div className={cn(
+        'mx-4 w-full max-w-md rounded-2xl shadow-xl',
+        isDark ? 'bg-slate-900' : 'bg-white'
+      )}>
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-slate-200 p-4 dark:border-slate-700">
+        <div className={cn(
+          'flex items-center justify-between border-b p-4',
+          isDark ? 'border-slate-700' : 'border-slate-200'
+        )}>
           <div className="flex items-center gap-3">
             <div className={cn('rounded-full p-2', getIconBg())}>
               {getIcon()}
             </div>
-            <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+            <h2 className={cn('text-lg font-semibold', isDark ? 'text-slate-100' : 'text-slate-900')}>
               {title}
             </h2>
           </div>
           <button
             onClick={handleCancel}
-            className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800"
+            className={cn(
+              'rounded-lg p-1',
+              isDark ? 'text-slate-400 hover:bg-slate-800 hover:text-slate-300' : 'text-slate-400 hover:bg-slate-100 hover:text-slate-600'
+            )}
           >
             <X className="h-5 w-5" />
           </button>
@@ -102,13 +112,12 @@ export const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({
 
         {/* Body */}
         <div className="p-4">
-          <p className="text-sm text-slate-600 dark:text-slate-300">{message}</p>
+          <p className={cn('text-sm', isDark ? 'text-slate-300' : 'text-slate-600')}>{message}</p>
 
-          {/* Input field for prompt */}
           {showInput && (
             <div className="mt-4">
               {inputLabel && (
-                <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">
+                <label className={cn('mb-1 block text-sm font-medium', isDark ? 'text-slate-300' : 'text-slate-700')}>
                   {inputLabel}
                 </label>
               )}
@@ -117,7 +126,10 @@ export const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({
                 onChange={(e) => setInternalInputValue(e.target.value)}
                 placeholder={inputPlaceholder}
                 rows={3}
-                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none transition-all focus:border-blue-500 focus:ring-1 focus:ring-blue-500 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
+                className={cn(
+                  'w-full rounded-lg border px-3 py-2 text-sm outline-none transition-all focus:border-blue-500 focus:ring-1 focus:ring-blue-500',
+                  isDark ? 'border-slate-600 bg-slate-800 text-slate-100' : 'border-slate-300'
+                )}
                 autoFocus
               />
             </div>
@@ -125,10 +137,16 @@ export const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="flex justify-end gap-3 border-t border-slate-200 p-4 dark:border-slate-700">
+        <div className={cn(
+          'flex justify-end gap-3 border-t p-4',
+          isDark ? 'border-slate-700' : 'border-slate-200'
+        )}>
           <button
             onClick={handleCancel}
-            className="rounded-lg px-4 py-2 text-sm font-medium text-slate-600 transition-all hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
+            className={cn(
+              'rounded-lg px-4 py-2 text-sm font-medium transition-all',
+              isDark ? 'text-slate-300 hover:bg-slate-800' : 'text-slate-600 hover:bg-slate-100'
+            )}
           >
             {cancelText}
           </button>

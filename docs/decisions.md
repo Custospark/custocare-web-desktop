@@ -130,3 +130,25 @@
 **Files changed (BE):**
 - `StoreTemplateRequest.php` — 3 new validation rules
 - `PrescriptionService.php` — 7 `??=` defaults in `applyTemplate()` loop
+
+---
+
+## 2026-05-20: Theme-Aware Dialogs — ConfirmationDialog + DiagnosesPreviewModal + ConsultationsPreviewModal
+
+**Context:** The `ConfirmationDialog` (shared/Feedback/Prompt/) used for dispute/verify/resolve/accept/decline in diagnosis and consultation forms had no `theme` prop — it relied entirely on `dark:` Tailwind CSS class strategy. The `DiagnosesPreviewModal` and `ConsultationsPreviewModal` had hardcoded light-mode colors with no dark mode support at all.
+
+**Decisions:**
+1. **`ConfirmationDialog`** — Added `theme?: 'light' | 'dark'` prop with `isDark` programmatic color switching. Replaced all `dark:` CSS classes with conditional ternary expressions using `isDark`. Icon background colors use opacity-based dark variants (`bg-amber-900/30`) for consistency with the rest of the app.
+2. **`DiagnosesPreviewModal`** + **`ConsultationsPreviewModal`** — Added `theme?: 'light' | 'dark'` prop. Extracted 7 shared color tokens (`cardBg`, `borderColor`, `bodyBg`, `textPrimary`, `textSecondary`, `textMuted`, `hoverBg`, `btnBorder`) via `isDark` and applied them across all 3 state branches (loading, empty, normal). Download PDF button also uses theme-aware green tones.
+3. **`DiagnosisForm`** + **`ConsultationsForm`** — Both now pass `theme={theme}` (already available from their own props) to `ConfirmationDialog`, `DiagnosesPreviewModal`, and `ConsultationsPreviewModal`.
+
+**Files changed:**
+- `ConfirmationDialog.tsx` — added `theme` prop, replaced `dark:` with `isDark` ternaries
+- `DiagnosesPreviewModal.tsx` — added `theme` prop, theme-aware color tokens
+- `ConsultationsPreviewModal.tsx` — added `theme` prop, theme-aware color tokens
+- `DiagnosisForm.tsx` — passes `theme={theme}` to both child dialogs
+- `ConsultationsForm.tsx` — passes `theme={theme}` to both child dialogs
+
+**Trade-offs:**
+- Uses shared color token variables rather than per-element `dark:` classes — consistent with the app's `isDark` pattern but less automatic than Tailwind's CSS-based strategy.
+- The `ConfirmationDialog` now has two code paths (old `dark:` classes remain removed), but the `useConfirm()`-based `ConfirmDialog` (shared/Feedback/ConfirmDialog/) was already theme-aware — these fixes bring the older `Prompt/ConfirmationDialog` up to parity.
