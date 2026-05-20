@@ -10,6 +10,8 @@ import { selectActiveVisitId, selectActiveVisitPatientId } from '../../../../../
 // Import queries for status indicators
 import { useGetActiveVisitClinicalNotes } from '../../../api/clinical-notes/clinicalNoteQueries';
 import { useGetActiveVisitDiagnoses } from '../../../api/diagnosis/diagnosisQueries';
+import { useGetActiveVisitConsultations } from '../../../api/consultations/consultationQueries';
+import { useGetActiveVisitVitals } from '../../../api/vitals/vitalQueries';
 import { useGetAllergies } from '../../../api/allergies/AllergyQueries';
 import { normalizeAllergyResponse } from '../../visit-action-center/clinical-forms/allergies-form-components';
 
@@ -274,6 +276,14 @@ export const MRPatientRecords: React.FC<MRPatientRecordsProps> = ({
     enabled: !!activeVisitId,
   });
 
+  const consultationsQuery = useGetActiveVisitConsultations({
+    enabled: !!activeVisitId,
+  });
+
+  const vitalsQuery = useGetActiveVisitVitals({
+    enabled: !!activeVisitId,
+  });
+
   const allergiesQuery = useGetAllergies(activePatientId ?? '', {}, {
     enabled: !!activePatientId,
   });
@@ -292,18 +302,21 @@ export const MRPatientRecords: React.FC<MRPatientRecordsProps> = ({
   const latestVisitStatus = useMemo(() => {
     const hasNotes = (clinicalNotesQuery.data?.data?.length || 0) > 0;
     const hasDiagnoses = (diagnosesQuery.data?.data?.length || 0) > 0;
-    
+    const hasConsultations = (consultationsQuery.data?.data?.length || 0) > 0;
+    const hasVitals = (vitalsQuery.data?.data?.length || 0) > 0;
+    const documentedCount = [hasNotes, hasDiagnoses, hasConsultations, hasVitals].filter(Boolean).length;
+
     if (activeVisitId) {
-      if (hasNotes && hasDiagnoses) {
+      if (documentedCount >= 3) {
         return {
           hasData: true,
           message: '✓ Documentation complete',
         };
       }
-      if (hasNotes || hasDiagnoses) {
+      if (documentedCount > 0) {
         return {
           hasData: true,
-          message: '⚠️ Partial documentation',
+          message: `⚠️ Partial documentation (${documentedCount}/4)`,
         };
       }
       return {
@@ -315,7 +328,7 @@ export const MRPatientRecords: React.FC<MRPatientRecordsProps> = ({
       hasData: false,
       message: 'No active visit selected',
     };
-  }, [activeVisitId, clinicalNotesQuery.data, diagnosesQuery.data]);
+  }, [activeVisitId, clinicalNotesQuery.data, diagnosesQuery.data, consultationsQuery.data, vitalsQuery.data]);
 
   // Determine medical history status
   const medicalHistoryStatus = useMemo(() => {

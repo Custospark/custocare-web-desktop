@@ -76,3 +76,22 @@
 
 **Trade-offs:**
 - `normalizeAllergyResponse` is in the allergies-form-components barrel, which is a UI-path utility. Ideal would be a shared API-level type fix, but this unblocks the display bug without cascading type changes to other consumers that may rely on the current (incorrect) type.
+
+---
+
+## 2026-05-20: Broader Documentation Check + Suspense Fallback Theme
+
+**Context:** The "Latest Visit" status card in `MRPatientRecords` only checked clinical notes and diagnoses, so it showed "No documentation yet" even when consultations or vitals were recorded. Separately, all `Suspense` fallbacks in `FocusModeRoutes` rendered `LoadingSkeleton` with its default `'dark'` theme, ignoring the actual theme setting.
+
+**Decisions:**
+1. **Broadened `latestVisitStatus`** to check 4 data sources: clinical notes, diagnoses, consultations, and vitals. "Complete" requires 3+/4, "Partial" shows `(x/4)` count for 1-2, "No documentation yet" when all are empty.
+2. **Added `useGetActiveVisitConsultations` and `useGetActiveVisitVitals`** queries to `MRPatientRecords` (both already cached — no additional network overhead beyond one API call each).
+3. **Passed `theme={theme}` to all 12 `LoadingSkeleton` Suspense fallbacks** in `FocusModeRoutes.tsx`, fixing the loading state theme mismatch.
+
+**Files changed:**
+- `MRPatientRecords.tsx` — added 2 imports, 2 hook calls, broadened latestVisitStatus
+- `FocusModeRoutes.tsx` — added `theme={theme}` to all 12 Suspense fallbacks
+
+**Trade-offs:**
+- Added 2 queries to MRPatientRecords — minimal overhead, both disabled when no active visit.
+- The 3/4 threshold for "complete" is subjective; can be adjusted per feedback.
