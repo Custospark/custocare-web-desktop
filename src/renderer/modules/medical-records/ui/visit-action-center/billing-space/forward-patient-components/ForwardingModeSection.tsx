@@ -1,12 +1,12 @@
 import React from 'react';
-import { User, GitBranch } from 'lucide-react';
+import { User, GitBranch, MapPin } from 'lucide-react';
 import type { UseFormReset, UseFormWatch } from 'react-hook-form';
 
 import {
   CARE_DELIVERY_WORKFLOW_LABELS,
-  DEFAULT_ENCOUNTER_WORKFLOW_STAGE,
   ENCOUNTER_WORKFLOW_STAGE_HINTS,
   ENCOUNTER_WORKFLOW_STAGE_ORDER,
+  type CareDeliveryWorkflow,
 } from '../../../../../pharmacy/api/dispensing/visit-queue/visitTypes';
 
 import type { ForwardPatientFormData } from './schema';
@@ -17,6 +17,7 @@ export interface ForwardingModeSectionProps {
   colors: ForwardPatientColors;
   watch: UseFormWatch<ForwardPatientFormData>;
   reset: UseFormReset<ForwardPatientFormData>;
+  currentWorkflow?: CareDeliveryWorkflow | null;
 }
 
 export const ForwardingModeSection: React.FC<ForwardingModeSectionProps> = ({
@@ -24,6 +25,7 @@ export const ForwardingModeSection: React.FC<ForwardingModeSectionProps> = ({
   colors,
   watch,
   reset,
+  currentWorkflow,
 }) => {
   const mode = watch('forwarding_mode');
   const selectedWorkflow =
@@ -33,7 +35,7 @@ export const ForwardingModeSection: React.FC<ForwardingModeSectionProps> = ({
     const note = watch('note');
     reset({
       forwarding_mode: 'workflow',
-      care_delivery_workflow: selectedWorkflow ?? DEFAULT_ENCOUNTER_WORKFLOW_STAGE,
+      ...(selectedWorkflow ? { care_delivery_workflow: selectedWorkflow } : {}),
       note: note ?? '',
     });
   };
@@ -97,7 +99,7 @@ export const ForwardingModeSection: React.FC<ForwardingModeSectionProps> = ({
         )}
         {modeButton(
           'staff',
-          'Specific person',
+          'Specific Team member',
           'Pick someone from the directory below.',
           <User className="h-4 w-4" />,
           mode === 'staff',
@@ -105,12 +107,27 @@ export const ForwardingModeSection: React.FC<ForwardingModeSectionProps> = ({
         )}
       </div>
 
+      {currentWorkflow && (
+        <div className={`rounded-lg border px-3 py-2.5 ${isDark ? 'border-indigo-800/40 bg-indigo-950/25' : 'border-indigo-200 bg-indigo-50'}`}>
+          <div className="flex items-center gap-2">
+            <MapPin className={`h-4 w-4 ${isDark ? 'text-indigo-400' : 'text-indigo-600'}`} />
+            <span className={`text-xs font-medium ${isDark ? 'text-indigo-300' : 'text-indigo-700'}`}>
+              Currently at
+            </span>
+            <span className={`text-sm font-semibold ${isDark ? 'text-indigo-200' : 'text-indigo-800'}`}>
+              {CARE_DELIVERY_WORKFLOW_LABELS[currentWorkflow]}
+            </span>
+          </div>
+        </div>
+      )}
+
       {mode === 'workflow' && (
         <div className="space-y-2">
           <p className={`text-xs font-medium ${colors.text.secondary}`}>Care step</p>
           <div className="grid gap-2 sm:grid-cols-2">
             {ENCOUNTER_WORKFLOW_STAGE_ORDER.map((wf) => {
               const selected = selectedWorkflow === wf;
+              const isCurrentStep = wf === currentWorkflow;
               const hint =
                 ENCOUNTER_WORKFLOW_STAGE_HINTS[wf] ?? 'Next team picks it up from their queue.';
               return (
@@ -125,15 +142,31 @@ export const ForwardingModeSection: React.FC<ForwardingModeSectionProps> = ({
                       note: note ?? '',
                     });
                   }}
-                  className={`rounded-lg border px-3 py-2.5 text-left text-sm transition-colors cursor-pointer ${
+                  className={`relative rounded-lg border px-3 py-2.5 text-left text-sm transition-colors cursor-pointer ${
                     selected
                       ? isDark
                         ? 'border-emerald-500/60 bg-emerald-950/35 text-emerald-100'
                         : 'border-emerald-400 bg-emerald-50 text-emerald-900'
-                      : `${colors.border.primary} ${colors.bg.primary} ${colors.text.primary} ${colors.bg.hover}`
+                      : isCurrentStep
+                        ? isDark
+                          ? 'border-indigo-600/50 bg-indigo-950/20 text-indigo-100'
+                          : 'border-indigo-300 bg-indigo-50/80 text-indigo-900'
+                        : `${colors.border.primary} ${colors.bg.primary} ${colors.text.primary} ${colors.bg.hover}`
                   }`}
                 >
-                  <span className="font-medium">{CARE_DELIVERY_WORKFLOW_LABELS[wf]}</span>
+                  <div className="flex items-center gap-1.5">
+                    {isCurrentStep && (
+                      <MapPin className={`h-3.5 w-3.5 ${isDark ? 'text-indigo-400' : 'text-indigo-500'}`} />
+                    )}
+                    <span className="font-medium">{CARE_DELIVERY_WORKFLOW_LABELS[wf]}</span>
+                    {isCurrentStep && (
+                      <span className={`ml-1 inline-block rounded-full px-1.5 py-0.5 text-[10px] font-medium leading-tight ${
+                        isDark ? 'bg-indigo-900/60 text-indigo-300' : 'bg-indigo-100 text-indigo-700'
+                      }`}>
+                        Current
+                      </span>
+                    )}
+                  </div>
                   <span className={`mt-0.5 block text-xs ${colors.text.secondary}`}>{hint}</span>
                 </button>
               );

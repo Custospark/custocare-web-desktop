@@ -26,7 +26,7 @@ export const ForwardPatientHeader: React.FC<HeaderProps> = ({
             Forward Patient
           </h2>
           <p className={colors.text.secondary}>
-            Send to a team queue or assign to a specific person
+            Send to a team queue or assign to a specific Team member.
           </p>
         </div>
 

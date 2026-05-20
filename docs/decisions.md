@@ -257,3 +257,24 @@
 - Adding eager loading adds a JOIN or extra query per request, but only when items are loaded — negligible overhead for correct behavior.
 - The `template_id` fallback on the FE means even if a future endpoint omits the eager loading, the editor won't falsely fall to manual mode (it will show a loading state until the template becomes available or an error occurs).
 - The `testHasTemplateId` check is always available because `template_id` is a direct column on the `lab_tests` table — no relationship needed.
+
+---
+
+## 2026-05-20: Forward Patient — Show Current Workflow Step
+
+**Context:** The Forward Patient component's "Care step" grid showed all available workflow stages (Medical Records, Doctor Visit, Pharmacy, etc.) to choose where to forward the patient, but never indicated which step the patient was currently at. Staff had to remember or guess where the patient currently was in the workflow.
+
+**Decision:**
+- Added optional `currentWorkflow` prop to `ForwardingModeSection` accepting the patient's current `CareDeliveryWorkflow` from `activeVisit.care_delivery_workflow`
+- When set, a "Currently at" banner shows above the care step grid (indigo-themed, icon + label)
+- In the grid, the current step button gets a distinct border/background (indigo instead of default) plus a `MapPin` icon and a small "Current" badge
+- No BE changes needed — `care_delivery_workflow` is already exposed in `VisitResource` and loaded via Redux `activeVisit`
+
+**Files changed:**
+- `ForwardingModeSection.tsx` — added `currentWorkflow` prop, current step indicator banner + visual highlight in grid
+- `ForwardPatient.tsx` — passes `activeVisit?.care_delivery_workflow` to `ForwardingModeSection`
+
+**Trade-offs:**
+- The current step display is purely visual — users can still forward to the same step (useful for re-queuing). No blocking logic was added.
+- Only `ENCOUNTER_WORKFLOW_STAGE_ORDER` stages are highlighted; steps not in that list (Registration, Triage, Imaging) show only in the "Currently at" banner but not in the grid.
+- The feature relies on `care_delivery_workflow` being set on the visit — visits that have never been forwarded (null) will not show a "Currently at" block.

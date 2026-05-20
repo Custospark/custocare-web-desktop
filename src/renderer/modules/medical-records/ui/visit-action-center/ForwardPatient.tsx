@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState, useCallback } from 'react';
+import React, { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -28,7 +28,6 @@ import { useGetBillableItems } from '../../api/billable-items/BillableItemsQueri
 
 import {
   CareDeliveryWorkflow,
-  DEFAULT_ENCOUNTER_WORKFLOW_STAGE,
   type StaffForwardingFilters,
   type ForwardingStaff,
   type StaffPresenceStatus,
@@ -133,7 +132,11 @@ export const ForwardPatient: React.FC<ForwardPatientProps> = ({
   const [clientSideSearchTerm, setClientSideSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] =
     useState<StaffFilterStatus>('available');
-  const [hasLoadedInitialData, setHasLoadedInitialData] = useState(false);
+  const hasLoadedInitialDataRef = useRef(false);
+  if (staffMembers.length > 0) {
+    hasLoadedInitialDataRef.current = true;
+  }
+  const hasLoadedInitialData = hasLoadedInitialDataRef.current;
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState<number>(10);
 
@@ -151,7 +154,6 @@ export const ForwardPatient: React.FC<ForwardPatientProps> = ({
     mode: 'onChange',
     defaultValues: {
       forwarding_mode: 'workflow',
-      care_delivery_workflow: DEFAULT_ENCOUNTER_WORKFLOW_STAGE,
       note: '',
     },
   });
@@ -292,14 +294,9 @@ export const ForwardPatient: React.FC<ForwardPatientProps> = ({
   });
 
   useEffect(() => {
-    if (staffMembers.length > 0 && !hasLoadedInitialData) {
-      setHasLoadedInitialData(true);
-    }
-  }, [staffMembers, hasLoadedInitialData]);
-
-  useEffect(() => {
     const timer = setTimeout(() => {
       setClientSideSearchTerm(searchTerm);
+      setCurrentPage(1);
     }, 300);
 
     return () => clearTimeout(timer);
@@ -326,7 +323,6 @@ export const ForwardPatient: React.FC<ForwardPatientProps> = ({
     } else {
       reset({
         forwarding_mode: 'workflow',
-        care_delivery_workflow: DEFAULT_ENCOUNTER_WORKFLOW_STAGE,
         note: sameVisitPending ? pendingForwarding?.note ?? '' : '',
       });
     }
@@ -400,20 +396,12 @@ export const ForwardPatient: React.FC<ForwardPatientProps> = ({
   );
 
   const paginatedStaff = useMemo(() => {
-    const startIndex = (currentPage - 1) * pageSize;
+    const startIndex = (safeCurrentPage - 1) * pageSize;
     const endIndex = startIndex + pageSize;
     return filteredStaff.slice(startIndex, endIndex);
-  }, [filteredStaff, currentPage, pageSize]);
+  }, [filteredStaff, safeCurrentPage, pageSize]);
 
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [clientSideSearchTerm, filterStatus, pageSize]);
-
-  useEffect(() => {
-    if (currentPage > totalPages) {
-      setCurrentPage(totalPages);
-    }
-  }, [currentPage, totalPages]);
+  const safeCurrentPage = Math.min(currentPage, totalPages);
 
   const summaryData = useMemo(() => buildStaffSummary(staffMembers), [staffMembers]);
 
@@ -466,7 +454,7 @@ export const ForwardPatient: React.FC<ForwardPatientProps> = ({
 
       <div className="p-6">
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-          <ForwardingModeSection isDark={isDark} colors={colors} watch={watch} reset={reset} />
+          <ForwardingModeSection isDark={isDark} colors={colors} watch={watch} reset={reset} currentWorkflow={activeVisit?.care_delivery_workflow} />
 
           {forwardMode === 'staff' && (
             <>
@@ -502,7 +490,7 @@ export const ForwardPatient: React.FC<ForwardPatientProps> = ({
                 errors={errors}
                 summaryData={summaryData}
                 clientSideSearchTerm={clientSideSearchTerm}
-                currentPage={currentPage}
+                currentPage={safeCurrentPage}
                 totalPages={totalPages}
                 pageSize={pageSize}
                 onPageChange={handlePageChange}
