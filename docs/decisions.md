@@ -343,3 +343,18 @@
 **Trade-offs:**
 - 60s interval for `now` means wait times on FocusedModeLayout update at most every minute (vs. per-render before). Acceptable for a display-time relative value.
 - `behavior: 'instant'` is less visually smooth but avoids racing with route animations — user sees content at the top immediately.
+
+---
+
+## 2026-05-20: Removed NavigationGuard Hook — Reverted to Plain useNavigate
+
+**Context:** The `useNavigationGuard` hook (added as Layer 1 of the three-layer crash protection) caused a 300ms delay on every sidebar click. Users reported navigation felt completely broken — clicking sidebar items did nothing for 300ms. Rapid clicks were also silently dropped, making the app appear unresponsive.
+
+**Decision:**
+- Deleted `src/renderer/shared/hooks/useNavigationGuard.ts`
+- Reverted `Sidebar.tsx` and `FocusedModeLayout.tsx` back to plain `useNavigate()` from `react-router-dom`
+- Kept the per-route `<ErrorBoundary>` in `SuspenseWrapper` (Layer 2) and the `cancelAllPendingQueries()` / `createNavigationSignal()` in `axiosConfig.ts` (Layer 3) — those didn't cause navigation issues
+
+**Trade-offs:**
+- Users can rapid-click sidebar links again, which risks the original crash scenario (competing lazy chunk loads). The per-route `ErrorBoundary` (Layer 2) still provides protection — a crash in one module won't take down the whole app.
+- No query cancellation before navigation — in-flight API requests from unmounting routes may still fire and update stale closures. This is the original behavior before the three-layer system.

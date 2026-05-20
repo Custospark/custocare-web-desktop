@@ -6,8 +6,7 @@ import React, {
   useLayoutEffect,
   useMemo,
 } from 'react';
-import { useLocation } from 'react-router-dom';
-import { useNavigationGuard } from '../../hooks/useNavigationGuard';
+import { useLocation, useNavigate } from 'react-router-dom';
 import {
   Briefcase,
   FileText,
@@ -116,7 +115,7 @@ export const Sidebar: React.FC<SidebarExtendedProps> = ({
   className,
   theme = 'dark',
 }) => {
-  const { navigate: guardedNavigate } = useNavigationGuard({ delay: 300, cooldown: 500, cancelQueries: true });
+  const navigate = useNavigate();
   const location = useLocation();
 
   const [activeHover, setActiveHover] = useState<string | null>(null);
@@ -502,13 +501,13 @@ const menuConfig: MenuItem[] = useMemo(
   const handleNavigation = useCallback(
     (e: React.MouseEvent, route: string) => {
       e.preventDefault();
-      guardedNavigate(route);
+      navigate(route);
 
       if (window.innerWidth < 1024) {
         onClose?.();
       }
     },
-    [guardedNavigate, onClose],
+    [navigate, onClose],
   );
 
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
@@ -548,24 +547,24 @@ const menuConfig: MenuItem[] = useMemo(
         const route = shortcutMap[e.key.toLowerCase()];
         if (route) {
           e.preventDefault();
-          guardedNavigate(route);
+          navigate(route);
         }
 
         if (e.key.toLowerCase() === 'p' && activeCapability === 'super_admin') {
           e.preventDefault();
-          guardedNavigate(ROUTES.PLATFORM_ADMINISTRATION);
+          navigate(ROUTES.PLATFORM_ADMINISTRATION);
         }
 
         if (e.key === ',') {
           e.preventDefault();
-          guardedNavigate(ROUTES.SETTINGS);
+          navigate(ROUTES.SETTINGS);
         }
       }
     };
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, onClose, guardedNavigate, currentMenuItems, activeCapability]);
+  }, [isOpen, onClose, navigate, currentMenuItems, activeCapability]);
 
   const contextSubtitle = useMemo(() => {
     if (activeCapability === 'super_admin') return 'Platform Administrator';

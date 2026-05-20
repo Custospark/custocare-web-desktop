@@ -14,7 +14,7 @@ import {
   Plus,
   ChevronRight,
 } from 'lucide-react';
-import { useNavigationGuard } from '../../hooks/useNavigationGuard';
+import { useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 
 import type { RootState } from '../../../app/store/rootReducer';
@@ -104,7 +104,7 @@ export const FocusedModeLayout: React.FC<FocusedModeLayoutProps> = ({
   onClose,
   children,
 }) => {
-  const { navigate: guardedNavigate } = useNavigationGuard({ delay: 300, cooldown: 500 });
+  const navigate = useNavigate();
 
   const [now, setNow] = useState<number>(() => Date.now());
   useEffect(() => {
@@ -148,15 +148,15 @@ export const FocusedModeLayout: React.FC<FocusedModeLayoutProps> = ({
 
   const handleClose = useCallback(() => {
     if (onClose) {
-      guardedNavigate(onClose);
+      navigate(onClose);
     } else {
-      guardedNavigate(-1);
+      navigate(-1);
     }
-  }, [onClose, guardedNavigate]);
+  }, [onClose, navigate]);
 
   const handleOpenAllergyFocus = useCallback(() => {
-    guardedNavigate(FOCUS_MODE_ROUTES.ALLERGY_FOCUS);
-  }, [guardedNavigate]);
+    navigate(FOCUS_MODE_ROUTES.ALLERGY_FOCUS);
+  }, [navigate]);
 
   const isDark = theme === 'dark';
 
