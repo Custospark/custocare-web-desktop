@@ -314,26 +314,36 @@ export const MRPatientRecords: React.FC<MRPatientRecordsProps> = ({
 
   // Determine medical history status
   const medicalHistoryStatus = useMemo(() => {
-    const normalizedAllergies = normalizeAllergyResponse(allergiesQuery.data);
-    const allergiesCount = normalizedAllergies.meta.total;
+    const mh = medicalHistoryQuery.data;
+    const categories = [
+      (mh?.clinical_notes?.length  || 0) > 0,
+      (mh?.diagnoses?.length       || 0) > 0,
+      (mh?.consultations?.length   || 0) > 0,
+      (mh?.vitals?.length          || 0) > 0,
+      (mh?.allergies?.length       || 0) > 0,
+      (mh?.prescriptions?.length   || 0) > 0,
+      (mh?.lab_requests?.length    || 0) > 0,
+      (mh?.lab_results?.length     || 0) > 0,
+    ];
+    const documentedCount = categories.filter(Boolean).length;
 
     if (activePatientId) {
-      if (allergiesCount > 0) {
+      if (documentedCount > 0) {
         return {
           hasData: true,
-          message: `${allergiesCount} allergy record${allergiesCount > 1 ? 's' : ''}`,
+          message: `Historical data exists (${documentedCount} of ${categories.length} clinical categories)`,
         };
       }
       return {
         hasData: false,
-        message: 'No historical data',
+        message: 'No historical data recorded',
       };
     }
     return {
       hasData: false,
       message: 'No patient selected',
     };
-  }, [activePatientId, allergiesQuery.data]);
+  }, [activePatientId, medicalHistoryQuery.data]);
 
   // Handler for Latest Visit
   const handleLatestVisit = useCallback(() => {
