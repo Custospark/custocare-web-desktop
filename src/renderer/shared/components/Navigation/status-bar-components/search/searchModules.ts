@@ -1,13 +1,15 @@
 import {
   ACCOUNT_ROUTES,
+  AMBULANCE_ROUTES,
   BILLING_ROUTES,
   CLINICAL_ROUTES,
   CUSTOCARE_HUB_ROUTES,
   LABORATORY_ROUTES,
   MEDICAL_RECORDS_ROUTES,
   NURSING_ROUTES,
-  // PATIENT_PORTAL_ROUTES,
+  PATIENT_PORTAL_ROUTES,
   PHARMACY_ROUTES,
+  REFERRAL_ROUTES,
   ROUTES,
 } from '../../../../../app/routes/routeConstants';
 import { ADMIN_ROUTES, ADMINISTRATION_CLINICAL_SPACE_MGT_ROUTES, ADMINISTRATION_FACILITY_SETTINGS_ROUTES } from '../../../../../app/routes/constants/administration.paths';
@@ -16,12 +18,16 @@ import type { SearchableModule } from '../StatusBarTypes';
 
 export const allModules: SearchableModule[] = [
   // Patient Portal
-  // { id: 'patient-dashboard', label: 'My Health', route: PATIENT_PORTAL_ROUTES.OVERVIEW, description: 'Patient overview, health summary, and personal care dashboard.', moduleCode: 'patient_dashboard', keywords: ['my health', 'patient dashboard', 'health overview', 'personal health', 'vitals', 'conditions', 'allergies', 'where is my health summary'], category: 'Patient Portal' },
-  // { id: 'patient-health', label: 'Health', route: PATIENT_PORTAL_ROUTES.HEALTH, description: 'View health summary, vitals, conditions, and allergies.', moduleCode: 'patient_dashboard', keywords: ['health', 'health summary', 'vitals', 'conditions', 'allergies', 'current health'], category: 'Patient Portal' },
-  // { id: 'patient-records', label: 'Patient Records', route: PATIENT_PORTAL_ROUTES.RECORDS, description: 'Access, request, and manage personal records.', moduleCode: 'patient_dashboard', keywords: ['records', 'medical records', 'download records', 'share records', 'request records', 'history'], category: 'Patient Portal' },
-  // { id: 'patient-test-results', label: 'Test Results', route: PATIENT_PORTAL_ROUTES.TEST_RESULTS, description: 'Track test and laboratory results over time.', moduleCode: 'patient_dashboard', keywords: ['test results', 'lab results', 'compare results', 'result history', 'explain results'], category: 'Patient Portal' },
-  // { id: 'patient-appointments', label: 'Appointments', route: PATIENT_PORTAL_ROUTES.APPOINTMENTS, description: 'Manage upcoming and past appointments.', moduleCode: 'patient_dashboard', keywords: ['appointments', 'schedule', 'book appointment', 'cancel appointment', 'upcoming', 'past visits'], category: 'Patient Portal' },
-  // { id: 'patient-medications', label: 'Medications', route: PATIENT_PORTAL_ROUTES.MEDICATIONS, description: 'Review current medications and refill requests.', moduleCode: 'patient_dashboard', keywords: ['medications', 'current meds', 'refill', 'interaction check', 'prescriptions'], category: 'Patient Portal' },
+  { id: 'patient-dashboard', label: 'My Health', route: PATIENT_PORTAL_ROUTES.OVERVIEW, description: 'Patient overview, health summary, and personal care dashboard.', moduleCode: 'patient_dashboard', keywords: ['my health', 'patient dashboard', 'health overview', 'personal health', 'vitals', 'conditions', 'allergies', 'where is my health summary'], category: 'Patient Portal' },
+  { id: 'patient-health', label: 'Health', route: PATIENT_PORTAL_ROUTES.HEALTH, description: 'View health summary, vitals, conditions, and allergies.', moduleCode: 'patient_dashboard', keywords: ['health', 'health summary', 'vitals', 'conditions', 'allergies', 'current health'], category: 'Patient Portal' },
+  { id: 'patient-records', label: 'Patient Records', route: PATIENT_PORTAL_ROUTES.RECORDS, description: 'Access, request, and manage personal records.', moduleCode: 'patient_dashboard', keywords: ['records', 'medical records', 'download records', 'share records', 'request records', 'history'], category: 'Patient Portal' },
+  { id: 'patient-test-results', label: 'Test Results', route: PATIENT_PORTAL_ROUTES.TEST_RESULTS, description: 'Track test and laboratory results over time.', moduleCode: 'patient_dashboard', keywords: ['test results', 'lab results', 'compare results', 'result history', 'explain results'], category: 'Patient Portal' },
+  { id: 'patient-appointments', label: 'Appointments', route: PATIENT_PORTAL_ROUTES.APPOINTMENTS, description: 'Manage upcoming and past appointments.', moduleCode: 'patient_dashboard', keywords: ['appointments', 'schedule', 'book appointment', 'cancel appointment', 'upcoming', 'past visits'], category: 'Patient Portal' },
+  { id: 'patient-medications', label: 'Medications', route: PATIENT_PORTAL_ROUTES.MEDICATIONS, description: 'Review current medications and refill requests.', moduleCode: 'patient_dashboard', keywords: ['medications', 'current meds', 'refill', 'interaction check', 'prescriptions'], category: 'Patient Portal' },
+
+  { id: 'patient-billing', label: 'Billing & Payments', route: PATIENT_PORTAL_ROUTES.BILLING, description: 'View billing history, invoices, and payment methods.', moduleCode: 'patient_dashboard', keywords: ['billing', 'payments', 'invoices', 'payment history', 'billing overview'], category: 'Patient Portal' },
+  { id: 'patient-notifications', label: 'Notifications', route: PATIENT_PORTAL_ROUTES.NOTIFICATIONS, description: 'View all notifications, inbox, and message center.', moduleCode: 'patient_dashboard', keywords: ['notifications', 'inbox', 'messages', 'alerts', 'patient notifications'], category: 'Patient Portal' },
+  { id: 'patient-downloads', label: 'Downloads & Reports', route: PATIENT_PORTAL_ROUTES.DOWNLOADS, description: 'Download medical records, lab reports, and billing documents.', moduleCode: 'patient_dashboard', keywords: ['downloads', 'reports', 'download records', 'medical reports', 'lab reports download'], category: 'Patient Portal' },
 
   // Staff Portal
   { id: 'staff-dashboard', label: 'Staff Portal', route: ROUTES.STAFF_DASHBOARD, description: 'Staff workspace entry and capability selection.', moduleCode: 'staff_dashboard', keywords: ['staff portal', 'staff dashboard', 'workspace', 'employee', 'switch workspace'], category: 'Administration' },
@@ -88,6 +94,27 @@ export const allModules: SearchableModule[] = [
   { id: 'pharmacy-inventory', label: 'Pharmacy Inventory', route: PHARMACY_ROUTES.INVENTORY, description: 'Inventory and medication stock management.', moduleCode: 'pharmacy', keywords: ['pharmacy inventory', 'medication stock', 'drug inventory'], category: 'Clinical' },
   { id: 'pharmacy-receipts', label: 'Pharmacy Receipts', route: PHARMACY_ROUTES.RECEIPTS, description: 'Pharmacy receipts and billing records.', moduleCode: 'pharmacy', keywords: ['pharmacy receipts', 'dispensing payments', 'pharmacy billing'], category: 'Clinical' },
 
+  // Ambulance Module
+  { id: 'amb-intelligence', label: 'Fleet Intelligence', route: AMBULANCE_ROUTES.OVERVIEW, description: 'Active trips, vehicle availability, and fleet status overview.', moduleCode: 'ambulance', keywords: ['ambulance intelligence', 'fleet dashboard', 'active trips', 'fleet status', 'vehicle availability'], category: 'Clinical' },
+  { id: 'amb-queue', label: 'Ambulance — Patient Intake', route: AMBULANCE_ROUTES.PATIENT_QUEUE, description: 'Queue and intake for patients requiring transport.', moduleCode: 'ambulance', keywords: ['ambulance queue', 'transport queue', 'ambulance intake', 'patient transport'], category: 'Clinical' },
+  { id: 'amb-transport-encounter', label: 'Transport Encounter Center', route: AMBULANCE_ROUTES.ACTION_CENTER_TRANSPORT, description: 'Dispatch board, trip workspace, and transport encounter actions.', moduleCode: 'ambulance', keywords: ['transport encounter', 'dispatch board', 'trip workspace', 'ambulance dispatch'], category: 'Clinical' },
+  { id: 'amb-fleet-overview', label: 'Fleet & Assets', route: AMBULANCE_ROUTES.FLEET_OVERVIEW, description: 'Vehicles, crew assignments, and fleet analytics.', moduleCode: 'ambulance', keywords: ['fleet assets', 'vehicles', 'crew assignment', 'fleet analytics'], category: 'Clinical' },
+  { id: 'amb-fleet-dispatch', label: 'Fleet Dispatch Board', route: AMBULANCE_ROUTES.FLEET_DISPATCH, description: 'Active board, new trips, and trip history.', moduleCode: 'ambulance', keywords: ['fleet dispatch', 'active board', 'new trip', 'trip history'], category: 'Clinical' },
+  { id: 'amb-fleet-vehicles', label: 'Fleet Vehicles', route: AMBULANCE_ROUTES.FLEET_VEHICLES, description: 'Vehicle registry, service schedule, and vehicle details.', moduleCode: 'ambulance', keywords: ['fleet vehicles', 'ambulance vehicle', 'service schedule', 'vehicle registry'], category: 'Clinical' },
+  { id: 'amb-fleet-crew', label: 'Fleet Crew', route: AMBULANCE_ROUTES.FLEET_CREW, description: 'Crew assignments by vehicle and by staff.', moduleCode: 'ambulance', keywords: ['fleet crew', 'crew assignment', 'ambulance staff', 'crew by vehicle'], category: 'Clinical' },
+  { id: 'amb-fleet-analytics', label: 'Fleet Analytics', route: AMBULANCE_ROUTES.FLEET_ANALYTICS, description: 'Fleet performance and operational analytics.', moduleCode: 'ambulance', keywords: ['fleet analytics', 'ambulance metrics', 'fleet performance', 'transport stats'], category: 'Clinical' },
+  { id: 'amb-receipts', label: 'Ambulance — Billing & Receipts', route: AMBULANCE_ROUTES.RECEIPTS, description: 'Review captured charges and issued receipts for transport encounters.', moduleCode: 'ambulance', keywords: ['ambulance receipts', 'transport billing', 'ambulance charges'], category: 'Finance' },
+  { id: 'amb-forward', label: 'Ambulance — Forward Patient', route: AMBULANCE_ROUTES.ACTION_CENTER_FORWARD_PATIENT, description: 'Forward patient from transport encounter.', moduleCode: 'ambulance', keywords: ['forward ambulance patient', 'transport transfer', 'send from ambulance'], category: 'Clinical' },
+
+  // Referral Module
+  { id: 'ref-intelligence', label: 'Referral Intelligence', route: REFERRAL_ROUTES.OVERVIEW, description: 'Pending, incoming, and outgoing referral volume at a glance.', moduleCode: 'referrals', keywords: ['referral intelligence', 'referral overview', 'referral dashboard', 'pending referrals'], category: 'Clinical' },
+  { id: 'ref-queue', label: 'Referral — Patient Intake', route: REFERRAL_ROUTES.PATIENT_QUEUE, description: 'Queue and intake for visits in the referral workflow.', moduleCode: 'referrals', keywords: ['referral queue', 'referral intake', 'referral patients'], category: 'Clinical' },
+  { id: 'ref-encounter', label: 'Referral Encounter Center', route: REFERRAL_ROUTES.ACTION_CENTER, description: 'Patient context with referral status, create request, and forward.', moduleCode: 'referrals', keywords: ['referral encounter', 'referral center', 'referral workspace'], category: 'Clinical' },
+  { id: 'ref-network', label: 'Referral Network', route: REFERRAL_ROUTES.NETWORK, description: 'Facility-wide pending, incoming, and outgoing referrals.', moduleCode: 'referrals', keywords: ['referral network', 'incoming referrals', 'outgoing referrals', 'pending referrals'], category: 'Clinical' },
+  { id: 'ref-create', label: 'Referral — Create Referral', route: REFERRAL_ROUTES.ACTION_CENTER_CREATE_REFERRAL, description: 'Create a new referral request.', moduleCode: 'referrals', keywords: ['create referral', 'new referral', 'referral request'], category: 'Clinical' },
+  { id: 'ref-receipts', label: 'Referral — Billing & Receipts', route: REFERRAL_ROUTES.RECEIPTS, description: 'Review charges and receipts for referral encounters.', moduleCode: 'referrals', keywords: ['referral receipts', 'referral billing', 'referral charges'], category: 'Finance' },
+  { id: 'ref-forward', label: 'Referral — Forward Patient', route: REFERRAL_ROUTES.ACTION_CENTER_FORWARD_PATIENT, description: 'Forward patient from referral workflow.', moduleCode: 'referrals', keywords: ['forward referral patient', 'referral transfer'], category: 'Clinical' },
+
   // Billing Module
   { id: 'billing-intelligence', label: 'Financial Intelligence', route: BILLING_ROUTES.INTELLIGENCE, description: 'Billing analytics, revenue trends, and financial operations.', moduleCode: 'billing', keywords: ['financial intelligence', 'billing intelligence', 'revenue stats', 'collections', 'finance dashboard'], category: 'Finance' },
   { id: 'billing-queue', label: 'Billing Queue', route: BILLING_ROUTES.PATIENT_QUEUE, description: 'Visits waiting for billing workflow.', moduleCode: 'billing', keywords: ['billing queue', 'charge queue', 'ready for billing'], category: 'Finance' },
@@ -140,4 +167,7 @@ export const allModules: SearchableModule[] = [
   { id: 'shortcut-billing-root', label: 'Billing', route: BILLING_ROUTES.INTELLIGENCE, description: 'Jump to Financial intelligence page.', moduleCode: 'billing', keywords: ['billing', 'finance', 'financial intelligence'], category: 'Finance' },
   { id: 'shortcut-admin-root', label: 'Administration', route: ADMIN_ROUTES.OVERVIEW, description: 'Jump to Facility intelligence page.', moduleCode: 'administration', keywords: ['administration', 'facility governance', 'admin overview'], category: 'Administration' },
   { id: 'shortcut-custocare-hub-root', label: 'Custocare Hub', route: CUSTOCARE_HUB_ROUTES.LEARNING_CENTER, description: 'Jump to the Custocare Hub learning workspace.', moduleCode: 'custocare_hub', keywords: ['custocare hub', 'hub', 'help', 'documentation hub'], category: 'Custocare Hub' },
+  { id: 'shortcut-ambulance-root', label: 'Ambulance', route: AMBULANCE_ROUTES.OVERVIEW, description: 'Jump to Fleet Intelligence page.', moduleCode: 'ambulance', keywords: ['ambulance', 'fleet', 'transport'], category: 'Clinical' },
+  { id: 'shortcut-referral-root', label: 'Referral', route: REFERRAL_ROUTES.OVERVIEW, description: 'Jump to Referral Intelligence page.', moduleCode: 'referrals', keywords: ['referral', 'referral network', 'referrals overview'], category: 'Clinical' },
+  { id: 'shortcut-patient-portal-root', label: 'Patient Portal', route: PATIENT_PORTAL_ROUTES.OVERVIEW, description: 'Jump to My Health patient dashboard.', moduleCode: 'patient_dashboard', keywords: ['patient portal', 'my health', 'patient dashboard'], category: 'Patient Portal' },
 ];
