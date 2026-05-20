@@ -1,2 +1,21 @@
 @import "tailwindcss";
-@import '../../public/styles/index.css'
+@import '../../public/styles/index.css';
+
+@layer base {
+  button:not(:disabled),
+  [type='button']:not(:disabled),
+  [type='submit']:not(:disabled),
+  [type='reset']:not(:disabled),
+  [role='button']:not(:disabled),
+  [role='tab']:not(:disabled),
+  [role='menuitem']:not(:disabled),
+  [role='option']:not(:disabled),
+  [role='checkbox']:not(:disabled),
+  [role='radio']:not(:disabled),
+  [role='switch']:not(:disabled),
+  select:not(:disabled),
+  summary,
+  label {
+    cursor: pointer;
+  }
+}

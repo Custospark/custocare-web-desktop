@@ -8,7 +8,9 @@ import {
 } from '../../../../../api/lab/LabQueries';
 import {
   LabRequestItemStatus,
+  LabResultFlag,
   TemplateFieldDataType,
+  type LabResult,
   type LabTemplateField,
 } from '../../../../../api/lab/LabTypes';
 import type { LabResultEditorModalProps, LabResultFieldDraft } from '../labResultForm.types';
@@ -37,7 +39,7 @@ const getSelectOptions = (field?: LabTemplateField | null): string[] => {
 };
 
 // Create a manual fallback draft when no template fields exist
-const createManualFallbackDraft = (existingResults: any[]): LabResultFieldDraft[] => {
+const createManualFallbackDraft = (existingResults: LabResult[]): LabResultFieldDraft[] => {
   if (existingResults.length > 0) {
     return existingResults.map((result, index) => ({
       localId: result.result_uuid || `manual-${index}`,
@@ -80,7 +82,7 @@ const createManualFallbackDraft = (existingResults: any[]): LabResultFieldDraft[
       unit: '',
       reference_min: '',
       reference_max: '',
-      flag: 'pending' as any,
+      flag: LabResultFlag.PENDING,
       interpretation: '',
       comments: '',
       existingResult: undefined,
@@ -101,15 +103,14 @@ export const LabResultItemResultEditor: React.FC<LabResultEditorModalProps> = ({
 }) => {
   const [drafts, setDrafts] = useState<LabResultFieldDraft[]>([]);
   const [saveError, setSaveError] = useState<string | null>(null);
-  const [isManualMode, setIsManualMode] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
   const templateUuid = item?.lab_test?.template?.template_uuid || '';
   const hasTemplate = !!templateUuid;
-  const hasTemplateWithFields = hasTemplate;
+  const testHasTemplateId = !!item?.lab_test?.template_id;
 
   const fieldsQuery = useGetFieldsByTemplate(templateUuid, {
-    enabled: open && hasTemplateWithFields,
+    enabled: open && hasTemplate,
   });
 
   const createResults = useBulkCreateResults();
@@ -128,13 +129,9 @@ export const LabResultItemResultEditor: React.FC<LabResultEditorModalProps> = ({
     [existingResults]
   );
 
-  // Determine if we should use manual mode
-  const shouldUseManualMode = useMemo(() => {
-    const noTemplateFields = !hasTemplateWithFields || templateFields.length === 0;
-    const hasExistingResults = existingResults.length > 0;
-    
-    return (!hasTemplateWithFields || (noTemplateFields && !hasExistingResults)) || isManualMode;
-  }, [hasTemplateWithFields, templateFields.length, existingResults.length, isManualMode]);
+  // Only fall to manual mode when the test genuinely has no template at all.
+  // If it has a template (template_id set), wait for fields to load.
+  const noTemplateFieldsAvailable = !testHasTemplateId && !hasTemplate;
 
   // Reset drafts when modal opens or when results change
   useEffect(() => {
@@ -143,17 +140,13 @@ export const LabResultItemResultEditor: React.FC<LabResultEditorModalProps> = ({
     setSaveError(null);
     setIsSaving(false);
     
-    const noTemplateFields = !hasTemplateWithFields || templateFields.length === 0;
-    const hasExistingResults = existingResults.length > 0;
-    
-    if (noTemplateFields || (shouldUseManualMode && !hasExistingResults)) {
+    if (noTemplateFieldsAvailable) {
       setDrafts(createManualFallbackDraft(existingResults));
-      setIsManualMode(true);
     } else {
       setDrafts(buildDraftsFromFieldsAndResults(templateFields, existingResults));
-      setIsManualMode(false);
     }
-  }, [open, item, resultsKey, templateFields, hasTemplateWithFields, shouldUseManualMode]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, item, resultsKey, templateFields, hasTemplate, noTemplateFieldsAvailable]);
 
   const loading = fieldsQuery.isLoading;
   const saving = createResults.isPending || updateResult.isPending || isSaving;
@@ -195,7 +188,7 @@ export const LabResultItemResultEditor: React.FC<LabResultEditorModalProps> = ({
       unit: '',
       reference_min: '',
       reference_max: '',
-      flag: 'pending' as any,
+      flag: LabResultFlag.PENDING,
       interpretation: '',
       comments: '',
       existingResult: undefined,
@@ -231,6 +224,9 @@ export const LabResultItemResultEditor: React.FC<LabResultEditorModalProps> = ({
       const getDraftInputValue = (draft: LabResultFieldDraft): string =>
         draft.data_type === TemplateFieldDataType.NUMBER ? draft.numeric_value : draft.value;
 
+      const isManualField = (draft: LabResultFieldDraft): boolean =>
+        draft.template_field_id === null || draft.template_field_id === undefined;
+
       const createPayloads = meaningfulDrafts
         .filter((draft) => draft.isNew && !draft.result_uuid)
         .map((draft) => {
@@ -255,7 +251,7 @@ export const LabResultItemResultEditor: React.FC<LabResultEditorModalProps> = ({
             recorded_by_staff_id: staffId || null,
             metadata: {
               source: 'lab-result-item-result-editor',
-              is_manual_entry: !hasTemplateWithFields,
+              is_manual_entry: isManualField(draft),
             },
           };
         });
@@ -285,7 +281,7 @@ export const LabResultItemResultEditor: React.FC<LabResultEditorModalProps> = ({
               recorded_by_staff_id: staffId || null,
               metadata: {
                 source: 'lab-result-item-result-editor',
-                is_manual_entry: !hasTemplateWithFields,
+                is_manual_entry: isManualField(draft),
               },
             },
           };
@@ -362,7 +358,7 @@ export const LabResultItemResultEditor: React.FC<LabResultEditorModalProps> = ({
             </div>
           )}
 
-          {!readOnly && isManualMode && (
+          {!readOnly && noTemplateFieldsAvailable && (
             <div
               className={cn(
                 'mb-4 rounded-xl border px-4 py-3 text-sm',
@@ -409,7 +405,7 @@ export const LabResultItemResultEditor: React.FC<LabResultEditorModalProps> = ({
                 );
               })}
 
-              {!readOnly && isManualMode && (
+              {!readOnly && (
                 <button
                   type="button"
                   onClick={handleAddManualField}
@@ -422,7 +418,7 @@ export const LabResultItemResultEditor: React.FC<LabResultEditorModalProps> = ({
                   )}
                 >
                   <Plus className="h-4 w-4" />
-                  Add Another Result Field
+                  {noTemplateFieldsAvailable ? 'Add Another Result Field' : 'Add Manual Result Field'}
                 </button>
               )}
             </div>

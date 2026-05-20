@@ -18,8 +18,8 @@ export const FOCUS_MODE_ROUTE_ACCESS: readonly FocusModeRouteAccessConfig[] = [
   },
   {
     prefix: FOCUS_MODE_ROUTES.PATIENT_RECORD_FOCUS,
-    moduleCodes: ['medical_records'],
-    displayName: 'Medical Records',
+    moduleCodes: ['medical_records', 'clinical', 'nursing', 'pharmacy', 'laboratory', 'ambulance', 'referrals', 'billing'],
+    displayName: 'Patient Records',
   },
   {
     prefix: '/reports-focus',
@@ -33,7 +33,7 @@ export const FOCUS_MODE_ROUTE_ACCESS: readonly FocusModeRouteAccessConfig[] = [
   },
   {
     prefix: '/medical-records-focus',
-    moduleCodes: ['medical_records'],
+    moduleCodes: ['medical_records', 'clinical', 'nursing', 'pharmacy', 'laboratory', 'ambulance', 'referrals', 'billing'],
     displayName: 'Medical Records',
   },
   {

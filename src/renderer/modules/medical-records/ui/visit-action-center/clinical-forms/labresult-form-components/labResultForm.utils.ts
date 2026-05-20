@@ -646,6 +646,29 @@ export const extractResultsArray = (payload: unknown): LabResult[] => {
 export const sortTemplateFields = (fields: LabTemplateField[]): LabTemplateField[] =>
   [...fields].sort((a, b) => (a.display_order || 0) - (b.display_order || 0));
 
+const draftFromResult = (result: LabResult, index: number): LabResultFieldDraft => ({
+  localId: result.result_uuid || `existing-${index}`,
+  result_uuid: result.result_uuid,
+  template_field_id: result.template_field_id,
+  field_uuid: result.template_field?.field_uuid || null,
+  field_name: result.template_field?.name || `Result ${index + 1}`,
+  field_code: result.template_field?.code || null,
+  data_type: result.template_field?.data_type || TemplateFieldDataType.TEXT,
+  display_order: result.template_field?.display_order || index + 1,
+  is_required: !!result.template_field?.is_required,
+  is_critical: !!result.template_field?.is_critical,
+  value: result.value || (result.numeric_value !== null ? String(result.numeric_value) : ''),
+  numeric_value: result.numeric_value !== null ? String(result.numeric_value) : '',
+  unit: result.unit || result.template_field?.unit || '',
+  reference_min: result.reference_min !== null ? String(result.reference_min) : '',
+  reference_max: result.reference_max !== null ? String(result.reference_max) : '',
+  flag: result.flag,
+  interpretation: result.interpretation || '',
+  comments: result.comments || '',
+  existingResult: result,
+  isNew: false,
+});
+
 export const buildDraftsFromFieldsAndResults = (
   fields: LabTemplateField[],
   results: LabResult[]
@@ -656,65 +679,52 @@ export const buildDraftsFromFieldsAndResults = (
       .map((result) => [result.template_field_id as number, result])
   );
 
+  const manualResults = results.filter((result) => result.template_field_id === null);
+
   if (!fields.length && results.length) {
-    return results.map((result, index) => ({
-      localId: result.result_uuid || `existing-${index}`,
-      result_uuid: result.result_uuid,
-      template_field_id: result.template_field_id,
-      field_uuid: result.template_field?.field_uuid || null,
-      field_name: result.template_field?.name || `Result ${index + 1}`,
-      field_code: result.template_field?.code || null,
-      data_type: result.template_field?.data_type || TemplateFieldDataType.TEXT,
-      display_order: result.template_field?.display_order || index + 1,
-      is_required: !!result.template_field?.is_required,
-      is_critical: !!result.template_field?.is_critical,
-      value: result.value || (result.numeric_value !== null ? String(result.numeric_value) : ''),
-      numeric_value: result.numeric_value !== null ? String(result.numeric_value) : '',
-      unit: result.unit || result.template_field?.unit || '',
-      reference_min: result.reference_min !== null ? String(result.reference_min) : '',
-      reference_max: result.reference_max !== null ? String(result.reference_max) : '',
-      flag: result.flag,
-      interpretation: result.interpretation || '',
-      comments: result.comments || '',
-      existingResult: result,
-      isNew: false,
-    }));
+    return results.map((result, index) => draftFromResult(result, index));
   }
 
-  return sortTemplateFields(fields).map((field, index) => {
-  const existing = resultByFieldId.get(field.id);
+  const fieldDrafts = sortTemplateFields(fields).map((field, index) => {
+    const existing = resultByFieldId.get(field.id);
 
-  return {
-    localId: existing?.result_uuid || field.field_uuid || `field-${index}`,
-    result_uuid: existing?.result_uuid,
-    template_field_id: field.id,
-    field_uuid: field.field_uuid,
-    field_name: field.name,
-    field_code: field.code,
-    data_type: field.data_type,
-    display_order: field.display_order,
-    is_required: field.is_required,
-    is_critical: field.is_critical,
-    value: existing?.value || (existing && existing.numeric_value !== null ? String(existing.numeric_value) : ''),
-    numeric_value: existing && existing.numeric_value !== null ? String(existing.numeric_value) : '',
-    unit: existing?.unit || field.unit || '',
-    reference_min:
-      existing && existing.reference_min !== null && existing.reference_min !== undefined
-        ? String(existing.reference_min)
-        : field.reference_min !== null && field.reference_min !== undefined
-        ? String(field.reference_min)
-        : '',
-    reference_max:
-      existing && existing.reference_max !== null && existing.reference_max !== undefined
-        ? String(existing.reference_max)
-        : field.reference_max !== null && field.reference_max !== undefined
-        ? String(field.reference_max)
-        : '',
-    flag: existing?.flag || LabResultFlag.PENDING,
-    interpretation: existing?.interpretation || '',
-    comments: existing?.comments || '',
-    existingResult: existing,
-    isNew: !existing,
-  };
-});
+    return {
+      localId: existing?.result_uuid || field.field_uuid || `field-${index}`,
+      result_uuid: existing?.result_uuid,
+      template_field_id: field.id,
+      field_uuid: field.field_uuid,
+      field_name: field.name,
+      field_code: field.code,
+      data_type: field.data_type,
+      display_order: field.display_order,
+      is_required: field.is_required,
+      is_critical: field.is_critical,
+      value: existing?.value || (existing && existing.numeric_value !== null ? String(existing.numeric_value) : ''),
+      numeric_value: existing && existing.numeric_value !== null ? String(existing.numeric_value) : '',
+      unit: existing?.unit || field.unit || '',
+      reference_min:
+        existing && existing.reference_min !== null && existing.reference_min !== undefined
+          ? String(existing.reference_min)
+          : field.reference_min !== null && field.reference_min !== undefined
+          ? String(field.reference_min)
+          : '',
+      reference_max:
+        existing && existing.reference_max !== null && existing.reference_max !== undefined
+          ? String(existing.reference_max)
+          : field.reference_max !== null && field.reference_max !== undefined
+          ? String(field.reference_max)
+          : '',
+      flag: existing?.flag || LabResultFlag.PENDING,
+      interpretation: existing?.interpretation || '',
+      comments: existing?.comments || '',
+      existingResult: existing,
+      isNew: !existing,
+    };
+  });
+
+  const manualDrafts = manualResults.map((result, index) =>
+    draftFromResult(result, index)
+  );
+
+  return [...fieldDrafts, ...manualDrafts];
 };

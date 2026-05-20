@@ -152,3 +152,108 @@
 **Trade-offs:**
 - Uses shared color token variables rather than per-element `dark:` classes — consistent with the app's `isDark` pattern but less automatic than Tailwind's CSS-based strategy.
 - The `ConfirmationDialog` now has two code paths (old `dark:` classes remain removed), but the `useConfirm()`-based `ConfirmDialog` (shared/Feedback/ConfirmDialog/) was already theme-aware — these fixes bring the older `Prompt/ConfirmationDialog` up to parity.
+
+---
+
+## 2026-05-20: Module Access — Broadened Focus Route Permissions for Cross-Module Components
+
+**Context:** Focus-mode components (Latest Visit, Medical History, Forward Patient) live under the `medical-records` module's route tree but are reused by other modules (front desk, nursing, pharmacy, laboratory, etc.). The `ModuleAccessMiddleware` uses `FOCUS_MODE_ROUTE_ACCESS` to validate access by prefix, but `PATIENT_RECORD_FOCUS` (`/patient-record-focus`) and `/medical-records-focus` entries only allowed `['medical_records']`. Users without `medical_records` module access (e.g., front desk, nursing, pharmacy) were blocked from these shared components.
+
+**Decision:**
+- Updated `PATIENT_RECORD_FOCUS` entry in `focusModeRouteAccess.ts` — `moduleCodes` changed from `['medical_records']` to `['medical_records', 'clinical', 'nursing', 'pharmacy', 'laboratory', 'ambulance', 'referrals', 'billing']`
+- Updated `/medical-records-focus` entry — same change
+- No changes needed to `ModuleAccessMiddleware.tsx` — `validateModuleAccess` already uses `.some()` against the multi-code array, so it was already equipped for this pattern
+
+**Files changed:**
+- `focusModeRouteAccess.ts` — 2 entries broadened
+
+**Trade-offs:**
+- Broadening access means any clinical staff with any of the listed modules can see patient records in focus mode. This matches the clinical workflow intent but reduces strict module isolation.
+- If finer-grained access is needed later, individual focus routes could get their own entries (vs. prefix-based matching) or a per-route access function could be introduced.
+
+---
+
+## 2026-05-20: Global Cursor Pointer for All Interactive Elements
+
+**Context:** Interactive elements throughout the app (buttons, tabs, dropdown items, selects, labels, checkboxes, switches, etc.) inconsistently had `cursor: pointer`. Some had it via inline utility classes, others relied on the browser default (`cursor: default` for buttons, selects, and ARIA roles). The user wanted consistent `cursor: pointer` across all interactive elements on every theme.
+
+**Decision:**
+- Added a `@layer base` block in `App.css` with a grouped selector targeting all common interactive elements
+- Uses `:not(:disabled)` to preserve `cursor: not-allowed` / default cursor on disabled interactive elements
+- Covers: `button`, `[type="button"]`, `[type="submit"]`, `[type="reset"]`, `[role="button"]`, `[role="tab"]`, `[role="menuitem"]`, `[role="option"]`, `[role="checkbox"]`, `[role="radio"]`, `[role="switch"]`, `select`, `summary`, `label`
+- Excludes `<a>` (already `pointer` by default), `<input>`/`<textarea>` (should keep `text` cursor)
+- Component-level `cursor-pointer` / `cursor-not-allowed` utility classes override this base layer via specificity
+
+**Files changed:**
+- `App.css` — new `@layer base` block
+- `LabRequestDetailsCard.tsx` — fixed `&&` → ternary for `cursor-pointer` on Cancel Request trigger button
+
+**Trade-offs:**
+- Global rule means future components automatically get `cursor: pointer` without remembering to add it — consistent UX out of the box.
+- If a specific interactive element needs `cursor: default` or another cursor, an explicit utility class will win due to higher specificity.
+- `label` is included broadly — covers both `htmlFor`-associated labels and standalone labels used in custom form controls.
+
+---
+
+## 2026-05-20: Lab Result Editor — Template Fields + Manual Overrides
+
+**Context:** When a lab test is linked to a template with predefined fields, the result editor showed template fields correctly but locked the user into template-only mode — the "Add Another Result Field" button was hidden unless the test had no template at all. Users couldn't add extra manual result fields alongside template-defined ones.
+
+**Decisions:**
+
+1. **`buildDraftsFromFieldsAndResults` (utils)** — Now also includes manual results (those with `template_field_id === null`) as drafts appended after template field drafts. Previously they were filtered out entirely, meaning manually-added results from a prior session would be lost when re-opening the editor.
+
+2. **Removed binary `isManualMode` toggle** — The editor no longer switches between template mode and manual mode. Instead, template fields are shown when available, and manual fields can always be added on top. The initialization logic:
+   - If template fields exist → build drafts from template fields + all results (template-linked + manual)
+   - If no template fields → fall back to manual draft
+
+3. **"Add Manual Result Field" button always visible** — Now shown whenever the editor is not read-only. When no template fields exist, it reads "Add Another Result Field"; when template fields are present, it reads "Add Manual Result Field".
+
+4. **`is_manual_entry` metadata per-field** — Changed from `!hasTemplateWithFields` (global) to per-field `template_field_id === null` check, so the metadata accurately reflects which results are from template fields vs manually added.
+
+**Files changed:**
+- `labResultForm.utils.ts` — `buildDraftsFromFieldsAndResults` now includes manual results; extracted shared `draftFromResult` helper
+- `LabResultItemResultEditor/index.tsx` — removed `isManualMode` state, `shouldUseManualMode` memo; simplified initialization effect; always show "Add Manual Result Field" button
+
+**Trade-offs:**
+- Manual fields added alongside template fields will have `template_field_id: null` — the backend already handles this correctly (no field validation, preserves flag as-is).
+- The `resultsKey` dependency captures serialized `result_uuid` + `updated_at` rather than the `existingResults` array directly — avoids unnecessary draft rebuilds when the array reference changes but content hasn't.
+- Pre-existing manual results from prior sessions are now preserved on re-open (included in `buildDraftsFromFieldsAndResults`).
+
+---
+
+## 2026-05-20: BE-FE Sync — Lab Test Template Detection in Result Editor
+
+**Context:** Even when a lab test was linked to a template with fields, the result editor always showed "Manual Result Entry Mode" — template fields never loaded. The root cause was a **BE eager-loading gap**: the template relationship was never included in API responses, so the FE could never detect it.
+
+**Root cause trace:**
+
+1. FE editor checks `item?.lab_test?.template?.template_uuid` to detect if a test has a template
+2. The item data comes from `GET /lab/requests/{uuid}/with-items` → `LabRequestRepository::findByUuid()`
+3. The repository eager-loaded `items.labTest` but **not** `items.labTest.template`
+4. `LabTestResource::toArray()` uses `$this->whenLoaded('template')` — since template was never loaded, the `template` key was silently omitted from JSON
+5. FE got `item.lab_test` without `template` → `template_uuid` was always `undefined`
+6. `hasTemplate` was `false` → `useGetFieldsByTemplate` never fired → editor fell to manual mode
+
+**Fix — Backend:**
+- Added `'labTest.template'` to the nested `->with()` inside the items callback in:
+  - `LabRequestRepository::findByUuid()` — used by `GET /lab/requests/{uuid}/with-items`
+  - `LabRequestRepository::getWithItems()` — used by `GET /lab/requests/{id}`
+  - `LabRequestRepository::getWithFullDetails()` — used by `GET /lab/requests/{id}/full-details`
+  - `LabRequestItemRepository::getWithFullDetails()` — used by item-level details endpoint
+
+**Fix — Frontend:**
+- Added `testHasTemplateId` check (`!!item?.lab_test?.template_id`) as a more robust signal that a test belongs to a template — works even if the template relationship isn't loaded for any reason
+- Changed `noTemplateFieldsAvailable` from `!hasTemplate || templateFields.length === 0` to `!testHasTemplateId && !hasTemplate` — prevents false fallback to manual mode while fields are still loading
+
+**Files changed (BE):**
+- `app/Repositories/Lab/LabRequestRepository.php` — added `'labTest.template'` in 3 methods
+- `app/Repositories/Lab/LabRequestItemRepository.php` — changed `'labTest'` to `'labTest.template'`
+
+**Files changed (FE):**
+- `LabResultItemResultEditor/index.tsx` — added `testHasTemplateId` guard, fixed timing bug in `noTemplateFieldsAvailable`
+
+**Trade-offs:**
+- Adding eager loading adds a JOIN or extra query per request, but only when items are loaded — negligible overhead for correct behavior.
+- The `template_id` fallback on the FE means even if a future endpoint omits the eager loading, the editor won't falsely fall to manual mode (it will show a loading state until the template becomes available or an error occurs).
+- The `testHasTemplateId` check is always available because `template_id` is a direct column on the `lab_tests` table — no relationship needed.

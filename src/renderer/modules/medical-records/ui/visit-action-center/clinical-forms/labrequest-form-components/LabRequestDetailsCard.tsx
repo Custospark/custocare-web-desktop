@@ -144,7 +144,7 @@ export const LabRequestDetailsCard: React.FC<LabRequestDetailsCardProps> = ({
                     className={cn(
                       'inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium transition-all',
                       'text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/40',
-                      isCancellingRequest && 'cursor-not-allowed opacity-50'
+                      isCancellingRequest ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'
                     )}
                   >
                     <Trash2 className="h-4 w-4" />
