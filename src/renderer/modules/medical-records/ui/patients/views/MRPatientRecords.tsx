@@ -8,10 +8,7 @@ import { FOCUS_MODE_ROUTES } from '../../../../administration/onboarding/routes/
 import { selectActiveVisitId, selectActiveVisitPatientId } from '../../../../../app/store/slices/visitSlice';
 
 // Import queries for status indicators
-import { useGetActiveVisitClinicalNotes } from '../../../api/clinical-notes/clinicalNoteQueries';
-import { useGetActiveVisitDiagnoses } from '../../../api/diagnosis/diagnosisQueries';
-import { useGetActiveVisitConsultations } from '../../../api/consultations/consultationQueries';
-import { useGetActiveVisitVitals } from '../../../api/vitals/vitalQueries';
+import { usePatientMedicalHistory } from '../../../api/patient-medical-history/patientMedicalHistoryQueries';
 import { useGetAllergies } from '../../../api/allergies/AllergyQueries';
 import { normalizeAllergyResponse } from '../../visit-action-center/clinical-forms/allergies-form-components';
 
@@ -268,20 +265,9 @@ export const MRPatientRecords: React.FC<MRPatientRecordsProps> = ({
   const activePatientId = useSelector(selectActiveVisitPatientId);
 
   // Fetch data for status indicators
-  const clinicalNotesQuery = useGetActiveVisitClinicalNotes({
-    enabled: !!activeVisitId,
-  });
-
-  const diagnosesQuery = useGetActiveVisitDiagnoses({
-    enabled: !!activeVisitId,
-  });
-
-  const consultationsQuery = useGetActiveVisitConsultations({
-    enabled: !!activeVisitId,
-  });
-
-  const vitalsQuery = useGetActiveVisitVitals({
-    enabled: !!activeVisitId,
+  const patientIdNum = Number(activePatientId);
+  const medicalHistoryQuery = usePatientMedicalHistory(patientIdNum, {
+    enabled: patientIdNum > 0,
   });
 
   const allergiesQuery = useGetAllergies(activePatientId ?? '', {}, {
@@ -298,37 +284,33 @@ export const MRPatientRecords: React.FC<MRPatientRecordsProps> = ({
     },
   };
 
-  // Determine latest visit status
+  // Determine latest visit status from all clinical forms
   const latestVisitStatus = useMemo(() => {
-    const hasNotes = (clinicalNotesQuery.data?.data?.length || 0) > 0;
-    const hasDiagnoses = (diagnosesQuery.data?.data?.length || 0) > 0;
-    const hasConsultations = (consultationsQuery.data?.data?.length || 0) > 0;
-    const hasVitals = (vitalsQuery.data?.data?.length || 0) > 0;
-    const documentedCount = [hasNotes, hasDiagnoses, hasConsultations, hasVitals].filter(Boolean).length;
+    const mh = medicalHistoryQuery.data;
+    const categories = [
+      { name: 'Clinical Notes',    hasData: (mh?.clinical_notes?.length  || 0) > 0 },
+      { name: 'Diagnoses',         hasData: (mh?.diagnoses?.length      || 0) > 0 },
+      { name: 'Consultations',     hasData: (mh?.consultations?.length  || 0) > 0 },
+      { name: 'Vitals',            hasData: (mh?.vitals?.length         || 0) > 0 },
+      { name: 'Allergies',         hasData: (mh?.allergies?.length      || 0) > 0 },
+      { name: 'Prescriptions',     hasData: (mh?.prescriptions?.length  || 0) > 0 },
+      { name: 'Lab Requests',      hasData: (mh?.lab_requests?.length   || 0) > 0 },
+      { name: 'Lab Results',       hasData: (mh?.lab_results?.length    || 0) > 0 },
+    ];
+    const documentedCount = categories.filter(c => c.hasData).length;
+    const total = categories.length;
 
-    if (activeVisitId) {
-      if (documentedCount >= 3) {
-        return {
-          hasData: true,
-          message: '✓ Documentation complete',
-        };
+    if (activePatientId) {
+      if (documentedCount === total) {
+        return { hasData: true, message: '✓ All clinical forms documented' };
       }
       if (documentedCount > 0) {
-        return {
-          hasData: true,
-          message: `⚠️ Partial documentation (${documentedCount}/4)`,
-        };
+        return { hasData: true, message: `⚠️ ${documentedCount}/${total} clinical forms have data` };
       }
-      return {
-        hasData: false,
-        message: 'No documentation yet',
-      };
+      return { hasData: false, message: 'No clinical data recorded' };
     }
-    return {
-      hasData: false,
-      message: 'No active visit selected',
-    };
-  }, [activeVisitId, clinicalNotesQuery.data, diagnosesQuery.data, consultationsQuery.data, vitalsQuery.data]);
+    return { hasData: false, message: 'No patient selected' };
+  }, [activePatientId, medicalHistoryQuery.data]);
 
   // Determine medical history status
   const medicalHistoryStatus = useMemo(() => {

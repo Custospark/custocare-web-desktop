@@ -92,6 +92,20 @@
 - `MRPatientRecords.tsx` — added 2 imports, 2 hook calls, broadened latestVisitStatus
 - `FocusModeRoutes.tsx` — added `theme={theme}` to all 12 Suspense fallbacks
 
+---
+
+## 2026-05-20: Replaced Individual Visit Queries with Single Medical History Query (All 8 Form Categories)
+
+**Context:** The previous `latestVisitStatus` checked only 4 categories (clinical notes, diagnoses, consultations, vitals) with a hardcoded `/4` denominator. In reality there are 8 clinical form categories. The `/4` was misleading.
+
+**Decisions:**
+1. **Replaced 4 individual `useGetActiveVisit*` hooks** with a single `usePatientMedicalHistory(patientId)` query. The medical history endpoint (`GET /patients/{id}/medical-history`) returns all 8 categories in one payload: clinical_notes, diagnoses, consultations, vitals, allergies, prescriptions, lab_requests, lab_results.
+2. **Status message now shows `x/8`** — e.g., "⚠️ 3/8 clinical forms have data" — accurately reflecting the actual number of clinical form categories.
+3. **Kept `useGetAllergies` separately** for the Known Allergies stat count and Medical History card (which need the allergy-specific display).
+
+**Files changed:**
+- `MRPatientRecords.tsx` — replaced 4 imports + 4 hook calls with 1 import + 1 hook call; updated latestVisitStatus to check 8 categories from medical history payload.
+
 **Trade-offs:**
-- Added 2 queries to MRPatientRecords — minimal overhead, both disabled when no active visit.
-- The 3/4 threshold for "complete" is subjective; can be adjusted per feedback.
+- Single API call vs 4 individual calls = fewer network requests, but the medical history endpoint is a heavier payload (all patient data, not just current visit). React Query caching mitigates this for repeated visits to this component.
+- The medical history endpoint is patient-scoped (all visits) rather than visit-scoped. For a "current visit documentation" check this is slightly inaccurate, but it gives the user a complete picture of what clinical data exists for this patient.
