@@ -142,6 +142,30 @@ export const queryClient = new QueryClient({
   },
 });
 
+/** Navigation AbortController — aborted before guarded navigations to cancel in-flight requests. */
+let _navigationAbortController: AbortController | null = null;
+
+/**
+ * Cancels all pending API requests and React Query fetches.
+ * Called by useNavigationGuard before navigating to a new route.
+ */
+export function cancelAllPendingQueries(): void {
+  _navigationAbortController?.abort();
+  _navigationAbortController = new AbortController();
+  queryClient.cancelQueries();
+}
+
+/**
+ * Returns an AbortSignal that is aborted when a navigation occurs.
+ * Optional per-query usage for long-polling or non-critical endpoints.
+ */
+export function createNavigationSignal(): AbortSignal {
+  if (!_navigationAbortController) {
+    _navigationAbortController = new AbortController();
+  }
+  return _navigationAbortController.signal;
+}
+
 /**
  * Prevents multiple in-flight 401 responses (e.g. several parallel queries
  * all expiring at once) from each triggering a logout + toast + redirect.

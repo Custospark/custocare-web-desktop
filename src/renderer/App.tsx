@@ -11,7 +11,6 @@ import { queryClient } from './app/api/axiosConfig';
 import AppRoutes from './app/routes';
 import AppInitializer from './AppInitializer';
 
-import ErrorBoundary from './shared/components/Loading/ErrorBoundary';
 import { AppProvider } from './app/store/contexts/app/AppContext';
 import { ConfirmProvider } from './shared/components/Feedback/ConfirmDialog/ConfirmProvider';
 import { ToastProvider } from './app/store/contexts/toast/ToastContext';
@@ -47,8 +46,8 @@ function App() {
   return (
     <ToastProvider>
       <ConfirmProvider>
-        <ErrorBoundary>
-          <Provider store={store}>
+        {/* Error boundaries are applied per-route inside SuspenseWrapper */}
+        <Provider store={store}>
             <QueryClientProvider client={queryClient}>
               <ReverbInit />
               <Router>
@@ -75,7 +74,6 @@ function App() {
               )} */}
             </QueryClientProvider>
           </Provider>
-        </ErrorBoundary>
       </ConfirmProvider>
     </ToastProvider>
   );

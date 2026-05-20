@@ -1,6 +1,7 @@
 import React, { Suspense } from 'react';
 import { useOutletContext, Outlet, Navigate } from 'react-router-dom';
 import LoadingSkeleton from '../../../../shared/components/Loading/LoadingSkeletons';
+import ErrorBoundary from '../../../../shared/components/Loading/ErrorBoundary';
 import type { RootState } from '../../../store/store';
 import { useSelector } from "react-redux";
 import { selectUser } from '../../../store/slices/authSlice';
@@ -102,7 +103,9 @@ export const SuspenseWrapper: React.FC<{
         </div>
       }
     >
-      {children}
+      <ErrorBoundary>
+        {children}
+      </ErrorBoundary>
     </Suspense>
   );
 };

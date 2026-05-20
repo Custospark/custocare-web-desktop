@@ -278,3 +278,40 @@
 - The current step display is purely visual — users can still forward to the same step (useful for re-queuing). No blocking logic was added.
 - Only `ENCOUNTER_WORKFLOW_STAGE_ORDER` stages are highlighted; steps not in that list (Registration, Triage, Imaging) show only in the "Currently at" banner but not in the grid.
 - The feature relies on `care_delivery_workflow` being set on the visit — visits that have never been forwarded (null) will not show a "Currently at" block.
+
+---
+
+## 2026-05-20: Three-Layer Navigation Crash Protection (Debounce + Per-Route ErrorBoundary + Query Cancellation)
+
+**Context:** Users experienced crashes when rapidly clicking sidebar links. Multiple simultaneous `navigate()` calls triggered competing lazy chunk loads that could race and crash the entire app. A single root `ErrorBoundary` meant any module-level crash took down the whole SPA, and in-flight API requests from unmounting routes would try to update stale closures after navigation.
+
+**Decision — three-layer defense:**
+
+**Layer 1 — Navigation Debounce Guard (`useNavigationGuard` hook)**
+- Created `src/renderer/shared/hooks/useNavigationGuard.ts` — reusable hook wrapping `useNavigate` with configurable `delay` (300ms) and `cooldown` (500ms)
+- Rapid clicks within the cooldown window are silently dropped; the first click is debounced by `delay` before calling `navigate()`
+- Exposes `isNavigating` state for visual feedback
+- Applied to `Sidebar.handleNavigation` and `FocusedModeLayout.handleClose`, replacing direct `useNavigate()`
+
+**Layer 2 — Per-Route ErrorBoundary**
+- Moved `<ErrorBoundary>` from `App.tsx` (root wrapper) into each lazy-loaded route's `<Suspense>` fallback wrapper (`SuspenseWrapper` in `routeUtils.tsx`)
+- Each route's `<ErrorBoundary>` wraps only its own `{children}` inside `<Suspense>`
+- A crash in one lazy module no longer takes down the entire app
+- Removed the outer `<ErrorBoundary>` from `App.tsx`
+
+**Layer 3 — Query Cancellation on Navigation**
+- Added module-level `AbortController` in `axiosConfig.ts` — `cancelAllPendingQueries()` aborts it and calls `queryClient.cancelQueries()`
+- `createNavigationSignal()` exposes the `AbortSignal` for selective per-query use
+- `useNavigationGuard` calls `cancelAllPendingQueries()` dynamically before navigating when `cancelQueries: true`
+
+**Files changed:**
+- `src/renderer/shared/hooks/useNavigationGuard.ts` — **CREATED** (60 lines)
+- `src/renderer/app/api/axiosConfig.ts` — added `cancelAllPendingQueries()` + `createNavigationSignal()`
+- `src/renderer/shared/components/Navigation/Sidebar.tsx` — replaced `useNavigate` with `useNavigationGuard`
+- `src/renderer/shared/components/Navigation/FocusedModeLayout.tsx` — replaced `useNavigate` with `useNavigationGuard`
+- `src/renderer/app/routes/modules/shared/routeUtils.tsx` — added `<ErrorBoundary>` inside `SuspenseWrapper`
+- `src/renderer/App.tsx` — removed root `<ErrorBoundary>`
+
+**Trade-offs:**
+- 300ms delay + 500ms cooldown adds a sub-second wait between rapid clicks; `isNavigating` provides visual feedback
+- `cancelAllPendingQueries()` aborts all in-flight requests aggressively — React Query refetches on remount; long-polling endpoints can opt in via `createNavigationSignal()`
