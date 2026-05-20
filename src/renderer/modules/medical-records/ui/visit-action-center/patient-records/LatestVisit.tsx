@@ -314,8 +314,7 @@ export const CurrentVisit: React.FC<CurrentVisitProps> = ({ theme = 'light' }) =
   }, []);
 
   const handleFormSuccess = useCallback(() => {
-    // Optionally refresh data or show success message
-    setSelectedForm(null);
+    // Keep the form open after save — user navigates back via the back button.
   }, []);
 
   const clearSearch = useCallback(() => {
