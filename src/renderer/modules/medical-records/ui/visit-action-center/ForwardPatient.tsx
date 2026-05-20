@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState, useCallback, useRef } from 'react';
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -132,11 +132,6 @@ export const ForwardPatient: React.FC<ForwardPatientProps> = ({
   const [clientSideSearchTerm, setClientSideSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] =
     useState<StaffFilterStatus>('available');
-  const hasLoadedInitialDataRef = useRef(false);
-  if (staffMembers.length > 0) {
-    hasLoadedInitialDataRef.current = true;
-  }
-  const hasLoadedInitialData = hasLoadedInitialDataRef.current;
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState<number>(10);
 
@@ -215,6 +210,8 @@ export const ForwardPatient: React.FC<ForwardPatientProps> = ({
     if (!staffData?.data?.staff || !Array.isArray(staffData.data.staff)) return [];
     return staffData.data.staff;
   }, [staffData]);
+
+  const hasLoadedInitialData = staffMembers.length > 0;
 
   const selectedStaff = useMemo(() => {
     return staffMembers.find((staff) => staff.staff_id === selectedStaffId);
@@ -395,13 +392,13 @@ export const ForwardPatient: React.FC<ForwardPatientProps> = ({
     [filteredStaff.length, pageSize]
   );
 
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+
   const paginatedStaff = useMemo(() => {
     const startIndex = (safeCurrentPage - 1) * pageSize;
     const endIndex = startIndex + pageSize;
     return filteredStaff.slice(startIndex, endIndex);
   }, [filteredStaff, safeCurrentPage, pageSize]);
-
-  const safeCurrentPage = Math.min(currentPage, totalPages);
 
   const summaryData = useMemo(() => buildStaffSummary(staffMembers), [staffMembers]);
 
