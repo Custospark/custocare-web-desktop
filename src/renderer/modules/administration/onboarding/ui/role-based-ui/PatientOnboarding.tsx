@@ -170,6 +170,8 @@ export const PatientOnboarding: React.FC = () => {
   
   // Backend mutation hook
   const registerPatientMutation = useRegisterPatient({
+    autoNavigateToDashboard: false,
+    autoSwitchToPatientMode: true,
     onSuccess: (data) => {
       // Success is handled by the mutation hook (toast notification)
       // Store patient UUID for dashboard navigation
@@ -869,7 +871,7 @@ const prepareSubmissionPayload = useCallback((): RegisterPatientRequest => {
       theme === 'dark' ? "text-slate-400" : "text-slate-600"
     )}
   >
-    Your Patient ID
+    Your Patient Number
   </p>
 
   <div className="text-3xl md:text-4xl font-black tracking-tight bg-gradient-to-r from-blue-600 to-emerald-600 bg-clip-text text-transparent break-all">
@@ -882,7 +884,7 @@ const prepareSubmissionPayload = useCallback((): RegisterPatientRequest => {
       theme === 'dark' ? "text-slate-500" : "text-slate-500"
     )}
   >
-    Please keep this ID for your records. You may be asked for it when visiting any health facility using Custocare.
+    Please keep this Number for your records. You may be asked for it when visiting any health facility using Custocare.
   </p>
 </div>
 
@@ -932,6 +934,7 @@ const prepareSubmissionPayload = useCallback((): RegisterPatientRequest => {
           ref={printoutRef}
           patientName={patientName}
           patientNumber={registeredPatientID}
+          facility={null}
         />
       </div>
     </div>

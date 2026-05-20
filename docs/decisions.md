@@ -37,24 +37,27 @@
 
 ---
 
-## 2026-05-20: Patient Registration Printout / Download
+## 2026-05-20: Patient Registration Printout / Download (Revised)
 
-**Context:** Both staff-facing (`PatientSuccessModal`) and patient self-onboarding (`PatientOnboarding`) flows showed patient name and number after successful registration, but only offered a plain `.txt` download. What was needed is a clean, clinical-form-style printout (like lab requests or vitals forms) that can be printed or saved as PDF and handed to the patient.
+**Context:** Original implementation had a basic printout but was missing facility context for staff registration and had an auto-redirect that prevented users from viewing/printing the confirmation.
 
-**Decision:**
-- Created `PatientRegistrationPrintout` — a reusable, `React.forwardRef<HTMLDivElement>` component at `shared/components/Printout/PatientRegistrationPrintout.tsx`
-- Replaced the `.txt` download in `PatientSuccessModal` (`pharmacy/`) with a "Print / Download" button that uses `react-to-print` to target the printout ref
-- Added the same printout to the `PatientOnboarding` success screen (`administration/onboarding/`), deriving the patient name from Redux `auth.user`
-- The printout renders hidden (`className="hidden"`) in the DOM; `react-to-print` clones it into a new window for printing
+**Decisions:**
 
-**Printout layout:**
-- Branded header (Custocare blue banner + "Patient Registration Confirmation")
-- Registration date
-- Patient Name (large, underlined)
-- Patient Number (monospace, blue highlighted box)
-- Footer note explaining the patient identifier
+**1. Two-mode printout: Staff vs Self-Registration**
+- `PatientRegistrationPrintout` now accepts a `facility` prop (or `null` for self-registration)
+- **Staff registration:** Header follows the exact clinical forms pattern — facility name (uppercase), badges, address, phone, email, facility code, and a gradient title banner reading "PATIENT REGISTRATION CONFIRMATION". Info rows show patient name, patient number, registered by (staff name from `selectUserDisplayName`), and registration date. Facility data pulled from `activeContextSlice.selectActiveFacility`.
+- **Self-registration (onboarding):** Simpler header with emerald-colored styling and "Self-Registration via Patient Portal" subtitle. No facility data shown.
+- Footer matches the clinical forms pattern exactly: "Electronically Generated Registration Confirmation" + description + tagline "Connected Care • One Identifier Across All Facilities" + print timestamp.
+
+**2. Auto-redirect disabled for self-registration**
+- `useRegisterPatient` in `PatientOnboarding` now passes `autoNavigateToDashboard: false` — the 1.5s setTimeout redirect in the mutation hook no longer fires
+- User sees the success screen with printout and can print/download at their own pace
+- "Continue to Patient Portal" button handles manual navigation when the user is ready
+
+**3. Patient number universality**
+- Printout includes a blue info banner: "This patient number is unique and valid across all Custocare facilities. Present this number at any facility during your next visit — no need to register again."
 
 **Trade-offs:**
-- Uses `react-to-print` (already in the project for receipts) rather than building a PDF-generator endpoint on the backend — keeps it FE-only, no new API
-- Hidden DOM rendering means slightly more HTML in the modal, but avoids the complexity of opening a new window/tab
-- `.txt` download removed in favor of browser's native "Save as PDF" from the print dialog — gives the user a properly formatted document
+- Facility data comes from Redux `activeContextSlice` using the existing `selectActiveFacility` selector (same source as all clinical previews). No backend changes needed.
+- Staff name comes from `selectUserDisplayName` (Redux auth slice) — priority: display_name > full_name > name. This is the currently logged-in user, not a separate "registered_by" field from the backend (which would require a BE change).
+- Hidden DOM rendering (`className="hidden"`) keeps the printout in the DOM for `react-to-print` cloning without visual clutter in the modal.

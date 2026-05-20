@@ -13,9 +13,12 @@ import {
   X,
 } from 'lucide-react';
 
+import { useSelector } from 'react-redux';
 import { cn } from '../../../../../../../shared/utils/classNameUtils';
 import { useToast } from '../../../../../../../app/store/contexts/toast/useToast';
 import { PatientRegistrationPrintout } from '../../../../../../../shared/components/Printout/PatientRegistrationPrintout';
+import { selectActiveFacility } from '../../../../../../../app/store/slices/activeContextSlice';
+import { selectUserDisplayName } from '../../../../../../../app/store/slices/authSlice';
 
 export interface PatientSuccessModalProps {
   theme: 'light' | 'dark';
@@ -44,6 +47,24 @@ const PatientSuccessModal: React.FC<PatientSuccessModalProps> = ({
     contentRef: printoutRef,
     documentTitle: `Patient_${patientNumber}`,
   });
+
+  const activeFacility = useSelector(selectActiveFacility);
+  const staffName = useSelector(selectUserDisplayName);
+
+  const facility = activeFacility && activeFacility.facility_name
+    ? {
+        name: activeFacility.facility_name,
+        code: activeFacility.facility_code || 'N/A',
+        address: [
+          activeFacility.address_line1,
+          activeFacility.address_line2,
+          activeFacility.city,
+          activeFacility.state_province,
+        ].filter(Boolean).join(', ') || 'Address not available',
+        phone: activeFacility.main_phone || null,
+        email: activeFacility.email || null,
+      }
+    : null;
 
   useEffect(() => {
     return () => {
@@ -373,6 +394,8 @@ const PatientSuccessModal: React.FC<PatientSuccessModalProps> = ({
             ref={printoutRef}
             patientName={patientName}
             patientNumber={patientNumber}
+            facility={facility}
+            registeredByName={staffName || undefined}
           />
         </div>
       </motion.div>
