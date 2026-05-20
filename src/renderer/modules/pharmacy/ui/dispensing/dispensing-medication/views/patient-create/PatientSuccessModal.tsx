@@ -17,6 +17,7 @@ import { useSelector } from 'react-redux';
 import { cn } from '../../../../../../../shared/utils/classNameUtils';
 import { useToast } from '../../../../../../../app/store/contexts/toast/useToast';
 import { PatientRegistrationPrintout } from '../../../../../../../shared/components/Printout/PatientRegistrationPrintout';
+import { formatPrintTime } from '../../../../../../../shared/components/Printout/printoutUtils';
 import { selectActiveFacility } from '../../../../../../../app/store/slices/activeContextSlice';
 import { selectUserDisplayName } from '../../../../../../../app/store/slices/authSlice';
 
@@ -40,12 +41,16 @@ const PatientSuccessModal: React.FC<PatientSuccessModalProps> = ({
   const isDark = theme === 'dark';
   const { showToast } = useToast();
   const [copied, setCopied] = useState(false);
+  const [printTimestamp, setPrintTimestamp] = useState('');
   const copyTimerRef = useRef<number | null>(null);
   const printoutRef = useRef<HTMLDivElement>(null);
 
   const handlePrint = useReactToPrint({
     contentRef: printoutRef,
     documentTitle: `Patient_${patientNumber}`,
+    onBeforePrint: async () => {
+      setPrintTimestamp(formatPrintTime());
+    },
   });
 
   const activeFacility = useSelector(selectActiveFacility);
@@ -396,6 +401,7 @@ const PatientSuccessModal: React.FC<PatientSuccessModalProps> = ({
             patientNumber={patientNumber}
             facility={facility}
             registeredByName={staffName || undefined}
+            printTimestamp={printTimestamp}
           />
         </div>
       </motion.div>

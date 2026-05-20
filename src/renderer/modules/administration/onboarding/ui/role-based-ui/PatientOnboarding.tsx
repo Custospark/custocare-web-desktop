@@ -46,6 +46,7 @@ import type { RegisterPatientRequest } from '../../api/queries/register-patient/
 import LogoImage from '../../../../../shared/assets/LogoImage';
 import { BrandName } from '../../../../../shared/utils/BrandName';
 import { PatientRegistrationPrintout } from '../../../../../shared/components/Printout/PatientRegistrationPrintout';
+import { formatPrintTime } from '../../../../../shared/components/Printout/printoutUtils';
 import { countryCodes, type CountryCode } from '../auth/countryCodes';
 
 /* ==========================================================================
@@ -326,10 +327,14 @@ const prepareSubmissionPayload = useCallback((): RegisterPatientRequest => {
   const registeredPatientID = registerPatientMutation.data?.data?.patient_uuid || '';
   const printoutRef = useRef<HTMLDivElement>(null);
   const patientName = user?.name || user?.profile?.full_name || 'Patient';
+  const [printTimestamp, setPrintTimestamp] = useState('');
 
   const handlePrint = useReactToPrint({
     contentRef: printoutRef,
     documentTitle: `Patient_${registeredPatientID}`,
+    onBeforePrint: async () => {
+      setPrintTimestamp(formatPrintTime());
+    },
   });
 
   /* ==========================================================================
@@ -935,6 +940,7 @@ const prepareSubmissionPayload = useCallback((): RegisterPatientRequest => {
           patientName={patientName}
           patientNumber={registeredPatientID}
           facility={null}
+          printTimestamp={printTimestamp}
         />
       </div>
     </div>

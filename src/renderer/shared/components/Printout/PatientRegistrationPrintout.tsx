@@ -10,6 +10,7 @@ import {
   Fingerprint,
 } from 'lucide-react';
 import { BRAND_NAME_UCASE } from '../../utils/BrandName';
+import { formatPrintTime } from './printoutUtils';
 
 export interface FacilityInfo {
   name: string;
@@ -25,11 +26,13 @@ export interface PatientRegistrationPrintoutProps {
   registrationDate?: string;
   facility?: FacilityInfo | null;
   registeredByName?: string;
+  printTimestamp?: string;
 }
 
-const RegistrationFooter: React.FC<{ label: string; description: string }> = ({
+const RegistrationFooter: React.FC<{ label: string; description: string; printTimestamp?: string }> = ({
   label,
   description,
+  printTimestamp,
 }) => (
   <div className="mt-6 border-t-2 border-gray-200 pt-4 text-center">
     <div className="mb-2 flex items-center justify-center gap-2">
@@ -53,17 +56,7 @@ const RegistrationFooter: React.FC<{ label: string; description: string }> = ({
     <p className="mt-3 text-[10px] font-mono text-gray-500">
       PRINT TIME:{' '}
       <span className="font-bold text-gray-900">
-        {new Date()
-          .toLocaleString('en-US', {
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit',
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit',
-            hour12: true,
-          })
-          .replace(/,/g, '')}
+        {printTimestamp || formatPrintTime()}
       </span>
     </p>
   </div>
@@ -75,6 +68,7 @@ export const PatientRegistrationPrintout = React.forwardRef<HTMLDivElement, Pati
   registrationDate,
   facility,
   registeredByName,
+  printTimestamp,
 }, ref) => {
   const date = registrationDate || new Date().toLocaleString('en-US', {
     year: 'numeric',
@@ -233,6 +227,7 @@ export const PatientRegistrationPrintout = React.forwardRef<HTMLDivElement, Pati
             <RegistrationFooter
               label="Registration Confirmation"
               description="This patient registration confirmation is part of the patient's medical record and serves as proof of registration across all Custocare facilities."
+              printTimestamp={printTimestamp}
             />
 
           </div>
