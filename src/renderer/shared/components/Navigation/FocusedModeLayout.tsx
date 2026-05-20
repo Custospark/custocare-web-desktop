@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   X,
   AlertCircle,
@@ -106,6 +106,12 @@ export const FocusedModeLayout: React.FC<FocusedModeLayoutProps> = ({
 }) => {
   const { navigate: guardedNavigate } = useNavigationGuard({ delay: 300, cooldown: 500 });
 
+  const [now, setNow] = useState<number>(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 60_000);
+    return () => clearInterval(id);
+  }, []);
+
   const { theme, patient, visitInfo, patientId } = useSelector(
     (state: RootState) => ({
       theme: state.ui.theme as ThemeMode,
@@ -212,7 +218,6 @@ export const FocusedModeLayout: React.FC<FocusedModeLayoutProps> = ({
     if (!arrivedAt) return 'N/A';
     try {
       const arrivalTime = new Date(arrivedAt).getTime();
-      const now = Date.now();
       const diffMinutes = Math.floor((now - arrivalTime) / (1000 * 60));
 
       if (diffMinutes < 60) {

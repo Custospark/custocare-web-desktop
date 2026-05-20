@@ -315,3 +315,31 @@
 **Trade-offs:**
 - 300ms delay + 500ms cooldown adds a sub-second wait between rapid clicks; `isNavigating` provides visual feedback
 - `cancelAllPendingQueries()` aborts all in-flight requests aggressively — React Query refetches on remount; long-polling endpoints can opt in via `createNavigationSignal()`
+
+---
+
+## 2026-05-20: Lint Cleanup + ScrollToTop Fix
+
+**Context:** Six pre-existing eslint errors blocked the pre-commit hook on every commit (5× `no-explicit-any` in `axiosConfig.ts`, 1× `react-hooks/purity` `Date.now()` in `FocusedModeLayout.tsx`). The `ScrollToTop` component existed but was never imported — and even when wired, it targeted `window`/`main` which wasn't the actual scroll container.
+
+**Decisions:**
+
+**1. Lint fixes:**
+- `axiosConfig.ts` — replaced all `config.headers as any` with `config.headers as AxiosHeaders` (already imported); removed redundant fallback branches (`AxiosHeaders` always has `.set()` and `.delete()`)
+- `FocusedModeLayout.tsx` — moved `Date.now()` from inline in `calculateWaitTime` (called during render) into a `useState(() => Date.now())` + `useEffect` interval (updates every 60s)
+
+**2. ScrollToTop fix:**
+- `ScrollToTop.tsx` — already imported and placed correctly in `App.tsx` (inside `<Router>`) but used `window.scrollTo()` which didn't always work in the app's layout (content may scroll inside `document.scrollingElement` or a scoped container)
+- Rewritten to use `document.scrollingElement ?? document.documentElement ?? document.body` as the primary target
+- Also queries for `main`, `[role="main"]`, `#main-content`, `.main-content-area` as fallback containers
+- Uses `requestAnimationFrame` to ensure DOM is ready before scrolling (avoids race with lazy-loaded route rendering)
+- Uses `behavior: 'instant'` for reliability (no animation conflicts with route transitions)
+
+**Files changed:**
+- `src/renderer/app/api/axiosConfig.ts` — `as any` → `as AxiosHeaders` in 5 places, removed redundant `set` guard
+- `src/renderer/shared/components/Navigation/FocusedModeLayout.tsx` — added `useState(() => Date.now())` + interval, removed `const now = Date.now()` from `calculateWaitTime`
+- `src/renderer/shared/components/ScrollToTop/ScrollToTop.tsx` — rewritten with robust container detection + RAF timing
+
+**Trade-offs:**
+- 60s interval for `now` means wait times on FocusedModeLayout update at most every minute (vs. per-render before). Acceptable for a display-time relative value.
+- `behavior: 'instant'` is less visually smooth but avoids racing with route animations — user sees content at the top immediately.

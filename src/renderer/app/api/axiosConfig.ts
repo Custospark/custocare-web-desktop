@@ -108,18 +108,14 @@ axiosInstance.interceptors.request.use(
       // Let the browser set: multipart/form-data; boundary=....
       // Remove any forced JSON content-type if present.
       // Axios v1 headers can be AxiosHeaders, so support both delete styles.
-      (config.headers as any)?.delete?.('Content-Type');
-      delete (config.headers as any)['Content-Type'];
+      (config.headers as AxiosHeaders)?.delete?.('Content-Type');
     } else {
       // For JSON requests, set application/json when there's a body.
       const method = (config.method || 'get').toLowerCase();
       const hasBody = ['post', 'put', 'patch', 'delete'].includes(method);
 
       if (hasBody && config.data !== undefined) {
-        (config.headers as any)?.set?.('Content-Type', 'application/json');
-        if (!(config.headers as any)?.set) {
-          (config.headers as any)['Content-Type'] = 'application/json';
-        }
+        (config.headers as AxiosHeaders)?.set?.('Content-Type', 'application/json');
       }
     }
 

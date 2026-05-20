@@ -1,37 +1,40 @@
-// src/renderer/shared/components/ScrollToTop/ScrollToTop.tsx
 import { useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 
-/**
- * ScrollToTop Component
- * Automatically scrolls the window to the top when the route changes.
- * Uses native browser smooth scrolling for better performance and reliability.
- */
+function scrollToTop(): void {
+  const selectors = [
+    'main',
+    '[role="main"]',
+    '#main-content',
+    '.main-content-area',
+  ];
+
+  const scrollable = document.scrollingElement
+    ?? document.documentElement
+    ?? document.body;
+  scrollable.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+
+  for (const sel of selectors) {
+    const el = document.querySelector(sel);
+    if (el && el.scrollTop !== 0) {
+      el.scrollTo({ top: 0, behavior: 'instant' });
+    }
+  }
+}
+
 export const ScrollToTop: React.FC = () => {
   const { pathname } = useLocation();
   const previousPathname = useRef(pathname);
 
   useEffect(() => {
-    // Only scroll if the path actually changed (skip initial mount)
     const hasPathChanged = previousPathname.current !== pathname;
     previousPathname.current = pathname;
 
     if (hasPathChanged) {
-      // Native smooth scroll - works great, no extra dependencies
-      window.scrollTo({
-        top: 0,
-        left: 0,
-        behavior: 'smooth',
+      const rafId = requestAnimationFrame(() => {
+        scrollToTop();
       });
-
-      // Also scroll any main content containers if they have scroll
-      const mainContent = document.querySelector('main, [role="main"]');
-      if (mainContent && mainContent.scrollTop !== 0) {
-        mainContent.scrollTo({
-          top: 0,
-          behavior: 'smooth',
-        });
-      }
+      return () => cancelAnimationFrame(rafId);
     }
   }, [pathname]);
 
