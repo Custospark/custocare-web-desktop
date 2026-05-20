@@ -109,3 +109,24 @@
 **Trade-offs:**
 - Single API call vs 4 individual calls = fewer network requests, but the medical history endpoint is a heavier payload (all patient data, not just current visit). React Query caching mitigates this for repeated visits to this component.
 - The medical history endpoint is patient-scoped (all visits) rather than visit-scoped. For a "current visit documentation" check this is slightly inaccurate, but it gives the user a complete picture of what clinical data exists for this patient.
+
+---
+
+## 2026-05-20: Prescription Template — Missing dosage_form / dosage_unit / duration_unit Defaults
+
+**Context:** Creating a prescription from a clinical template failed with `"The items.0.dosage_form field is required"` (and 5 more errors). The `StorePrescriptionRequest` validates that every item has `dosage_form`, `dosage_unit`, and `duration_unit`, but templates stored before these fields were required were missing them from their JSON blob.
+
+**Decisions — three-layer fix:**
+
+1. **Frontend `templateToPrescriptionItem()`** — Added `||` fallbacks for `dosage_form`→`DosageForm.TABLET`, `dosage_unit`→`DosageUnit.TABLETS`, `duration_unit`→`DurationUnit.DAYS`. These fields already had `||` fallbacks in `ClinicalTemplateForm.addOrUpdateMedication`, but the standalone conversion function was missing them.
+
+2. **Backend `StoreTemplateRequest`** — Added validation rules for `dosage_form`, `dosage_unit`, `duration_unit` as `required_with:default_medications` so future templates cannot be saved without these fields.
+
+3. **Backend `PrescriptionService::applyTemplate()`** — Added `??=` defaults for all required-but-occasionally-missing fields (`dosage_form`, `dosage_unit`, `duration_unit`, `route`, `administration_instructions`, `refills`, `substitution`) as a runtime safety net for existing templates in the database.
+
+**Files changed (FE):**
+- `ClinicalTemplateTypes.ts` — 3 fallback defaults in `templateToPrescriptionItem()`
+
+**Files changed (BE):**
+- `StoreTemplateRequest.php` — 3 new validation rules
+- `PrescriptionService.php` — 7 `??=` defaults in `applyTemplate()` loop
