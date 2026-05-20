@@ -647,7 +647,7 @@ export const InventoryCatalogList: React.FC<Props> = ({
           </div>
 
           {/* Rows */}
-          {paginationData.currentItems.map((item) => {
+          {paginationData.currentItems.map((item, index) => {
             const category = itemCategoryOptions.find(
               (c) => c.value === item.item_category
             );

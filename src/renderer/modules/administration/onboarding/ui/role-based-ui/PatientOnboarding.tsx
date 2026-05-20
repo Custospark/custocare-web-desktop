@@ -17,9 +17,10 @@
  * - Toast notifications for user feedback
  */
 
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useReactToPrint } from 'react-to-print';
 import { 
   User, 
   Phone, 
@@ -34,6 +35,7 @@ import {
   BadgeCheck,
   AlertCircle,
   Loader2,
+  Printer,
 } from 'lucide-react';
 import { cn } from '../../../../../shared/types/cn';
 import { useAppDispatch, useAppSelector } from '../../../../../app/store/hooks/useApp';
@@ -43,6 +45,7 @@ import { useRegisterPatient } from '../../api/queries/register-patient/queries/r
 import type { RegisterPatientRequest } from '../../api/queries/register-patient/queries/registerPatientTypes';
 import LogoImage from '../../../../../shared/assets/LogoImage';
 import { BrandName } from '../../../../../shared/utils/BrandName';
+import { PatientRegistrationPrintout } from '../../../../../shared/components/Printout/PatientRegistrationPrintout';
 import { countryCodes, type CountryCode } from '../auth/countryCodes';
 
 /* ==========================================================================
@@ -319,6 +322,13 @@ const prepareSubmissionPayload = useCallback((): RegisterPatientRequest => {
   const isSubmitting = registerPatientMutation.isPending;
   const isComplete = registerPatientMutation.isSuccess;
   const registeredPatientID = registerPatientMutation.data?.data?.patient_uuid || '';
+  const printoutRef = useRef<HTMLDivElement>(null);
+  const patientName = user?.name || user?.profile?.full_name || 'Patient';
+
+  const handlePrint = useReactToPrint({
+    contentRef: printoutRef,
+    documentTitle: `Patient_${registeredPatientID}`,
+  });
 
   /* ==========================================================================
      RENDER COMPONENTS
@@ -902,7 +912,28 @@ const prepareSubmissionPayload = useCallback((): RegisterPatientRequest => {
           Continue to Patient Portal
           <ArrowRight className="w-6 h-6" />
         </button>
+
+        <button
+          onClick={() => handlePrint()}
+          className={cn(
+            "w-full flex items-center justify-center gap-3 px-8 py-4 rounded-xl font-bold text-lg border-2 transition-all cursor-pointer mt-3",
+            theme === 'dark'
+              ? "border-slate-600 text-slate-300 hover:bg-slate-700"
+              : "border-slate-300 text-slate-700 hover:bg-slate-100"
+          )}
+        >
+          <Printer className="w-5 h-5" />
+          Print / Download
+        </button>
       </motion.div>
+
+      <div className="hidden">
+        <PatientRegistrationPrintout
+          ref={printoutRef}
+          patientName={patientName}
+          patientNumber={registeredPatientID}
+        />
+      </div>
     </div>
   );
 

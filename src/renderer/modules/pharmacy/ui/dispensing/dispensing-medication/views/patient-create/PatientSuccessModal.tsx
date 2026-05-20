@@ -1,11 +1,12 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
+import { useReactToPrint } from 'react-to-print';
 import {
   CheckCircle,
   ChevronRight,
   Copy,
-  Download,
   Fingerprint,
+  Printer,
   Shield,
   User,
   UserCheck,
@@ -14,6 +15,7 @@ import {
 
 import { cn } from '../../../../../../../shared/utils/classNameUtils';
 import { useToast } from '../../../../../../../app/store/contexts/toast/useToast';
+import { PatientRegistrationPrintout } from '../../../../../../../shared/components/Printout/PatientRegistrationPrintout';
 
 export interface PatientSuccessModalProps {
   theme: 'light' | 'dark';
@@ -36,6 +38,12 @@ const PatientSuccessModal: React.FC<PatientSuccessModalProps> = ({
   const { showToast } = useToast();
   const [copied, setCopied] = useState(false);
   const copyTimerRef = useRef<number | null>(null);
+  const printoutRef = useRef<HTMLDivElement>(null);
+
+  const handlePrint = useReactToPrint({
+    contentRef: printoutRef,
+    documentTitle: `Patient_${patientNumber}`,
+  });
 
   useEffect(() => {
     return () => {
@@ -88,32 +96,13 @@ const PatientSuccessModal: React.FC<PatientSuccessModalProps> = ({
     }
   }, [patientNumber, showToast]);
 
-  const handleDownload = useCallback(() => {
-    try {
-      const content = [
-        `Patient Name: ${patientName}`,
-        `Patient Number: ${patientNumber}`,
-        `Saved: ${new Date().toLocaleString()}`,
-      ].join('\n');
-
-      const blob = new Blob([content], { type: 'text/plain' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-
-      link.href = url;
-      link.download = `Patient_${patientNumber}_${Date.now()}.txt`;
-      link.style.display = 'none';
-
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-
-      showToast('success', 'Patient details downloaded', 3000);
-    } catch {
-      showToast('error', 'Could not download patient details', 3000);
+  const handlePrintDownload = useCallback(() => {
+    if (!patientNumber) {
+      showToast('error', 'No patient data to print', 3000);
+      return;
     }
-  }, [patientName, patientNumber, showToast]);
+    handlePrint();
+  }, [patientNumber, handlePrint, showToast]);
 
   const handleBackdropClick = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {
@@ -330,7 +319,7 @@ const PatientSuccessModal: React.FC<PatientSuccessModalProps> = ({
               whileHover={{ scale: 1.01 }}
               whileTap={{ scale: 0.99 }}
               type="button"
-              onClick={handleDownload}
+              onClick={handlePrintDownload}
               disabled={!patientNumber}
               style={{ cursor: patientNumber ? 'pointer' : 'not-allowed' }}
               className={cn(
@@ -340,8 +329,8 @@ const PatientSuccessModal: React.FC<PatientSuccessModalProps> = ({
                   : 'border-gray-300 bg-gradient-to-br from-gray-100 to-gray-200 text-gray-700 hover:border-gray-400 hover:cursor-pointer'
               )}
             >
-              <Download className="h-5 w-5" />
-              Download
+              <Printer className="h-5 w-5" />
+              Print / Download
             </motion.button>
           </div>
 
@@ -377,6 +366,14 @@ const PatientSuccessModal: React.FC<PatientSuccessModalProps> = ({
               Please share the patient number with the patient for future visits.
             </motion.p>
           </div>
+        </div>
+
+        <div className="hidden">
+          <PatientRegistrationPrintout
+            ref={printoutRef}
+            patientName={patientName}
+            patientNumber={patientNumber}
+          />
         </div>
       </motion.div>
     </motion.div>
