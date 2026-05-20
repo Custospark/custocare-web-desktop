@@ -12,7 +12,8 @@
  * including request/response types, enums, and utility functions.
  */
 
-import type  { AdministrationInstructions, CommonSideEffects, CreatePrescriptionItemRequest, DosageForm, DosageUnit, DurationUnit, Frequency, MedicationType, MonitoringRequired, Refills, Route, Substitution } from '../prescription-items/PrescriptionItemsTypes';
+import type { AdministrationInstructions, CommonSideEffects, CreatePrescriptionItemRequest, Frequency, MedicationType, MonitoringRequired, Refills, Route, Substitution } from '../prescription-items/PrescriptionItemsTypes';
+import { DosageForm, DosageUnit, DurationUnit } from '../prescription-items/PrescriptionItemsTypes';
 
 /* -------------------------------------------------------------------------- */
 /*                                   ENUMS                                    */
