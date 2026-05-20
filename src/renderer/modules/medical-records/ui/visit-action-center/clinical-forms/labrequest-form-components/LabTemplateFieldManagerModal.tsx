@@ -89,14 +89,14 @@ const Chip: React.FC<{ label: string; variant: 'blue' | 'red' | 'gray' | 'green'
   variant,
 }) => {
   const cls = {
-    blue: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
-    red: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300',
-    gray: 'bg-gray-100 text-gray-600 dark:bg-gray-700/60 dark:text-gray-300',
-    green: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300',
-    violet: 'bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300',
+    blue: 'bg-blue-200/80 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
+    red: 'bg-red-200/80 text-red-800 dark:bg-red-900/30 dark:text-red-300',
+    gray: 'bg-gray-200/80 text-gray-700 dark:bg-gray-700/60 dark:text-gray-300',
+    green: 'bg-emerald-200/80 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300',
+    violet: 'bg-violet-200/80 text-violet-800 dark:bg-violet-900/30 dark:text-violet-300',
   }[variant];
   return (
-    <span className={cn('inline-block rounded-full px-2 py-0.5 text-[11px] font-medium', cls)}>
+    <span className={cn('inline-block rounded-full px-2 py-0.5 text-[11px] font-semibold', cls)}>
       {label}
     </span>
   );
@@ -223,6 +223,7 @@ export const LabTemplateFieldManagerModal: React.FC<LabTemplateFieldManagerModal
 
   // Reset when modal closes
   useEffect(() => {
+    /* eslint-disable react-hooks/set-state-in-effect -- intentional reset on prop change */
     if (!open) {
       setSelectedField(null);
       setFieldSearch('');
@@ -231,6 +232,7 @@ export const LabTemplateFieldManagerModal: React.FC<LabTemplateFieldManagerModal
       if (toastRef.current) clearTimeout(toastRef.current);
       setToastMsg(null);
     }
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, [open]);
 
   useEffect(() => () => { if (toastRef.current) clearTimeout(toastRef.current); }, []);

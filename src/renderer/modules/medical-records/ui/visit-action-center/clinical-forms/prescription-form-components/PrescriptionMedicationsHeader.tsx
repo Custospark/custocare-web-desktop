@@ -66,16 +66,12 @@ export function PrescriptionMedicationsHeader({
           </button>
         )}
 
-        {/* Download PDF Button - matches other modules */}
+        {/* Download PDF Button - solid style for contrast */}
         {onDownload && (
           <button
             type="button"
             onClick={onDownload}
-            className={cn(
-              'inline-flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-1.5 text-sm font-medium transition-all',
-              'border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100',
-              'dark:border-emerald-800/50 dark:bg-emerald-950/30 dark:text-emerald-300 dark:hover:bg-emerald-950/50'
-            )}
+            className="inline-flex cursor-pointer items-center gap-2 rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white transition-all hover:bg-emerald-700"
           >
             <Download className="h-4 w-4" />
             Download PDF
@@ -86,11 +82,7 @@ export function PrescriptionMedicationsHeader({
           <button
             type="button"
             onClick={onAddMedication}
-            className={cn(
-              'inline-flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-1.5 text-sm font-medium transition-all',
-              'border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100',
-              'dark:border-amber-800/50 dark:bg-amber-950/30 dark:text-amber-300 dark:hover:bg-amber-950/50'
-            )}
+            className="inline-flex cursor-pointer items-center gap-2 rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-medium text-white transition-all hover:bg-blue-700"
           >
             <Plus className="h-4 w-4" />
             Add Medication
