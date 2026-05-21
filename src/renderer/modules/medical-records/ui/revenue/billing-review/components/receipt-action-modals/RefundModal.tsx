@@ -148,8 +148,10 @@ export const RefundModal: React.FC<RefundModalProps> = ({
   const totalRefund = useMemo(() => {
     if (!selectedTransaction) return 0;
 
+    const maxRefundable = selectedTransaction.billing_data.totalPaid || 0;
+
     if (refundType === 'full') {
-      return selectedTransaction.billing_data.grandTotal;
+      return Math.min(selectedTransaction.billing_data.grandTotal, maxRefundable);
     }
 
     const selectedItems = lineItems.filter((item) => item.is_selected);
@@ -169,7 +171,7 @@ export const RefundModal: React.FC<RefundModalProps> = ({
       return sum + (taxableAmount * tax.rate) / 100;
     }, 0);
 
-    return Number((itemsSubtotal - discountAmount + taxAmount).toFixed(2));
+    return Number(Math.min(itemsSubtotal - discountAmount + taxAmount, maxRefundable).toFixed(2));
   }, [refundType, lineItems, selectedTransaction]);
 
   const selectedItemsCount = useMemo(

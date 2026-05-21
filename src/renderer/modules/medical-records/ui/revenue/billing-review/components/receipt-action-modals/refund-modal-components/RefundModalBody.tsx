@@ -4,6 +4,7 @@ import { type BillingReviewItem } from '../../Modals';
 import { type RefundReason, type RefundableLineItem } from '../../../../../../api/refund/RefundTypes';
 import  { type ThemeColors } from '../RefundModal';
 import { cx } from '../../../utils';
+import { formatCurrency } from '../../../../stats/billing-revenue-stats-component/revenueDashboardUtils';
 // Import sub-components
 import { TransactionSummaryCard } from './TransactionSummaryCard';
 import { RefundTypeAndReasonSelector } from './RefundTypeAndReasonSelector';
@@ -192,7 +193,7 @@ export const RefundModalBody: React.FC<RefundModalBodyProps> = ({
           )}
         >
           <Undo2 className="w-4 h-4" />
-          {isProcessing ? 'Processing...' : `Refund UGX ${totalRefund.toLocaleString()}`}
+          {isProcessing ? 'Processing...' : `Refund ${formatCurrency(totalRefund)}`}
         </button>
       </div>
     </form>

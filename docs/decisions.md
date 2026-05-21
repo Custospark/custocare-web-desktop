@@ -5,6 +5,46 @@
 
 ---
 
+## 2026-05-21: Refund Amount Capped at Total Paid — Prevents Over-Refunding Partial Payments
+
+**Context:** When a patient made a partial payment of 5000 on a total of 5500, the system allowed a full refund of 5500 (the grand total) instead of capping at 5000 (what was actually paid). Three root causes were identified:
+
+1. **Frontend `totalRefund` computation** used `grandTotal` directly for full refunds without considering `totalPaid`
+2. **Backend `cashRefundAmount`** was set to the sum of refunded line item net amounts, never capped at `originalTotalPaid`
+3. **Backend `adjustment_amount`** recorded the theoretical line-item total (5500) instead of the actual cash refunded (5000)
+
+Separately, inventory ledger entries for refund/void stock restorations used the generic `'reconciliation'` transaction cause, making them indistinguishable from manual adjustments in inventory history.
+
+**Decisions:**
+
+**1. Frontend `RefundModal.tsx` — Cap totalRefund at totalPaid**
+- Extracted `maxRefundable` from `selectedTransaction.billing_data.totalPaid` at the top of the `totalRefund` useMemo
+- Full refund path: `Math.min(grandTotal, maxRefundable)` instead of raw `grandTotal`
+- Partial refund path: `Math.min(computedAmount, maxRefundable)` for the final return
+
+**2. Backend `RefundService.php` — Cap cashRefundAmount at originalTotalPaid**
+- After computing `$cashRefundAmount` from refund plans, added a cap: if `$originalTotalPaid > 0` and `$cashRefundAmount > $originalTotalPaid`, cap it and log a warning
+- Changed `adjustment_amount` in the `createFinancialAdjustment` call from `$cashRefundAmount` to `round($patientRefundAmount + $insuranceRefundAmount, 2)` — the actual cash refunded after payer split
+
+**3. Backend `RefundService.php` + `InventoryLedgerService.php` — Distinct transaction cause for refund/void restorations**
+- Added 4th `$transactionCause` parameter to `restoreInventoryForRefundedLineItems()` (default `'reconciliation'` for backward compat)
+- Refund caller passes `'refund_restoration'`, void caller passes `'void_restoration'`
+- `InventoryLedgerService::recordAdjustment()` changed to preserve `transaction_cause` from input data, falling back to `'reconciliation'` only when not provided
+
+**Files changed (FE):**
+- `RefundModal.tsx` — capped `totalRefund` at `totalPaid` for full and partial paths
+
+**Files changed (BE):**
+- `RefundService.php` — capped `$cashRefundAmount`, fixed `adjustment_amount`, added `$transactionCause` param (3 call sites updated)
+- `InventoryLedgerService.php` — `recordAdjustment()` preserves custom `transaction_cause`
+
+**Trade-offs:**
+- Capping at `totalPaid` rather than returning an error means the refund still processes gracefully for the maximum refundable amount. Users see the capped amount in the UI.
+- The `adjustment_amount` correction affects reporting — historical records may have the inflated amount. New records will correctly reflect actual cash refunded.
+- Adding a 4th parameter to a private method is safe; no public API/interface changes needed.
+
+---
+
 ## 2026-05-18: Email Verification Flow for Unverified Login
 
 **Context:** When a user registers but doesn't verify their email, then tries to log in, the system must send a new OTP and redirect to the verification page — not just reject with a generic error.

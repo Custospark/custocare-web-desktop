@@ -1,6 +1,7 @@
 import React, { useMemo, useCallback } from 'react';
 import { Coins, AlertCircle, Plus, Trash2, CheckCircle, Percent } from 'lucide-react';
 import { cx } from '../../../utils';
+import { formatCurrency } from '../../../../stats/billing-revenue-stats-component/revenueDashboardUtils';
 import { REFUND_METHOD_LABELS, RefundMethodType } from '../../../../../../api/refund/RefundTypes';
 import { type BillingReviewItem, type ThemeColors } from '../../Modals';
 import type { RefundableLineItem } from '../../../../../../api/refund/RefundTypes';
@@ -158,19 +159,19 @@ export const RefundMethodsDistributor = React.memo<RefundMethodsDistributorProps
       )}>
         <div className="flex justify-between items-center font-semibold">
           <span className={colors.text.primary}>Original Transaction</span>
-          <span className="text-blue-600 dark:text-blue-400">{originalData.grandTotal.toLocaleString()} UGX</span>
+          <span className="text-blue-600 dark:text-blue-400">{formatCurrency(originalData.grandTotal)}</span>
         </div>
         
         <div className={cx('text-xs space-y-1', colors.text.secondary)}>
           <div className="flex justify-between">
             <span>Subtotal:</span>
-            <span>{originalData.subtotal.toLocaleString()} UGX</span>
+            <span>{formatCurrency(originalData.subtotal)}</span>
           </div>
           
           {originalData.discountAmount > 0 && (
             <div className="flex justify-between text-green-600 dark:text-green-400">
               <span>Discount:</span>
-              <span>-{originalData.discountAmount.toLocaleString()} UGX</span>
+              <span>-{formatCurrency(originalData.discountAmount)}</span>
             </div>
           )}
           
@@ -181,7 +182,7 @@ export const RefundMethodsDistributor = React.memo<RefundMethodsDistributorProps
                 <Percent className="w-3 h-3" />
                 {tax.name} ({tax.rate}%):
               </span>
-              <span>{tax.amount.toLocaleString()} UGX</span>
+              <span>{formatCurrency(tax.amount)}</span>
             </div>
           ))}
         </div>
@@ -198,43 +199,43 @@ export const RefundMethodsDistributor = React.memo<RefundMethodsDistributorProps
               {refundType === 'full' ? 'Full Refund' : 'Partial Refund'} Breakdown
             </span>
             <span className="text-blue-600 dark:text-blue-400 font-bold">
-              {totalRefund.toLocaleString()} UGX
+              {formatCurrency(totalRefund)}
             </span>
           </div>
           
           <div className={cx('text-xs space-y-1', colors.text.secondary)}>
             <div className="flex justify-between">
               <span>Items Subtotal:</span>
-              <span>{taxBreakdown.itemsSubtotal.toLocaleString()} UGX</span>
+              <span>{formatCurrency(taxBreakdown.itemsSubtotal)}</span>
             </div>
             
             {taxBreakdown.discountAmount > 0 && (
               <div className="flex justify-between text-green-600 dark:text-green-400">
                 <span>Discount ({((taxBreakdown.discountAmount / taxBreakdown.itemsSubtotal) * 100).toFixed(1)}%):</span>
-                <span>-{taxBreakdown.discountAmount.toLocaleString()} UGX</span>
+                <span>-{formatCurrency(taxBreakdown.discountAmount)}</span>
               </div>
             )}
             
             <div className="flex justify-between font-medium pt-1">
               <span>Taxable Amount:</span>
-              <span>{taxBreakdown.taxableAmount.toLocaleString()} UGX</span>
+              <span>{formatCurrency(taxBreakdown.taxableAmount)}</span>
             </div>
             
             {taxBreakdown.taxes.map((tax, idx) => (
               <div key={idx} className="flex justify-between pl-2">
                 <span>↳ {tax.name} ({tax.rate}%):</span>
-                <span>{tax.amount.toLocaleString()} UGX</span>
+                <span>{formatCurrency(tax.amount)}</span>
               </div>
             ))}
             
             <div className="flex justify-between font-semibold pt-1 border-t border-dashed mt-1">
               <span>Total Tax:</span>
-              <span className="text-blue-600 dark:text-blue-400">{taxBreakdown.totalTax.toLocaleString()} UGX</span>
+              <span className="text-blue-600 dark:text-blue-400">{formatCurrency(taxBreakdown.totalTax)}</span>
             </div>
             
             <div className="flex justify-between font-bold pt-1 mt-1 text-blue-600 dark:text-blue-400">
               <span>Total Refund Amount:</span>
-              <span>{(taxBreakdown.itemsSubtotal - taxBreakdown.discountAmount + taxBreakdown.totalTax).toLocaleString()} UGX</span>
+              <span>{formatCurrency(taxBreakdown.itemsSubtotal - taxBreakdown.discountAmount + taxBreakdown.totalTax)}</span>
             </div>
           </div>
         </div>
@@ -250,7 +251,7 @@ export const RefundMethodsDistributor = React.memo<RefundMethodsDistributorProps
             {refundType === 'full' ? 'Full Refund' : 'To Refund'}
           </span>
           <span className={cx('font-bold', colors.text.primary)}>
-            {totalRefund.toLocaleString()} UGX
+            {formatCurrency(totalRefund)}
           </span>
         </div>
         <div>
@@ -258,13 +259,13 @@ export const RefundMethodsDistributor = React.memo<RefundMethodsDistributorProps
           <span className={cx('font-bold', 
             totalsMatch ? 'text-green-600' : 'text-amber-600'
           )}>
-            {totalAllocatedAmount.toLocaleString()} UGX
+            {formatCurrency(totalAllocatedAmount)}
           </span>
         </div>
         <div>
           <span className={cx('text-xs block', colors.text.tertiary)}>Original Total</span>
           <span className={cx('font-bold', colors.text.primary)}>
-            {originalData.grandTotal.toLocaleString()} UGX
+            {formatCurrency(originalData.grandTotal)}
           </span>
         </div>
       </div>
@@ -277,7 +278,7 @@ export const RefundMethodsDistributor = React.memo<RefundMethodsDistributorProps
         )}>
           <CheckCircle className="w-4 h-4 flex-shrink-0" />
           <span>
-            Allocation matches refund amount ({totalRefund.toLocaleString()} UGX)
+            Allocation matches refund amount ({formatCurrency(totalRefund)})
           </span>
         </div>
       )}
@@ -290,8 +291,8 @@ export const RefundMethodsDistributor = React.memo<RefundMethodsDistributorProps
         )}>
           <AlertCircle className="w-4 h-4 shrink-0" />
           <span>
-            Total allocated ({totalAllocatedAmount.toLocaleString()} UGX) exceeds 
-            original payment total ({originalData.grandTotal.toLocaleString()} UGX)
+            Total allocated ({formatCurrency(totalAllocatedAmount)}) exceeds 
+            original payment total ({formatCurrency(originalData.grandTotal)})
           </span>
         </div>
       )}
@@ -305,8 +306,8 @@ export const RefundMethodsDistributor = React.memo<RefundMethodsDistributorProps
           <AlertCircle className="w-4 h-4 shrink-0" />
           <span>
             {remainingToMatch > 0 
-              ? `Need to allocate ${remainingToMatch.toLocaleString()} UGX more to match refund amount`
-              : `Exceeds refund amount by ${excessAmount.toLocaleString()} UGX`
+              ? `Need to allocate ${formatCurrency(remainingToMatch)} more to match refund amount`
+              : `Exceeds refund amount by ${formatCurrency(excessAmount)}`
             }
           </span>
         </div>
@@ -343,7 +344,7 @@ export const RefundMethodsDistributor = React.memo<RefundMethodsDistributorProps
                   isDark ? 'bg-gray-800 text-gray-400' : 'bg-gray-100 text-gray-600',
                   'cursor-not-allowed'
                 )}>
-                  {method.amount.toLocaleString()} UGX
+                  {formatCurrency(method.amount)}
                 </div>
               </div>
               
@@ -395,7 +396,7 @@ export const RefundMethodsDistributor = React.memo<RefundMethodsDistributorProps
           )}
         >
           <Plus className="w-4 h-4" />
-          Add Refund Method ({remainingToMatch.toLocaleString()} UGX remaining)
+          Add Refund Method ({formatCurrency(remainingToMatch)} remaining)
         </button>
       )}
 

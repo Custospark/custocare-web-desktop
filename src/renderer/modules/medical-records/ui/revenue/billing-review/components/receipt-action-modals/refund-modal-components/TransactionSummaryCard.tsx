@@ -1,5 +1,6 @@
 import React from 'react';
 import { cx } from '../../../utils';
+import { formatCurrency } from '../../../../stats/billing-revenue-stats-component/revenueDashboardUtils';
 import type { BillingReviewItem } from '../../../../../../api/billing-review/BillingReviewTypes';
 import type { ThemeColors } from '../../Modals';
 
@@ -36,13 +37,13 @@ export const TransactionSummaryCard = React.memo<TransactionSummaryCardProps>(({
       <div>
         <div className={cx('text-xs', colors.text.secondary)}>Total Paid</div>
         <div className={cx('font-semibold text-green-600')}>
-          UGX {selectedTransaction.billing_data.grandTotal.toLocaleString()}
+          {formatCurrency(selectedTransaction.billing_data.grandTotal)}
         </div>
       </div>
       <div>
         <div className={cx('text-xs', colors.text.secondary)}>Refund Amount</div>
         <div className={cx('font-semibold text-amber-600')}>
-          UGX {totalRefund.toLocaleString()}
+          {formatCurrency(totalRefund)}
         </div>
       </div>
     </div>

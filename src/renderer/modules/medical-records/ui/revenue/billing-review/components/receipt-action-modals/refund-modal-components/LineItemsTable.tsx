@@ -1,5 +1,6 @@
 import React from 'react';
 import { cx } from '../../../utils';
+import { formatCurrency } from '../../../../stats/billing-revenue-stats-component/revenueDashboardUtils';
 import type { RefundableLineItem } from '../../../../../../api/refund/RefundTypes';
 import { type ThemeColors } from '../../Modals';
 
@@ -74,12 +75,12 @@ export const LineItemsTable = React.memo<LineItemsTableProps>(({
 
           {/* Unit Price */}
           <div className="col-span-2 text-right self-center">
-            UGX {item.unit_price.toLocaleString()}
+            {formatCurrency(item.unit_price)}
           </div>
 
           {/* Total Amount */}
           <div className="col-span-2 text-right self-center">
-            UGX {item.net_amount.toLocaleString()}
+            {formatCurrency(item.net_amount)}
           </div>
 
           {/* Refund Quantity Input */}
