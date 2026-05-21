@@ -2,6 +2,7 @@
 import React, { useMemo, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { 
   FileText, 
   ArrowRight, 
@@ -80,6 +81,7 @@ const MRVisitActionCenter: React.FC<MRVisitActionCenterProps> = ({
 
   const navigate = useNavigate();
   const dispatch = useDispatch();
+  const queryClient = useQueryClient();
   const { showToast } = useToast();
   const [isNavigating, setIsNavigating] = useState(false);
   
@@ -139,6 +141,14 @@ const MRVisitActionCenter: React.FC<MRVisitActionCenterProps> = ({
         const billingDraftKey = `billing_draft_${currentVisitId}`;
         sessionStorage.removeItem(billingDraftKey);
       }
+      
+      // Invalidate all clinical data caches so previous visit data doesn't persist
+      queryClient.invalidateQueries({ queryKey: ['vitals'] });
+      queryClient.invalidateQueries({ queryKey: ['clinical-notes'] });
+      queryClient.invalidateQueries({ queryKey: ['diagnoses'] });
+      queryClient.invalidateQueries({ queryKey: ['consultations'] });
+      queryClient.invalidateQueries({ queryKey: ['prescriptions'] });
+      queryClient.invalidateQueries({ queryKey: ['lab'] });
       
       // Clear billing slice state
       dispatch(clearAll());
