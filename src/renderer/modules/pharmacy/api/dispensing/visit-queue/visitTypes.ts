@@ -857,8 +857,8 @@ export interface ForwardingStaff {
   professional_title: string | null;
   global_role_level: string;
 
-  /** When present, links to `users.id` for assignment payloads (e.g. facility_tasks.assigned_to_user_id). */
-  user_id?: number;
+  /** `users.id` — used as `assigned_to_user_id` on facility_tasks. Always present from backend. */
+  user_id: number;
 
   // User information
   first_name: string;

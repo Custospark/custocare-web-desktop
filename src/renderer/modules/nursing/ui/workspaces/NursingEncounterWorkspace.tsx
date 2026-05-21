@@ -284,7 +284,7 @@ const NursingEncounterWorkspace: React.FC<NursingWorkspaceProps> = ({ theme }) =
                 },
                 {
                   key: 'meds',
-                  label: 'Meds',
+                  label: 'Medications',
                   icon: <Pill className="w-4 h-4" />,
                   to: FOCUS_MODE_ROUTES.NURSING_MEDS_FOCUS,
                   activeWhenPath: NURSING_ROUTES.NURSING_ENCOUNTER_MEDS,

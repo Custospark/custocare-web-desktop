@@ -217,7 +217,7 @@ export const FocusModeRoutes = ({ theme = 'light', patientName }: FocusModeRoute
     key="nursing-encounter-meds-focus"
     path={FOCUS_MODE_ROUTES.NURSING_MEDS_FOCUS}
     element={
-      <FocusedModeLayout title={withPatientTitle('Meds')} onClose={NURSING_ROUTES.NURSING_ENCOUNTER_MEDS}>
+      <FocusedModeLayout title={withPatientTitle('Medications')} onClose={NURSING_ROUTES.NURSING_ENCOUNTER_MEDS}>
         <NursingEncounterMedsView theme={theme} />
       </FocusedModeLayout>
     }

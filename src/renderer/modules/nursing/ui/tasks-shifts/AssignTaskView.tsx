@@ -9,19 +9,13 @@ import type {
   FacilityTaskCategory,
   FacilityTaskPriority,
 } from '../../api/facility-tasks/facilityTaskTypes';
-import { useFacilityStaffAssignees } from '../../api/facility-tasks/useFacilityStaffAssignees';
-import type { StaffAssigneeOption } from '../../api/facility-tasks/useFacilityStaffAssignees';
 import { useGetWards } from '../../../administration/admin-module/api/wards/wardQueries';
 import type { Ward } from '../../../administration/admin-module/api/wards/wardTypes';
 import {
   useGetStaffForForwarding,
   useGetVisitsByFacility,
 } from '../../../pharmacy/api/dispensing/visit-queue/useVisitQueries';
-import {
-  VisitStatus,
-  type ForwardingStaff,
-  type Visit,
-} from '../../../pharmacy/api/dispensing/visit-queue/visitTypes';
+import type { ForwardingStaff, Visit } from '../../../pharmacy/api/dispensing/visit-queue/visitTypes';
 
 interface Props {
   theme: 'light' | 'dark';
@@ -36,13 +30,7 @@ const CATEGORY_OPTIONS: { value: FacilityTaskCategory; label: string }[] = [
   { value: 'other', label: 'Other' },
 ];
 
-/** Same source as Medical Records → Visit action center → Forward (`/visits/staff/forwarding`). */
 const STAFF_FORWARDING_FILTERS = { exclude_current_staff: false as const, limit: 150 };
-
-/** API may return a non-array shape; `x ?? []` is not enough when `x` is a truthy object. */
-function asArray<T>(x: unknown): T[] {
-  return Array.isArray(x) ? (x as T[]) : [];
-}
 
 function localDatetimeToIso(local: string): string | null {
   const t = local.trim();
@@ -52,16 +40,12 @@ function localDatetimeToIso(local: string): string | null {
   return d.toISOString();
 }
 
-function resolveAssigneeUserId(staff: ForwardingStaff, staffIdToUserId: Map<number, number>): number | null {
-  if (typeof staff.user_id === 'number' && staff.user_id > 0) return staff.user_id;
-  const mapped = staffIdToUserId.get(staff.staff_id);
-  return mapped ?? null;
-}
-
 function formatVisitPickLabel(v: Visit): string {
   const pname = v.patient?.name?.trim() || `Patient #${v.patient_id}`;
-  const statusLabel =
-    v.status === VisitStatus.ACTIVE ? 'Active' : v.status === VisitStatus.IN_PROGRESS ? 'In progress' : String(v.status);
+  let statusLabel = 'Active';
+  if (v.status === 'in_progress') statusLabel = 'In progress';
+  else if (v.status === 'active') statusLabel = 'Active';
+  else statusLabel = String(v.status);
   return `${pname} · ${statusLabel} · visit #${v.id}`;
 }
 
@@ -78,24 +62,17 @@ const AssignTaskView: React.FC<Props> = ({ theme }) => {
   const [dueAtLocal, setDueAtLocal] = useState('');
   const [assignedToUserId, setAssignedToUserId] = useState<string>('');
   const [wardId, setWardId] = useState<string>('');
-  /** Selected visit UUID for `visit_uuid` on create; UI shows patient/visit context only. */
   const [visitUuid, setVisitUuid] = useState('');
 
   const wardFilters = useMemo(() => ({ facility_id: facilityId }), [facilityId]);
 
-  const staffUserMapQuery = useFacilityStaffAssignees(facilityId > 0 ? facilityId : null);
   const staffForwardingQuery = useGetStaffForForwarding(STAFF_FORWARDING_FILTERS, {
     enabled: facilityId > 0,
   });
 
-  const activeVisitsQuery = useGetVisitsByFacility(
+  const visitsQuery = useGetVisitsByFacility(
     facilityId,
-    { status: VisitStatus.ACTIVE, per_page: 100 },
-    { enabled: facilityId > 0 }
-  );
-  const inProgressVisitsQuery = useGetVisitsByFacility(
-    facilityId,
-    { status: VisitStatus.IN_PROGRESS, per_page: 100 },
+    { status: 'active,in_progress', per_page: 200 },
     { enabled: facilityId > 0 }
   );
 
@@ -103,64 +80,44 @@ const AssignTaskView: React.FC<Props> = ({ theme }) => {
 
   const createMutation = useCreateFacilityTask();
 
-  const staffIdToUserId = useMemo(() => {
-    const m = new Map<number, number>();
-    for (const a of asArray<StaffAssigneeOption>(staffUserMapQuery.data)) {
-      if (a.staffId > 0) m.set(a.staffId, a.userId);
-    }
-    return m;
-  }, [staffUserMapQuery.data]);
-
-  const forwardingStaff = useMemo(
-    () => asArray<ForwardingStaff>(staffForwardingQuery.data?.data?.staff),
+  const forwardingStaff: ForwardingStaff[] = useMemo(
+    () => staffForwardingQuery.data?.data?.staff ?? [],
     [staffForwardingQuery.data]
   );
 
   const assigneeOptions = useMemo(() => {
     const byUserId = new Map<number, { userId: number; label: string }>();
     for (const s of forwardingStaff) {
-      const uid = resolveAssigneeUserId(s, staffIdToUserId);
-      if (uid == null) continue;
-      if (byUserId.has(uid)) continue;
+      if (!s.user_id || s.user_id <= 0) continue;
+      if (byUserId.has(s.user_id)) continue;
       const you = currentStaffId != null && s.staff_id === currentStaffId ? ' (you)' : '';
-      byUserId.set(uid, {
-        userId: uid,
+      byUserId.set(s.user_id, {
+        userId: s.user_id,
         label: `${s.full_name}${you} — ${s.role_code}`,
       });
     }
     return [...byUserId.values()].sort((a, b) =>
       a.label.localeCompare(b.label, undefined, { sensitivity: 'base' })
     );
-  }, [forwardingStaff, staffIdToUserId, currentStaffId]);
+  }, [forwardingStaff, currentStaffId]);
 
-  const visitPicklist = useMemo(() => {
-    const byId = new Map<number, Visit>();
-    const activeList = asArray<Visit>(activeVisitsQuery.data?.data);
-    const inProgressList = asArray<Visit>(inProgressVisitsQuery.data?.data);
-    for (const v of [...activeList, ...inProgressList]) {
-      byId.set(v.id, v);
-    }
-    return [...byId.values()].sort((a, b) => {
+  const visitPicklist: Visit[] = useMemo(() => {
+    const raw = visitsQuery.data?.data ?? [];
+    const list = Array.isArray(raw) ? raw : [];
+    return [...list].sort((a, b) => {
       const ta = new Date(a.arrived_at).getTime();
       const tb = new Date(b.arrived_at).getTime();
       return tb - ta;
     });
-  }, [activeVisitsQuery.data, inProgressVisitsQuery.data]);
+  }, [visitsQuery.data]);
 
-  const wards = asArray<Ward>(wardsQuery.data);
+  const wards: Ward[] = useMemo(
+    () => (Array.isArray(wardsQuery.data) ? wardsQuery.data : []),
+    [wardsQuery.data]
+  );
 
-  const staffLoadError = staffForwardingQuery.isError || staffUserMapQuery.isError;
-  const unmappedForwardingCount = useMemo(() => {
-    let n = 0;
-    for (const s of forwardingStaff) {
-      if (resolveAssigneeUserId(s, staffIdToUserId) == null) n += 1;
-    }
-    return n;
-  }, [forwardingStaff, staffIdToUserId]);
-
-  const visitsLoading = activeVisitsQuery.isLoading || inProgressVisitsQuery.isLoading;
+  const visitsLoading = visitsQuery.isLoading;
   const busy =
-    staffUserMapQuery.isFetching ||
     staffForwardingQuery.isFetching ||
     visitsLoading ||
     wardsQuery.isFetching ||
@@ -238,9 +195,8 @@ const AssignTaskView: React.FC<Props> = ({ theme }) => {
             Assign task
           </h2>
           <p className={`text-sm mt-0.5 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-            Staff come from the same forwarding list as Medical Records (visit action center → Forward):{' '}
-            <code className="text-xs opacity-90">/visits/staff/forwarding</code> with the current user included. Assignee is saved as{' '}
-            <code className="text-xs opacity-90">assigned_to_user_id</code> (resolved from API or active facility role assignment).
+            Delegate a task to any staff member with an active role at this facility.
+            Your name is marked as <strong>(you)</strong>.
           </p>
         </div>
       </div>
@@ -370,23 +326,16 @@ const AssignTaskView: React.FC<Props> = ({ theme }) => {
               </option>
             ))}
           </select>
-          {staffLoadError ? (
+          {staffForwardingQuery.isError ? (
             <p className={`text-xs mt-1 ${isDark ? 'text-rose-400' : 'text-rose-600'}`}>
-              Could not load staff forwarding or facility role map.
+              Could not load staff list. Try refreshing.
             </p>
           ) : null}
           {!staffForwardingQuery.isLoading &&
-          forwardingStaff.length > 0 &&
-          assigneeOptions.length === 0 &&
-          !staffLoadError ? (
+          !staffForwardingQuery.isError &&
+          assigneeOptions.length === 0 ? (
             <p className={`text-xs mt-1 ${isDark ? 'text-amber-400/90' : 'text-amber-700'}`}>
-              No assignees could be linked to a user id. Ensure facility staff roles are active or the forwarding API returns{' '}
-              <code className="text-xs">user_id</code>.
-            </p>
-          ) : null}
-          {unmappedForwardingCount > 0 && assigneeOptions.length > 0 ? (
-            <p className={`text-xs mt-1 ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
-              {unmappedForwardingCount} forwarding row(s) omitted (no user id).
+              No staff with active roles found at this facility.
             </p>
           ) : null}
         </div>
@@ -409,12 +358,8 @@ const AssignTaskView: React.FC<Props> = ({ theme }) => {
               </option>
             ))}
           </select>
-          <p className={`text-xs mt-1 ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
-            Lists visits with status <strong className="font-medium">active</strong> or <strong className="font-medium">in progress</strong>{' '}
-            at this facility. The task stores the visit UUID only.
-          </p>
           {!visitsLoading && visitPicklist.length === 0 ? (
-            <p className={`text-xs mt-1 ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>No active or in-progress visits found.</p>
+            <p className={`text-xs mt-1 ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>No active or in-progress visits at this facility.</p>
           ) : null}
         </div>
 

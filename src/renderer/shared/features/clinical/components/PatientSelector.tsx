@@ -1,6 +1,6 @@
 // src/modules/clinical/components/PatientSelector.tsx
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { useSelector } from 'react-redux';
 import { Search, UserPlus, User, AlertCircle, Phone, Calendar, FileText } from 'lucide-react';
 import type { RootState } from '../../../../app/store/store';
@@ -55,34 +55,15 @@ export const PatientSelector: React.FC<PatientSelectorProps> = ({
 }) => {
   const theme = useSelector((state: RootState) => state.ui.theme);
   const [searchQuery, setSearchQuery] = useState('');
-  const [filteredPatients, setFilteredPatients] = useState<Patient[]>(MOCK_PATIENTS);
-  const [showNewPatientForm, setShowNewPatientForm] = useState(false);
-  const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
-  
-  // New patient form state
-  const [newPatient, setNewPatient] = useState<Partial<Patient>>({
-    name: '',
-    age: 0,
-    gender: 'Male',
-    phone: '',
-    allergies: [],
-    currentMedications: [],
-    medicalHistory: []
-  });
-
   // Filter patients based on search
-  useEffect(() => {
-    if (searchQuery.trim() === '') {
-      setFilteredPatients(MOCK_PATIENTS);
-    } else {
-      const query = searchQuery.toLowerCase();
-      const filtered = MOCK_PATIENTS.filter(patient =>
-        patient.name.toLowerCase().includes(query) ||
-        patient.phone.includes(query) ||
-        patient.medicalRecordNumber.toLowerCase().includes(query)
-      );
-      setFilteredPatients(filtered);
-    }
+  const filteredPatients = useMemo(() => {
+    if (searchQuery.trim() === '') return MOCK_PATIENTS;
+    const query = searchQuery.toLowerCase();
+    return MOCK_PATIENTS.filter(patient =>
+      patient.name.toLowerCase().includes(query) ||
+      patient.phone.includes(query) ||
+      patient.medicalRecordNumber.toLowerCase().includes(query)
+    );
   }, [searchQuery]);
 
   const handleSelectPatient = useCallback((patient: Patient) => {
@@ -184,7 +165,7 @@ export const PatientSelector: React.FC<PatientSelectorProps> = ({
                       ? 'bg-blue-900/30 text-blue-300 border border-blue-700' 
                       : 'bg-blue-50 text-blue-700 border border-blue-200'
                   )}>
-                    Current Meds: {selectedPatient.currentMedications.length}
+                    Current Medications: {selectedPatient.currentMedications.length}
                   </div>
                 )}
               </div>
