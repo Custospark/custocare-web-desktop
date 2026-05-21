@@ -877,6 +877,48 @@ export const useAssignStaffToVisit = (
 };
 
 /**
+ * Bulk reassign all active visits from current staff to another (shift handover).
+ */
+export const useBulkReassignStaff = (
+  callbacks: MutationCallbacks<{ success: boolean; reassigned_count: number; message: string }, AxiosError<ApiErrorResponse>> = {}
+) => {
+  const queryClient = useQueryClient();
+  const { showToast } = useToast();
+  const facilityId = useSelector((state: RootState) => getActiveFacilityId(state));
+
+  return useMutation<{ success: boolean; reassigned_count: number; message: string }, AxiosError<ApiErrorResponse>, { to_staff_id: number }>({
+    mutationFn: async ({ to_staff_id }) => {
+      if (!facilityId) throw new Error('No active facility selected');
+
+      const response = await axiosInstance.post<{ success: boolean; reassigned_count: number; message: string }>(
+        '/visits/bulk-reassign-staff',
+        { to_staff_id },
+        {
+          headers: {
+            'X-Facility-Id': facilityId.toString(),
+          },
+        }
+      );
+
+      return response.data;
+    },
+    onSuccess: (data) => {
+      showToast('success', data.message || 'Visits reassigned successfully.', 6000);
+      queryClient.invalidateQueries({ queryKey: visitKeys.queue({}) });
+      queryClient.invalidateQueries({ queryKey: visitKeys.lists() });
+      callbacks.onSuccess?.(data);
+    },
+    onError: (error: AxiosError<ApiErrorResponse>) => {
+      showToast('error', error.response?.data?.message || error.message || 'Failed to reassign visits.', 6000);
+      callbacks.onError?.(error);
+    },
+    onSettled: () => {
+      callbacks.onSettled?.();
+    },
+  });
+};
+
+/**
  * Discharges a visit.
  * 
  * @param callbacks - Optional onSuccess and onError callbacks
@@ -1480,6 +1522,7 @@ const visitQueries = {
   useUpdateVisitPhase,
   useUpdateVisitStatus,
   useAssignStaffToVisit,
+  useBulkReassignStaff,
   useDischargeVisit,
   useRegisterVisit,
   useStartClinicalCare,
