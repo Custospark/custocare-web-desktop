@@ -138,7 +138,6 @@ export const CurrentVisit: React.FC<CurrentVisitProps> = ({ theme = 'light' }) =
   const labRequestsQuery = useGetRequestsByVisit(Number(activeVisitId ?? 0), {
     patientId: Number(activePatientId ?? 0),
     enabled: !!activeVisitId,
-    enabled: !!activeVisitId,
   });
   const visitRequests = useMemo(() => labRequestsQuery.data ?? [], [labRequestsQuery.data]);
   const activeLabRequestForOrders = useMemo<LabRequest | null>(() => {

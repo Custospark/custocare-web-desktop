@@ -2,8 +2,9 @@
 import React from 'react';
 import { AlertCircle } from 'lucide-react';
 import { DEFAULT_TAXES, formatCurrency } from '../billing-types';
-import { type ReceiptTransactionShape } from '../../../revenue/billing-review/components/receipt-view/printable-receipt/ReceiptTypes';// Define the shape that matches what PrintableReceipt expects
+import { type ReceiptTransactionShape } from '../../../revenue/billing-review/components/receipt-view/printable-receipt/ReceiptTypes';
 import { PrintableReceipt } from '../../../revenue/billing-review/components/receipt-view/PrintableReceipt';
+import type { DerivedFinancials, CashBreakdown } from '../../../revenue/billing-review/components/receipt-view/printable-receipt/ReceiptTypes';
 import { formatText } from '../../../revenue/stats/billing-revenue-stats-component/revenueDashboardUtils';
 import type { BillingSummaryColors } from '../billing-summary-step/billingSummaryTheme';
 interface ReceiptPreviewSectionProps {
@@ -86,9 +87,9 @@ export const ReceiptPreviewSection: React.FC<ReceiptPreviewSectionProps> = ({
             <PrintableReceipt
               ref={receiptRef}
               selectedTransaction={selectedTransaction}
-              derivedFinancials={derivedFinancials}
-              cashBreakdown={cashBreakdown}
-              changeAmount={derivedFinancials.changeAmount}
+              derivedFinancials={derivedFinancials as unknown as DerivedFinancials}
+              cashBreakdown={cashBreakdown as unknown as CashBreakdown | null}
+              changeAmount={(derivedFinancials as unknown as DerivedFinancials).changeAmount}
               isPrinting={isPrinting}
             />
 
@@ -133,7 +134,7 @@ export const ReceiptPreviewSection: React.FC<ReceiptPreviewSectionProps> = ({
                         <p className={`text-xs ${colors.text.secondary}`}>{tax.rate}% rate</p>
                       </div>
                       <p className={`text-sm font-extrabold ${colors.text.primary}`}>
-                        {formatCurrency(billingData.taxes[idx]?.amount || 0)}
+                        {formatCurrency((billingData.taxes as Array<{ amount: number }> | undefined)?.[idx]?.amount || 0)}
                       </p>
                     </div>
                   ))}

@@ -178,7 +178,7 @@ export const LabRequestFormBody: React.FC<LabRequestFormBodyProps> = ({
 
       if (visitNumericId) {
         await queryClient.invalidateQueries({
-          queryKey: labKeys.requestByVisit(visitNumericId),
+          queryKey: labKeys.requestByVisit(patientNumericId, visitNumericId),
         });
       }
 
