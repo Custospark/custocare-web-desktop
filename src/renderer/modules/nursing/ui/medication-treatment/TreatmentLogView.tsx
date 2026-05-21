@@ -223,7 +223,7 @@ const TreatmentLogView: React.FC<Props> = ({ theme }) => {
             <option value="">— Select active/in-progress visit —</option>
             {visitPicklist.map((v) => (
               <option key={v.visit_uuid} value={v.visit_uuid}>
-                {v.patientName} · {v.visit_uuid}
+                {v.patientName}
               </option>
             ))}
           </select>
@@ -400,7 +400,7 @@ const TreatmentLogView: React.FC<Props> = ({ theme }) => {
                 </div>
                 <p className={`text-sm mt-1 ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>{row.title}</p>
                 <p className={`text-xs mt-1 ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
-                  Visit: {row.visit?.visit_uuid || row.visit_id} · Patient: {formatPerson(row.patient?.user)} · By:{' '}
+                  Patient: {row.patient?.user ? formatPerson(row.patient.user) : `Patient #${row.patient_id}`} · By:{' '}
                   {formatPerson(row.loggedBy)}
                 </p>
                 {row.notes ? (

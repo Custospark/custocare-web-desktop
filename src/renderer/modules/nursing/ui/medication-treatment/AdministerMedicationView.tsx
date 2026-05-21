@@ -206,7 +206,7 @@ const AdministerMedicationView: React.FC<Props> = ({ theme }) => {
               <optgroup key={group.patientName} label={group.patientName}>
                 {group.doses.map((d) => (
                   <option key={d.id} value={String(d.id)}>
-                    {d.prescriptionItem?.medication_name || `Item #${d.prescription_item_id}`} · {formatWhen(d.scheduled_for)}
+                    {d.prescriptionItem?.medication_name || `Medication #${d.prescription_item_id}`} · {formatWhen(d.scheduled_for)}
                   </option>
                 ))}
               </optgroup>
@@ -366,8 +366,7 @@ const AdministerMedicationView: React.FC<Props> = ({ theme }) => {
                   <span className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>{formatWhen(row.administered_at)}</span>
                 </div>
                 <p className={`text-sm mt-1 ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>
-                  {row.prescriptionItem?.medication_name || `Item #${row.prescription_item_id}`} · Visit{' '}
-                  {row.visit?.visit_uuid || row.visit_id}
+                  {row.prescriptionItem?.medication_name || `Medication #${row.prescription_item_id}`}
                 </p>
                 {row.notes ? <p className={`text-xs mt-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Notes: {row.notes}</p> : null}
               </li>
