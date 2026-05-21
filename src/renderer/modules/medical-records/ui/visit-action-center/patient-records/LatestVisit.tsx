@@ -11,7 +11,7 @@ import {
   Stethoscope,
   FileSpreadsheet,
 } from 'lucide-react';
-import { selectActiveVisitId } from '../../../../../app/store/slices/visitSlice';
+import { selectActiveVisitId, selectActiveVisitPatientId } from '../../../../../app/store/slices/visitSlice';
 import AllergyForm from '../clinical-forms/AllergyForm';
 import ClinicalNotesForm from '../clinical-forms/ClinicalNotesForm';
 import VitalsForm from '../clinical-forms/VitalsForm';
@@ -22,7 +22,7 @@ import LabRequestForm from '../clinical-forms/LabRequestForm';
 import LabResultForm from '../clinical-forms/LabResultForm';
 import ClinicalTemplateForm from '../clinical-forms/ClinicalTemplateForm';
 import { CLINICAL_FORM_GRID_DEFINITIONS, type ClinicalFormModuleId } from './clinicalFormGridDefinitions';
-import { useGetVisitAllergies } from '../../../api/allergies/AllergyQueries';
+import { useGetAllergies } from '../../../api/allergies/AllergyQueries';
 import { useGetActiveVisitClinicalNotes } from '../../../api/clinical-notes/clinicalNoteQueries';
 import { useGetActiveVisitVitals } from '../../../api/vitals/vitalQueries';
 import { useGetActiveVisitDiagnoses } from '../../../api/diagnosis/diagnosisQueries';
@@ -111,6 +111,7 @@ const FORM_REGISTRY: FormOption[] = CLINICAL_FORM_GRID_DEFINITIONS.map((def) => 
 export const CurrentVisit: React.FC<CurrentVisitProps> = ({ theme = 'light' }) => {
   const isDark = theme === 'dark';
   const activeVisitId = useSelector(selectActiveVisitId);
+  const activePatientId = useSelector(selectActiveVisitPatientId);
 
   // State for selected form
   const [selectedForm, setSelectedForm] = useState<FormModule>(null);
@@ -128,8 +129,8 @@ export const CurrentVisit: React.FC<CurrentVisitProps> = ({ theme = 'light' }) =
   const consultationsQuery = useGetActiveVisitConsultations({
     enabled: !!activeVisitId,
   });
-  const allergiesQuery = useGetVisitAllergies(Number(activeVisitId ?? 0), {
-    enabled: !!activeVisitId,
+  const allergiesQuery = useGetAllergies(activePatientId ?? '', {}, {
+    enabled: !!activePatientId,
   });
   const prescriptionsQuery = useGetVisitPrescriptions(Number(activeVisitId ?? 0), {
     enabled: !!activeVisitId,

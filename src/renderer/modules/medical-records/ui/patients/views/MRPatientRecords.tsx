@@ -9,6 +9,10 @@ import { selectActiveVisitId, selectActiveVisitPatientId } from '../../../../../
 
 // Import queries for status indicators
 import { usePatientMedicalHistory } from '../../../api/patient-medical-history/patientMedicalHistoryQueries';
+import {
+  pickLatestVisitId,
+  filterMedicalHistoryPayloadByVisitId,
+} from '../../../api/patient-medical-history/patientMedicalHistoryVisitFilter';
 import { useGetAllergies } from '../../../api/allergies/AllergyQueries';
 import { normalizeAllergyResponse } from '../../visit-action-center/clinical-forms/allergies-form-components';
 
@@ -284,38 +288,46 @@ export const MRPatientRecords: React.FC<MRPatientRecordsProps> = ({
     },
   };
 
-  // Determine latest visit status from all clinical forms
+  // Determine latest visit status — scoped to latest visit only (allergies patient-scoped)
   const latestVisitStatus = useMemo(() => {
     const mh = medicalHistoryQuery.data;
+    if (!mh) return { hasData: false, message: 'No clinical data recorded' };
+
+    const latestId = pickLatestVisitId(mh.visits);
+    const visitScoped = latestId != null ? filterMedicalHistoryPayloadByVisitId(mh, latestId) : null;
+
+    const normalizedAllergies = normalizeAllergyResponse(allergiesQuery.data);
+    const hasAllergies = normalizedAllergies.allergies.length > 0;
+
     const categories = [
-      { name: 'Clinical Notes',    hasData: (mh?.clinical_notes?.length  || 0) > 0 },
-      { name: 'Diagnoses',         hasData: (mh?.diagnoses?.length      || 0) > 0 },
-      { name: 'Consultations',     hasData: (mh?.consultations?.length  || 0) > 0 },
-      { name: 'Vitals',            hasData: (mh?.vitals?.length         || 0) > 0 },
-      { name: 'Allergies',         hasData: (mh?.allergies?.length      || 0) > 0 },
-      { name: 'Prescriptions',     hasData: (mh?.prescriptions?.length  || 0) > 0 },
-      { name: 'Lab Requests',      hasData: (mh?.lab_requests?.length   || 0) > 0 },
-      { name: 'Lab Results',       hasData: (mh?.lab_results?.length    || 0) > 0 },
+      { name: 'Clinical Notes',    hasData: (visitScoped?.clinical_notes?.length  || 0) > 0 },
+      { name: 'Diagnoses',         hasData: (visitScoped?.diagnoses?.length      || 0) > 0 },
+      { name: 'Consultations',     hasData: (visitScoped?.consultations?.length  || 0) > 0 },
+      { name: 'Vitals',            hasData: (visitScoped?.vitals?.length         || 0) > 0 },
+      { name: 'Allergies',         hasData: hasAllergies },
+      { name: 'Prescriptions',     hasData: (visitScoped?.prescriptions?.length  || 0) > 0 },
+      { name: 'Lab Requests',      hasData: (visitScoped?.lab_requests?.length   || 0) > 0 },
+      { name: 'Lab Results',       hasData: (visitScoped?.lab_results?.length    || 0) > 0 },
     ];
     const documentedCount = categories.filter(c => c.hasData).length;
     const total = categories.length;
 
     if (activePatientId) {
       if (documentedCount === total) {
-        return { hasData: true, message: '✓ All clinical forms documented' };
+        return { hasData: true, message: '✓ All clinical documents documented' };
       }
       if (documentedCount > 0) {
-        return { hasData: true, message: `⚠️ ${documentedCount}/${total} clinical forms have data` };
+        return { hasData: true, message: `⚠️ ${documentedCount}/${total} clinical documents have data` };
       }
       return { hasData: false, message: 'No clinical data recorded' };
     }
     return { hasData: false, message: 'No patient selected' };
-  }, [activePatientId, medicalHistoryQuery.data]);
+  }, [activePatientId, medicalHistoryQuery.data, allergiesQuery.data]);
 
   // Determine medical history status
   const medicalHistoryStatus = useMemo(() => {
     const mh = medicalHistoryQuery.data;
-    const categories = [
+    const hasAnyData = [
       (mh?.clinical_notes?.length  || 0) > 0,
       (mh?.diagnoses?.length       || 0) > 0,
       (mh?.consultations?.length   || 0) > 0,
@@ -324,25 +336,15 @@ export const MRPatientRecords: React.FC<MRPatientRecordsProps> = ({
       (mh?.prescriptions?.length   || 0) > 0,
       (mh?.lab_requests?.length    || 0) > 0,
       (mh?.lab_results?.length     || 0) > 0,
-    ];
-    const documentedCount = categories.filter(Boolean).length;
+    ].some(Boolean);
 
     if (activePatientId) {
-      if (documentedCount > 0) {
-        return {
-          hasData: true,
-          message: `Historical data exists (${documentedCount} of ${categories.length} clinical categories)`,
-        };
+      if (hasAnyData) {
+        return { hasData: true, message: 'Historical data exists' };
       }
-      return {
-        hasData: false,
-        message: 'No historical data recorded',
-      };
+      return { hasData: false, message: 'No historical data recorded' };
     }
-    return {
-      hasData: false,
-      message: 'No patient selected',
-    };
+    return { hasData: false, message: 'No patient selected' };
   }, [activePatientId, medicalHistoryQuery.data]);
 
   // Handler for Latest Visit
