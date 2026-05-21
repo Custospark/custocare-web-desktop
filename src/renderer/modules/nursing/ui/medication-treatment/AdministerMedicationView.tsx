@@ -153,7 +153,7 @@ const AdministerMedicationView: React.FC<Props> = ({ theme }) => {
             Administer medication
           </h2>
           <p className={`text-sm mt-0.5 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-            Record administered doses via <code className="text-xs opacity-90">POST /nursing/medication-administrations</code>.
+            Record medication administrations for this facility.
           </p>
         </div>
         <button

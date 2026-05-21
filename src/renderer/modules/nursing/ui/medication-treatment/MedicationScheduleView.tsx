@@ -112,7 +112,7 @@ const MedicationScheduleView: React.FC<Props> = ({ theme }) => {
             Medication schedule
           </h2>
           <p className={`text-sm mt-0.5 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-            Scheduled nursing doses from <code className="text-xs opacity-90">GET /nursing/medication-doses</code>.
+            View all scheduled medication doses at this facility. Filter by status, ward, or date range.
           </p>
         </div>
         <button

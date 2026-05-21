@@ -74,7 +74,7 @@ const MissedMedicationsView: React.FC<Props> = ({ theme }) => {
             Missed medications
           </h2>
           <p className={`text-sm mt-0.5 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-            Overdue pending doses from <code className="text-xs opacity-90">GET /nursing/medication-doses/missed</code>.
+            Doses past their scheduled time that still need attention.
           </p>
         </div>
         <button

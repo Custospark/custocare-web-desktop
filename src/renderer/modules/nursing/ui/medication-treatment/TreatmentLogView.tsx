@@ -189,7 +189,7 @@ const TreatmentLogView: React.FC<Props> = ({ theme }) => {
             Treatment log
           </h2>
           <p className={`text-sm mt-0.5 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-            Create and review treatment entries from <code className="text-xs opacity-90">/nursing/treatment-logs</code>.
+            Create and review nursing treatment entries for this facility.
           </p>
         </div>
         <button
