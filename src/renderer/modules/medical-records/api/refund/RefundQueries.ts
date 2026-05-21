@@ -113,6 +113,12 @@ export const useVoidTransaction = (
         queryClient.invalidateQueries({ 
           queryKey: ['billing-review', 'list', facilityId] 
         });
+        queryClient.invalidateQueries({ 
+          queryKey: ['billing-review', 'detail', facilityId] 
+        });
+        queryClient.invalidateQueries({ 
+          queryKey: ['billing-review', 'facility-visit', facilityId] 
+        });
       }
       
       // Call user's onSuccess if provided - we ignore the onMutateResult parameter
@@ -191,6 +197,12 @@ export const useRefundTransaction = (
         });
         queryClient.invalidateQueries({ 
           queryKey: ['billing-review', 'list', facilityId] 
+        });
+        queryClient.invalidateQueries({ 
+          queryKey: ['billing-review', 'detail', facilityId] 
+        });
+        queryClient.invalidateQueries({ 
+          queryKey: ['billing-review', 'facility-visit', facilityId] 
         });
       }
       

@@ -386,6 +386,20 @@ Separately, inventory ledger entries for refund/void stock restorations used the
 
 ---
 
+## 2026-05-21: Refund/Void Query Invalidation — Added Missing Detail + Facility-Visit Keys
+
+**Context:** After processing a refund or void on the billing review detail page, the page still showed refunded items because React Query's cached detail query was never invalidated. Only the `['billing-review', 'list', facilityId]` key was invalidated (used by the list view), but the detail view uses separate keys: `['billing-review', 'detail', facilityId, visitId]` and `['billing-review', 'facility-visit', facilityId, visitId]`.
+
+**Decision:**
+- Added `queryClient.invalidateQueries({ queryKey: ['billing-review', 'detail', facilityId] })` to both `useRefundTransaction` and `useVoidTransaction` in `RefundQueries.ts`
+- Added `queryClient.invalidateQueries({ queryKey: ['billing-review', 'facility-visit', facilityId] })` to both hooks
+- Uses prefix matching so a single invalidation covers all visit IDs for the current facility
+
+**Files changed:**
+- `src/renderer/modules/medical-records/api/refund/RefundQueries.ts` — added 4 `invalidateQueries` calls across 2 mutation hooks
+
+---
+
 ## 2026-05-20: Removed NavigationGuard Hook — Reverted to Plain useNavigate
 
 **Context:** The `useNavigationGuard` hook (added as Layer 1 of the three-layer crash protection) caused a 300ms delay on every sidebar click. Users reported navigation felt completely broken — clicking sidebar items did nothing for 300ms. Rapid clicks were also silently dropped, making the app appear unresponsive.
