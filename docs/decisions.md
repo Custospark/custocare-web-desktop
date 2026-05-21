@@ -386,6 +386,84 @@ Separately, inventory ledger entries for refund/void stock restorations used the
 
 ---
 
+## 2026-05-21: Clinical Data Scoped by Visit — Combined patientId+visitId Cache Keys
+
+**Context:** The `PrescriptionForm` was fetching all patient prescriptions (patient-scoped) instead of only the active visit's prescriptions (visit-scoped). This caused draft prescription data from previous visits to appear in the current visit's form. Additionally, the "Latest Visit" document count in `MRPatientRecords` was checking data across all visits rather than only the latest visit, and billing was auto-completing visits on full payment (preventing further clinical work on the same visit).
+
+**Root causes:**
+
+1. **Billing auto-completed visits** — `BillingProcessor.php` set `status = 'completed'` and `current_phase = 'discharged'` on full payment, locking the visit.
+2. **Fully-paid visits reused** — `VisitService.php` didn't exclude `payment_status = 'paid_in_full'` visits when looking for an existing reusable visit.
+3. **PrescriptionForm was patient-scoped** — Used `useGetPatientPrescriptions(patientNumericId, [])` which fetched all prescriptions across all patient visits, then filtered in-memory. Drafts from previous visits appeared in the current visit.
+4. **All clinical form queries lacked visit scope** — Vitals, clinical notes, diagnoses, consultations, prescriptions, and lab queries used patient-scoped keys or visit-only keys without patientId prefix, making invalidation tricky.
+5. **Stale variable reference caused crash** — `patientPrescriptionsQuery` was renamed to `visitPrescriptionsQuery` but one reference at line 878 was missed, throwing a `ReferenceError` on render.
+6. **Medical history not invalidated on prescription save** — The Latest Visit document count (`x/8`) didn't update after saving a prescription because `patientMedicalHistoryKeys` invalidation was missing from prescription mutation `onSuccess`.
+
+**Decisions:**
+
+**1. Backend — Billing no longer completes visits**
+- `BillingProcessor.php`: Removed `$visit->status = 'completed'` and `$visit->current_phase = 'discharged'` on full payment. Visit stays `active` with phase `billing`.
+- `BillingService.php`: Response message changed from "Payment successfully settled. Visit has been completed." to "Payment successfully settled."
+
+**2. Backend — Fully-paid visits excluded from reuse**
+- `VisitService.php`: Added `->where('payment_status', '!=', 'paid_in_full')` to the existing-visit reuse query.
+- Filters now check `status = 'active'` + `payment_status != 'paid_in_full'` + strict same-facility.
+
+**3. Backend — New visit-scoped prescription endpoint**
+- `PrescriptionController.php`: Added `visitPrescriptions($visitId)` method returning prescriptions filtered by `visit_id`.
+- Route: `GET /prescriptions/visit/{visitId}` registered.
+- `PrescriptionResource.php`: Now returns `visit_id` and `patient_id`.
+
+**4. Frontend — Combined cache key pattern for all clinical form queries**
+- Every clinical form module (vitals, clinical-notes, diagnoses, consultations, prescriptions, lab) now has a `visitPatient(patientId, visitId)` key: `['entity-root', 'patient', patientId, 'visit', visitId]`.
+- `useGetActiveVisit*` hooks read `selectActiveVisitPatientId` from Redux and use the combined key.
+- `useGetVisit*` hooks accept optional `patientId` (via options/param) for backward compatibility.
+- The pattern ensures a single `invalidateQueries({ queryKey: ['entity-root', 'patient', patientId] })` cascades to both patient-scoped and visit-scoped caches.
+
+**5. Allergies excluded from combined key pattern**
+- Stay patient-scoped only per explicit instruction (allergies belong to the patient, not the visit).
+
+**6. PrescriptionForm uses visit-scoped query**
+- Replaced `useGetPatientPrescriptions(patientNumericId, [])` with `useGetVisitPrescriptions(visitId ?? 0, patientNumericId, { enabled: !!visitId && !existingPrescription })`.
+- Drafts are now found only within the active visit.
+
+**7. Added medical history cache invalidation to prescription mutations**
+- Both `PrescriptionQueries.ts` and `PrescriptionItemsQueries.ts`: added `queryClient.invalidateQueries({ queryKey: patientMedicalHistoryKeys.all() })` and `queryClient.invalidateQueries({ queryKey: prescriptionKeys.all() })` to all mutation `onSuccess` handlers.
+
+**8. Toast changes for template application**
+- `PrescriptionItemsQueries.ts` `useCreatePrescriptionItem`: removed individual success toast (noisy during multi-item template application).
+- `PrescriptionForm.tsx` `addOrUpdateMedication`: added single `showToast('success', 'Medication added', 3000)` for individual persisted item saves.
+
+**9. MRPatientRecords — visit-scoped document count + medical history simplification**
+- `latestVisitStatus` now filters medical history by latest visit ID (via `pickLatestVisitId` + `filterMedicalHistoryPayloadByVisitId`).
+- Counts only prescriptions and other forms from the latest visit.
+- "clinical forms" → "clinical documents" in status message.
+- `medicalHistoryStatus` simplified to just "Historical data exists" (removed x/8 count — was misleading when scoped to latest visit).
+
+**Files changed (FE — 9 files):**
+- `vitalQueries.ts` — added `visitPatient` key, active visit hook reads patientId
+- `clinicalNoteQueries.ts` — same combined key pattern
+- `diagnosisQueries.ts` — same combined key pattern
+- `consultationQueries.ts` — same combined key pattern
+- `PrescriptionQueries.ts` — added `visitPatient` key, dual invalidation, patientId param
+- `PrescriptionItemsQueries.ts` — toast removed, medical history invalidation added
+- `LabQueries.ts` — combined key for requestByVisit
+- `PrescriptionForm.tsx` — visit-scoped query, toast added for item saves, crash fix (line 878)
+- `LatestVisit.tsx` — passes patientId to prescription/lab hooks
+
+**Files changed (BE — 4 files):**
+- `BillingProcessor.php` — removed visit completion on full payment
+- `BillingService.php` — updated response message
+- `VisitService.php` — exclude fully-paid visits from reuse
+- `PrescriptionController.php` — new `visitPrescriptions` method + route
+
+**Trade-offs:**
+- `patientId` as optional param/option on `useGetVisit*` hooks adds some API surface but keeps backward compatibility with callers that don't have patientId (patient portal, report launchers).
+- Combined key pattern means more specific invalidation targets; generic `invalidateQueries({ queryKey: ['entity-root', 'patient', patientId] })` is broader than necessary but ensures correctness.
+- Removing toast from the mutation hook means template appliers must show their own toast. Single grouped toast is better UX but requires each caller to implement it.
+
+---
+
 ## 2026-05-21: Refund/Void Query Invalidation — Added Missing Detail + Facility-Visit Keys
 
 **Context:** After processing a refund or void on the billing review detail page, the page still showed refunded items because React Query's cached detail query was never invalidated. Only the `['billing-review', 'list', facilityId]` key was invalidated (used by the list view), but the detail view uses separate keys: `['billing-review', 'detail', facilityId, visitId]` and `['billing-review', 'facility-visit', facilityId, visitId]`.
