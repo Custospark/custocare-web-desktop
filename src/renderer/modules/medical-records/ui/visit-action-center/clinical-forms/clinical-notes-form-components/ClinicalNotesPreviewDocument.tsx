@@ -250,7 +250,7 @@ export const ClinicalNotesPreviewDocument: React.FC<ClinicalNotesPreviewDocument
 
               <div
                 className={cn(
-                  'whitespace-pre-wrap text-sm leading-7 text-slate-800 print:text-base',
+                  'whitespace-pre-wrap break-words text-sm leading-7 text-slate-800 print:text-base',
                   isValueEmpty && 'italic text-slate-500'
                 )}
               >

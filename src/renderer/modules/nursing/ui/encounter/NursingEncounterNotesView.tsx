@@ -62,7 +62,7 @@ const NursingEncounterNotesView: React.FC<Props> = ({ theme }) => {
             Clinical notes
           </h2>
           <p className={cn('text-sm leading-snug', chrome.subhead)}>
-            Notes recorded for {activeVisit?.patient?.name?.trim() || 'this visit'}. Full authoring remains in Medical Records.
+            Notes recorded for {activeVisit?.patient?.name?.trim() || 'this visit'}. 
           </p>
         </div>
         <button type="button" onClick={() => query.refetch()} disabled={busy} className={cn(chrome.btnSecondary, 'shrink-0 cursor-pointer')}>
@@ -86,7 +86,7 @@ const NursingEncounterNotesView: React.FC<Props> = ({ theme }) => {
                   {note.staff_name ? ` · ${note.staff_name}` : ''}
                 </span>
               </div>
-              <p className={cn('whitespace-pre-wrap text-sm leading-relaxed', chrome.body)}>{previewText(note)}</p>
+              <p className={cn('whitespace-pre-wrap break-words text-sm leading-relaxed', chrome.body)}>{previewText(note)}</p>
             </article>
           ))
         )}

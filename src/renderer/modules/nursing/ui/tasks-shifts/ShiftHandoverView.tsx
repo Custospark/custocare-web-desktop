@@ -300,7 +300,7 @@ const ShiftHandoverView: React.FC<Props> = ({ theme }) => {
                   {row.ward?.name ? (
                     <p className={`text-xs mt-1 ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>Ward: {row.ward.name}</p>
                   ) : null}
-                  <p className={`text-sm mt-2 whitespace-pre-wrap ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>
+                  <p className={`text-sm mt-2 whitespace-pre-wrap break-words ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>
                     {truncate(row.summary, 480)}
                   </p>
                 </li>

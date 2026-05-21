@@ -210,7 +210,7 @@ export const ClinicalNotesSummaryCard: React.FC<ClinicalNotesSummaryCardProps> =
               </div>
 
               <p className={cn(
-                'whitespace-pre-wrap text-sm leading-6',
+                'whitespace-pre-wrap break-words text-sm leading-6',
                 !displayValue || displayValue === section.previewFallback
                   ? 'italic text-slate-500'
                   : colors.text.secondary
