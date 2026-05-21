@@ -63,6 +63,7 @@ export const prescriptionKeys = {
     [...prescriptionKeys.patient(patientId), 'list', statuses] as const,
   billing: (patientId: number) => [...prescriptionKeys.all(), 'billing', patientId] as const,
   billingDetail: (id: PrescriptionId) => [...prescriptionKeys.all(), 'billing', 'detail', id] as const,
+  visit: (visitId: number) => [...prescriptionKeys.all(), 'visit', visitId] as const,
 };
 
 /* -------------------------------------------------------------------------- */
@@ -168,6 +169,26 @@ export const useGetPatientPrescriptions = (
       return response.data;
     },
     enabled: !!patientId,
+    ...options,
+  });
+};
+
+/**
+ * Fetches prescriptions scoped to a specific visit.
+ */
+export const useGetVisitPrescriptions = (
+  visitId: number,
+  options?: Omit<UseQueryOptions<GetPatientPrescriptionsResponse, AxiosError<ApiErrorResponse>>, 'queryKey' | 'queryFn'>
+) => {
+  return useQuery<GetPatientPrescriptionsResponse, AxiosError<ApiErrorResponse>>({
+    queryKey: prescriptionKeys.visit(visitId),
+    queryFn: async () => {
+      const response = await axiosInstance.get<GetPatientPrescriptionsResponse>(
+        `/prescriptions/visit/${visitId}`
+      );
+      return response.data;
+    },
+    enabled: !!visitId,
     ...options,
   });
 };

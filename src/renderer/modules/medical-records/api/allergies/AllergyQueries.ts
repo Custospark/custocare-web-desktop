@@ -65,6 +65,7 @@ export const allergyKeys = {
   details: (patientId: PatientId) => [...allergyKeys.all(patientId), 'detail'] as const,
   detail: (patientId: PatientId, allergyId: AllergyId) => 
     [...allergyKeys.details(patientId), allergyId] as const,
+  visit: (visitId: number) => ['allergies', 'visit', visitId] as const,
 };
 
 /* -------------------------------------------------------------------------- */
@@ -160,6 +161,26 @@ export const useGetAllergyById = (
       return response.data;
     },
     enabled: !!patientId && !!allergyId, // Only run if both IDs are provided
+    ...options,
+  });
+};
+
+/**
+ * Fetches allergies scoped to a specific visit.
+ */
+export const useGetVisitAllergies = (
+  visitId: number,
+  options?: Omit<UseQueryOptions<GetAllergiesResponse, AxiosError<ApiErrorResponse>>, 'queryKey' | 'queryFn'>
+) => {
+  return useQuery<GetAllergiesResponse, AxiosError<ApiErrorResponse>>({
+    queryKey: allergyKeys.visit(visitId),
+    queryFn: async () => {
+      const response = await axiosInstance.get<GetAllergiesResponse>(
+        `/allergies/visit/${visitId}`
+      );
+      return response.data;
+    },
+    enabled: !!visitId,
     ...options,
   });
 };
