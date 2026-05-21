@@ -93,8 +93,7 @@ const NursingEncounterMedsView: React.FC<Props> = ({ theme }) => {
     return (
       <div className={chrome.emptyPanel}>
         <p className={cn(chrome.body, 'leading-relaxed')}>
-          Open a patient encounter so a visit is active. Scheduled doses load from{' '}
-          <code className={chrome.code}>GET /nursing/medication-doses?visit_id=…</code>.
+          Open a patient encounter to view medications for their active prescriptions.
         </p>
       </div>
     );
@@ -142,7 +141,7 @@ const NursingEncounterMedsView: React.FC<Props> = ({ theme }) => {
       <div className={cn(chrome.card, 'divide-y', chrome.divide)}>
         {doses.length === 0 && !query.isLoading ? (
           <div className={cn('p-6 text-sm leading-relaxed', chrome.muted)}>
-            No scheduled doses for this visit. Orders may still be pending pharmacy / MAR build-out.
+            No medications found for this visit. Prescriptions may not have active medication items.
           </div>
         ) : (
           doses.map((d) => (
