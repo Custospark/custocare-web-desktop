@@ -32,9 +32,14 @@ export interface NursingPrescriptionItemBrief {
   id: number;
   medication_name?: string | null;
   strength?: string | null;
+  dosage_form?: string | null;
   dosage_quantity?: string | number | null;
   dosage_unit?: string | null;
+  frequency?: string | null;
+  duration_value?: number | null;
+  duration_unit?: string | null;
   route?: string | null;
+  instructions?: string | null;
 }
 
 export interface NursingMedicationDose {
