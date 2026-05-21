@@ -11,7 +11,6 @@ export interface FacilityShiftHandover {
   ward_id: number | null;
   handed_over_to_user_id: number | null;
   handed_over_by_user_id: number | null;
-  visit_uuid: string | null;
   created_at: string;
   updated_at: string;
   handed_over_by?: FacilityTaskUserBrief | null;
@@ -37,7 +36,6 @@ export interface CreateFacilityShiftHandoverPayload {
   summary: string;
   ward_id?: number | null;
   handed_over_to_user_id?: number | null;
-  visit_uuid?: string | null;
 }
 
 export interface CreateFacilityShiftHandoverApiResponse {
