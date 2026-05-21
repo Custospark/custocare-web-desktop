@@ -7,7 +7,8 @@ import { selectActiveVisit } from '../../../../app/store/slices/visitSlice';
 import { selectActiveVisitPatientId } from '../../../../app/store/slices/visitSlice';
 import { useGetVisitPrescriptions } from '../../../medical-records/api/prescription/PrescriptionQueries';
 import { PrescriptionStatus } from '../../../medical-records/api/prescription/PrescriptionTypes';
-import type { Prescription, PrescriptionItem } from '../../../medical-records/api/prescription/PrescriptionTypes';
+import type { Prescription } from '../../../medical-records/api/prescription/PrescriptionTypes';
+import type { PrescriptionItem } from '../../../medical-records/api/prescription-items/PrescriptionItemsTypes';
 import { cn } from '../../../../shared/utils/classNameUtils';
 import { getNursingEncounterChrome } from './nursingEncounterChrome';
 
