@@ -120,9 +120,6 @@ const NursingEncounterMedsView: React.FC<Props> = ({ theme }) => {
                     <span className="italic">{item.instructions}</span>
                   ) : null}
                 </div>
-                <p className={cn('mt-1 text-xs', chrome.subtle)}>
-                  Rx #{rx.prescription_number} · {rx.status}
-                </p>
               </div>
             </div>
           ))}

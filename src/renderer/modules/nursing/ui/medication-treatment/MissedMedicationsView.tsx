@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { AlertTriangle, RefreshCw } from 'lucide-react';
+import { AlertTriangle, ChevronLeft, ChevronRight, RefreshCw, User } from 'lucide-react';
 
 import { useAppSelector } from '../../../../app/store/hooks/useApp';
 import { getActiveFacilityId } from '../../../../app/store/utils/contextSelectors';
@@ -46,13 +46,27 @@ const MissedMedicationsView: React.FC<Props> = ({ theme }) => {
     ward_id: wardId ? Number(wardId) : undefined,
     as_of: asOf ? new Date(asOf).toISOString() : undefined,
     page,
-    per_page: 20,
+    per_page: 50,
     enabled: facilityId > 0,
   });
 
   const wards = asArray<Ward>(wardsQuery.data);
   const doses = useMemo(() => asArray<NursingMedicationDose>(query.data?.data), [query.data?.data]);
   const meta = query.data?.meta;
+
+  const groupedDoses = useMemo(() => {
+    const groups = new Map<string, { patientName: string; doses: NursingMedicationDose[] }>();
+    for (const dose of doses) {
+      const name = patientNameFromDose(dose);
+      const existing = groups.get(name);
+      if (existing) {
+        existing.doses.push(dose);
+      } else {
+        groups.set(name, { patientName: name, doses: [dose] });
+      }
+    }
+    return [...groups.values()].sort((a, b) => a.patientName.localeCompare(b.patientName, undefined, { sensitivity: 'base' }));
+  }, [doses]);
 
   const busy = query.isFetching || wardsQuery.isFetching;
   const cardShell = isDark ? 'border-gray-700 bg-gray-900/60' : 'border-gray-200 bg-white';
@@ -74,17 +88,11 @@ const MissedMedicationsView: React.FC<Props> = ({ theme }) => {
             Missed medications
           </h2>
           <p className={`text-sm mt-0.5 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-            Doses past their scheduled time that still need attention.
+            Doses past their scheduled time that still need attention, grouped by patient.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => query.refetch()}
-          disabled={busy}
-          className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg border text-sm cursor-pointer disabled:opacity-50 ${
-            isDark ? 'border-gray-600 hover:bg-gray-800' : 'border-gray-300 hover:bg-gray-50'
-          }`}
-        >
+        <button type="button" onClick={() => query.refetch()} disabled={busy}
+          className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg border text-sm cursor-pointer disabled:opacity-50 ${isDark ? 'border-gray-600 hover:bg-gray-800' : 'border-gray-300 hover:bg-gray-50'}`}>
           <RefreshCw className={`w-4 h-4 ${busy ? 'animate-spin' : ''}`} />
           Refresh
         </button>
@@ -94,39 +102,16 @@ const MissedMedicationsView: React.FC<Props> = ({ theme }) => {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
             <label htmlFor="mm-ward" className={`block text-xs mb-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Ward</label>
-            <select
-              id="mm-ward"
-              value={wardId}
-              onChange={(e) => {
-                setWardId(e.target.value);
-                setPage(1);
-              }}
-              className={`w-full rounded-lg border px-2 py-1.5 text-sm cursor-pointer ${
-                isDark ? 'bg-gray-950 border-gray-600 text-gray-100' : 'bg-white border-gray-300 text-gray-900'
-              }`}
-            >
+            <select id="mm-ward" value={wardId} onChange={(e) => { setWardId(e.target.value); setPage(1); }}
+              className={`w-full rounded-lg border px-2 py-1.5 text-sm cursor-pointer ${isDark ? 'bg-gray-950 border-gray-600 text-gray-100' : 'bg-white border-gray-300 text-gray-900'}`}>
               <option value="">All wards</option>
-              {wards.map((w) => (
-                <option key={w.id} value={String(w.id)}>
-                  {w.name}
-                </option>
-              ))}
+              {wards.map((w) => (<option key={w.id} value={String(w.id)}>{w.name}</option>))}
             </select>
           </div>
           <div>
             <label htmlFor="mm-asof" className={`block text-xs mb-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>As of</label>
-            <input
-              id="mm-asof"
-              type="datetime-local"
-              value={asOf}
-              onChange={(e) => {
-                setAsOf(e.target.value);
-                setPage(1);
-              }}
-              className={`w-full rounded-lg border px-2 py-1.5 text-sm ${
-                isDark ? 'bg-gray-950 border-gray-600 text-gray-100' : 'bg-white border-gray-300 text-gray-900'
-              }`}
-            />
+            <input id="mm-asof" type="datetime-local" value={asOf} onChange={(e) => { setAsOf(e.target.value); setPage(1); }}
+              className={`w-full rounded-lg border px-2 py-1.5 text-sm ${isDark ? 'bg-gray-950 border-gray-600 text-gray-100' : 'bg-white border-gray-300 text-gray-900'}`} />
           </div>
         </div>
       </div>
@@ -140,33 +125,41 @@ const MissedMedicationsView: React.FC<Props> = ({ theme }) => {
           <p className={isDark ? 'text-gray-400' : 'text-gray-600'}>No missed doses found.</p>
         </div>
       ) : (
-        <ul className="space-y-3">
-          {doses.map((dose) => (
-            <li key={dose.id} className={`rounded-xl border p-4 ${cardShell}`}>
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <h3 className={`font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                      {dose.prescriptionItem?.medication_name || `Medication item #${dose.prescription_item_id}`}
-                    </h3>
-                    <span className={`text-xs px-2 py-0.5 rounded-md border ${isDark ? 'border-rose-700 text-rose-200 bg-rose-900/30' : 'border-rose-200 text-rose-800 bg-rose-50'}`}>
-                      Missed
-                    </span>
-                  </div>
-                  <div className={`text-sm mt-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                    Patient: {patientNameFromDose(dose)} · Visit: {dose.visit?.visit_uuid || '—'}
-                  </div>
-                  <div className={`flex flex-wrap gap-x-4 gap-y-1 mt-2 text-xs ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
-                    <span>Ward: {dose.ward?.name || '—'}</span>
-                    <span>Scheduled: {formatWhen(dose.scheduled_for)}</span>
-                    <span>Rx: {dose.prescription?.prescription_number || `#${dose.prescription_id}`}</span>
-                  </div>
-                  {dose.schedule_notes ? <p className={`text-xs mt-2 ${isDark ? 'text-gray-400' : 'text-gray-700'}`}>Notes: {dose.schedule_notes}</p> : null}
-                </div>
+        <div className="space-y-6">
+          {groupedDoses.map((group) => (
+            <div key={group.patientName} className={`rounded-xl border overflow-hidden ${cardShell}`}>
+              <div className={`px-4 py-3 border-b flex items-center gap-2 ${isDark ? 'border-gray-700 bg-gray-800/50' : 'border-gray-200 bg-gray-50'}`}>
+                <User className={`w-4 h-4 ${isDark ? 'text-gray-400' : 'text-gray-500'}`} />
+                <span className={`font-semibold text-sm ${isDark ? 'text-white' : 'text-gray-900'}`}>{group.patientName}</span>
+                <span className={`text-xs ml-auto ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>{group.doses.length} missed</span>
               </div>
-            </li>
+              <ul className="divide-y">
+                {group.doses.map((dose) => (
+                  <li key={dose.id} className="p-4">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className={`font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                            {dose.prescriptionItem?.medication_name || `Medication #${dose.prescription_item_id}`}
+                          </span>
+                          <span className={`text-xs px-2 py-0.5 rounded-md border ${isDark ? 'border-rose-700 text-rose-200 bg-rose-900/30' : 'border-rose-200 text-rose-800 bg-rose-50'}`}>Missed</span>
+                        </div>
+                        <div className={`text-sm mt-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                          {dose.prescriptionItem?.strength ? `${dose.prescriptionItem.strength}` : ''}
+                          {dose.prescriptionItem?.route ? ` · ${dose.prescriptionItem.route}` : ''}
+                        </div>
+                        <div className={`flex flex-wrap gap-x-4 gap-y-1 mt-2 text-xs ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
+                          <span>Ward: {dose.ward?.name || '—'}</span>
+                          <span>Scheduled: {formatWhen(dose.scheduled_for)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
           ))}
-        </ul>
+        </div>
       )}
 
       {meta && meta.last_page > 1 ? (
@@ -175,26 +168,10 @@ const MissedMedicationsView: React.FC<Props> = ({ theme }) => {
             Page {meta.current_page} of {meta.last_page} ({meta.total} doses)
           </span>
           <div className="flex gap-2">
-            <button
-              type="button"
-              disabled={page <= 1 || busy}
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              className={`px-3 py-1.5 rounded-lg border text-xs cursor-pointer disabled:opacity-40 ${
-                isDark ? 'border-gray-600 hover:bg-gray-800' : 'border-gray-300 hover:bg-gray-50'
-              }`}
-            >
-              Previous
-            </button>
-            <button
-              type="button"
-              disabled={page >= meta.last_page || busy}
-              onClick={() => setPage((p) => p + 1)}
-              className={`px-3 py-1.5 rounded-lg border text-xs cursor-pointer disabled:opacity-40 ${
-                isDark ? 'border-gray-600 hover:bg-gray-800' : 'border-gray-300 hover:bg-gray-50'
-              }`}
-            >
-              Next
-            </button>
+              <button type="button" disabled={page <= 1 || busy} onClick={() => setPage((p) => Math.max(1, p - 1))}
+                className={`px-3 py-1.5 rounded-lg border text-xs cursor-pointer disabled:opacity-40 ${isDark ? 'border-gray-600 hover:bg-gray-800' : 'border-gray-300 hover:bg-gray-50'}`}><ChevronLeft className="w-3 h-3 inline" /> Previous</button>
+              <button type="button" disabled={page >= meta.last_page || busy} onClick={() => setPage((p) => p + 1)}
+                className={`px-3 py-1.5 rounded-lg border text-xs cursor-pointer disabled:opacity-40 ${isDark ? 'border-gray-600 hover:bg-gray-800' : 'border-gray-300 hover:bg-gray-50'}`}>Next <ChevronRight className="w-3 h-3 inline" /></button>
           </div>
         </div>
       ) : null}

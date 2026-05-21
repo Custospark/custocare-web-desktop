@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { CalendarClock, RefreshCw } from 'lucide-react';
+import { CalendarClock, ChevronLeft, ChevronRight, RefreshCw, User } from 'lucide-react';
 
 import { useAppSelector } from '../../../../app/store/hooks/useApp';
 import { getActiveFacilityId } from '../../../../app/store/utils/contextSelectors';
@@ -42,19 +42,13 @@ function formatPatientName(dose: NursingMedicationDose): string {
 
 function statusPillClass(isDark: boolean, status: NursingMedicationDoseStatus): string {
   if (status === 'administered') {
-    return isDark
-      ? 'bg-emerald-900/40 text-emerald-200 border-emerald-700'
-      : 'bg-emerald-50 text-emerald-800 border-emerald-200';
+    return isDark ? 'bg-emerald-900/40 text-emerald-200 border-emerald-700' : 'bg-emerald-50 text-emerald-800 border-emerald-200';
   }
   if (status === 'missed') {
-    return isDark
-      ? 'bg-rose-900/30 text-rose-200 border-rose-700'
-      : 'bg-rose-50 text-rose-800 border-rose-200';
+    return isDark ? 'bg-rose-900/30 text-rose-200 border-rose-700' : 'bg-rose-50 text-rose-800 border-rose-200';
   }
   if (status === 'skipped') {
-    return isDark
-      ? 'bg-amber-900/30 text-amber-200 border-amber-700'
-      : 'bg-amber-50 text-amber-800 border-amber-200';
+    return isDark ? 'bg-amber-900/30 text-amber-200 border-amber-700' : 'bg-amber-50 text-amber-800 border-amber-200';
   }
   return isDark ? 'bg-blue-900/30 text-blue-200 border-blue-700' : 'bg-blue-50 text-blue-800 border-blue-200';
 }
@@ -68,7 +62,7 @@ const MedicationScheduleView: React.FC<Props> = ({ theme }) => {
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
   const [page, setPage] = useState(1);
-  const perPage = 20;
+  const perPage = 50;
 
   const wardFilters = useMemo(() => ({ facility_id: facilityId }), [facilityId]);
 
@@ -88,16 +82,26 @@ const MedicationScheduleView: React.FC<Props> = ({ theme }) => {
   const doses = useMemo(() => asArray<NursingMedicationDose>(query.data?.data), [query.data?.data]);
   const meta = query.data?.meta;
 
+  const groupedDoses = useMemo(() => {
+    const groups = new Map<string, { patientName: string; doses: NursingMedicationDose[] }>();
+    for (const dose of doses) {
+      const name = formatPatientName(dose);
+      const existing = groups.get(name);
+      if (existing) {
+        existing.doses.push(dose);
+      } else {
+        groups.set(name, { patientName: name, doses: [dose] });
+      }
+    }
+    return [...groups.values()].sort((a, b) => a.patientName.localeCompare(b.patientName, undefined, { sensitivity: 'base' }));
+  }, [doses]);
+
   const busy = query.isFetching || wardsQuery.isFetching;
   const cardShell = isDark ? 'border-gray-700 bg-gray-900/60' : 'border-gray-200 bg-white';
 
   if (!facilityId) {
     return (
-      <div
-        className={`rounded-xl border p-6 ${
-          isDark ? 'border-gray-700 bg-gray-900 text-gray-300' : 'border-gray-200 bg-white text-gray-600'
-        }`}
-      >
+      <div className={`rounded-xl border p-6 ${isDark ? 'border-gray-700 bg-gray-900 text-gray-300' : 'border-gray-200 bg-white text-gray-600'}`}>
         Select an active facility to view medication schedule.
       </div>
     );
@@ -112,17 +116,13 @@ const MedicationScheduleView: React.FC<Props> = ({ theme }) => {
             Medication schedule
           </h2>
           <p className={`text-sm mt-0.5 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-            Medications from active prescriptions at this facility awaiting administration.
+            Medications from active prescriptions at this facility, grouped by patient.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => query.refetch()}
-          disabled={busy}
+        <button type="button" onClick={() => query.refetch()} disabled={busy}
           className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg border text-sm cursor-pointer disabled:opacity-50 ${
             isDark ? 'border-gray-600 hover:bg-gray-800' : 'border-gray-300 hover:bg-gray-50'
-          }`}
-        >
+          }`}>
           <RefreshCw className={`w-4 h-4 ${busy ? 'animate-spin' : ''}`} />
           Refresh
         </button>
@@ -131,20 +131,9 @@ const MedicationScheduleView: React.FC<Props> = ({ theme }) => {
       <div className={`rounded-xl border p-3 ${cardShell}`}>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           <div>
-            <label htmlFor="ms-status" className={`block text-xs mb-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-              Status
-            </label>
-            <select
-              id="ms-status"
-              value={statusFilter}
-              onChange={(e) => {
-                setStatusFilter((e.target.value as NursingMedicationDoseStatus | '') || '');
-                setPage(1);
-              }}
-              className={`w-full rounded-lg border px-2 py-1.5 text-sm cursor-pointer ${
-                isDark ? 'bg-gray-950 border-gray-600 text-gray-100' : 'bg-white border-gray-300 text-gray-900'
-              }`}
-            >
+            <label htmlFor="ms-status" className={`block text-xs mb-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Status</label>
+            <select id="ms-status" value={statusFilter} onChange={(e) => { setStatusFilter((e.target.value as NursingMedicationDoseStatus | '') || ''); setPage(1); }}
+              className={`w-full rounded-lg border px-2 py-1.5 text-sm cursor-pointer ${isDark ? 'bg-gray-950 border-gray-600 text-gray-100' : 'bg-white border-gray-300 text-gray-900'}`}>
               <option value="">All</option>
               <option value="pending">Pending</option>
               <option value="administered">Administered</option>
@@ -153,111 +142,72 @@ const MedicationScheduleView: React.FC<Props> = ({ theme }) => {
             </select>
           </div>
           <div>
-            <label htmlFor="ms-ward" className={`block text-xs mb-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-              Ward
-            </label>
-            <select
-              id="ms-ward"
-              value={wardId}
-              onChange={(e) => {
-                setWardId(e.target.value);
-                setPage(1);
-              }}
-              className={`w-full rounded-lg border px-2 py-1.5 text-sm cursor-pointer ${
-                isDark ? 'bg-gray-950 border-gray-600 text-gray-100' : 'bg-white border-gray-300 text-gray-900'
-              }`}
-            >
+            <label htmlFor="ms-ward" className={`block text-xs mb-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Ward</label>
+            <select id="ms-ward" value={wardId} onChange={(e) => { setWardId(e.target.value); setPage(1); }}
+              className={`w-full rounded-lg border px-2 py-1.5 text-sm cursor-pointer ${isDark ? 'bg-gray-950 border-gray-600 text-gray-100' : 'bg-white border-gray-300 text-gray-900'}`}>
               <option value="">All wards</option>
-              {wards.map((w) => (
-                <option key={w.id} value={String(w.id)}>
-                  {w.name}
-                </option>
-              ))}
+              {wards.map((w) => (<option key={w.id} value={String(w.id)}>{w.name}</option>))}
             </select>
           </div>
           <div>
-            <label htmlFor="ms-from" className={`block text-xs mb-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-              From
-            </label>
-            <input
-              id="ms-from"
-              type="datetime-local"
-              value={from}
-              onChange={(e) => {
-                setFrom(e.target.value);
-                setPage(1);
-              }}
-              className={`w-full rounded-lg border px-2 py-1.5 text-sm ${
-                isDark ? 'bg-gray-950 border-gray-600 text-gray-100' : 'bg-white border-gray-300 text-gray-900'
-              }`}
-            />
+            <label htmlFor="ms-from" className={`block text-xs mb-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>From</label>
+            <input id="ms-from" type="datetime-local" value={from} onChange={(e) => { setFrom(e.target.value); setPage(1); }}
+              className={`w-full rounded-lg border px-2 py-1.5 text-sm ${isDark ? 'bg-gray-950 border-gray-600 text-gray-100' : 'bg-white border-gray-300 text-gray-900'}`} />
           </div>
           <div>
-            <label htmlFor="ms-to" className={`block text-xs mb-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-              To
-            </label>
-            <input
-              id="ms-to"
-              type="datetime-local"
-              value={to}
-              onChange={(e) => {
-                setTo(e.target.value);
-                setPage(1);
-              }}
-              className={`w-full rounded-lg border px-2 py-1.5 text-sm ${
-                isDark ? 'bg-gray-950 border-gray-600 text-gray-100' : 'bg-white border-gray-300 text-gray-900'
-              }`}
-            />
+            <label htmlFor="ms-to" className={`block text-xs mb-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>To</label>
+            <input id="ms-to" type="datetime-local" value={to} onChange={(e) => { setTo(e.target.value); setPage(1); }}
+              className={`w-full rounded-lg border px-2 py-1.5 text-sm ${isDark ? 'bg-gray-950 border-gray-600 text-gray-100' : 'bg-white border-gray-300 text-gray-900'}`} />
           </div>
         </div>
       </div>
 
       {query.isLoading ? (
         <div className={`rounded-xl border p-10 text-center ${cardShell}`}>
-          <div
-            className={`inline-block h-8 w-8 animate-spin rounded-full border-2 ${
-              isDark ? 'border-gray-600 border-t-blue-400' : 'border-gray-200 border-t-blue-600'
-            }`}
-          />
+          <div className={`inline-block h-8 w-8 animate-spin rounded-full border-2 ${isDark ? 'border-gray-600 border-t-blue-400' : 'border-gray-200 border-t-blue-600'}`} />
         </div>
       ) : doses.length === 0 ? (
         <div className={`rounded-xl border p-10 text-center ${cardShell}`}>
           <p className={isDark ? 'text-gray-400' : 'text-gray-600'}>No scheduled doses found.</p>
         </div>
       ) : (
-        <ul className="space-y-3">
-          {doses.map((dose) => (
-            <li key={dose.id} className={`rounded-xl border p-4 ${cardShell}`}>
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <h3 className={`font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                      {dose.prescriptionItem?.medication_name || `Medication item #${dose.prescription_item_id}`}
-                    </h3>
-                    <span className={`text-xs px-2 py-0.5 rounded-md border ${statusPillClass(isDark, dose.status)}`}>
-                      {STATUS_LABEL[dose.status]}
-                    </span>
-                  </div>
-
-                  <div className={`text-sm mt-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                    {dose.prescriptionItem?.strength ? `${dose.prescriptionItem.strength}` : '—'}
-                    {dose.prescriptionItem?.route ? ` · ${dose.prescriptionItem.route}` : ''}
-                  </div>
-
-                  <div className={`flex flex-wrap gap-x-4 gap-y-1 mt-2 text-xs ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
-                    <span>Patient: {formatPatientName(dose)}</span>
-                    <span>Visit: {dose.visit?.visit_uuid || '—'}</span>
-                    <span>Ward: {dose.ward?.name || '—'}</span>
-                    <span>Scheduled: {formatWhen(dose.scheduled_for)}</span>
-                  </div>
-                  {dose.schedule_notes ? (
-                    <p className={`text-xs mt-2 ${isDark ? 'text-gray-400' : 'text-gray-700'}`}>Notes: {dose.schedule_notes}</p>
-                  ) : null}
-                </div>
+        <div className="space-y-6">
+          {groupedDoses.map((group) => (
+            <div key={group.patientName} className={`rounded-xl border overflow-hidden ${cardShell}`}>
+              <div className={`px-4 py-3 border-b flex items-center gap-2 ${isDark ? 'border-gray-700 bg-gray-800/50' : 'border-gray-200 bg-gray-50'}`}>
+                <User className={`w-4 h-4 ${isDark ? 'text-gray-400' : 'text-gray-500'}`} />
+                <span className={`font-semibold text-sm ${isDark ? 'text-white' : 'text-gray-900'}`}>{group.patientName}</span>
+                <span className={`text-xs ml-auto ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>{group.doses.length} medication(s)</span>
               </div>
-            </li>
+              <ul className="divide-y">
+                {group.doses.map((dose) => (
+                  <li key={dose.id} className="p-4">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className={`font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                            {dose.prescriptionItem?.medication_name || `Medication #${dose.prescription_item_id}`}
+                          </span>
+                          <span className={`text-xs px-2 py-0.5 rounded-md border ${statusPillClass(isDark, dose.status)}`}>
+                            {STATUS_LABEL[dose.status]}
+                          </span>
+                        </div>
+                        <div className={`text-sm mt-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                          {dose.prescriptionItem?.strength ? `${dose.prescriptionItem.strength}` : ''}
+                          {dose.prescriptionItem?.route ? ` · ${dose.prescriptionItem.route}` : ''}
+                        </div>
+                        <div className={`flex flex-wrap gap-x-4 gap-y-1 mt-2 text-xs ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
+                          <span>Ward: {dose.ward?.name || '—'}</span>
+                          <span>Scheduled: {formatWhen(dose.scheduled_for)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
           ))}
-        </ul>
+        </div>
       )}
 
       {meta && meta.last_page > 1 ? (
@@ -266,26 +216,10 @@ const MedicationScheduleView: React.FC<Props> = ({ theme }) => {
             Page {meta.current_page} of {meta.last_page} ({meta.total} doses)
           </span>
           <div className="flex gap-2">
-            <button
-              type="button"
-              disabled={page <= 1 || busy}
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              className={`px-3 py-1.5 rounded-lg border text-xs cursor-pointer disabled:opacity-40 ${
-                isDark ? 'border-gray-600 hover:bg-gray-800' : 'border-gray-300 hover:bg-gray-50'
-              }`}
-            >
-              Previous
-            </button>
-            <button
-              type="button"
-              disabled={page >= meta.last_page || busy}
-              onClick={() => setPage((p) => p + 1)}
-              className={`px-3 py-1.5 rounded-lg border text-xs cursor-pointer disabled:opacity-40 ${
-                isDark ? 'border-gray-600 hover:bg-gray-800' : 'border-gray-300 hover:bg-gray-50'
-              }`}
-            >
-              Next
-            </button>
+              <button type="button" disabled={page <= 1 || busy} onClick={() => setPage((p) => Math.max(1, p - 1))}
+                className={`px-3 py-1.5 rounded-lg border text-xs cursor-pointer disabled:opacity-40 ${isDark ? 'border-gray-600 hover:bg-gray-800' : 'border-gray-300 hover:bg-gray-50'}`}><ChevronLeft className="w-3 h-3 inline" /> Previous</button>
+              <button type="button" disabled={page >= meta.last_page || busy} onClick={() => setPage((p) => p + 1)}
+                className={`px-3 py-1.5 rounded-lg border text-xs cursor-pointer disabled:opacity-40 ${isDark ? 'border-gray-600 hover:bg-gray-800' : 'border-gray-300 hover:bg-gray-50'}`}>Next <ChevronRight className="w-3 h-3 inline" /></button>
           </div>
         </div>
       ) : null}

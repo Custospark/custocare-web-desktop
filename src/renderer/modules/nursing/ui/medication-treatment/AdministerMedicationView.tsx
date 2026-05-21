@@ -80,6 +80,20 @@ const AdministerMedicationView: React.FC<Props> = ({ theme }) => {
     [scheduleQuery.data?.data]
   );
 
+  const groupedPendingDoses = useMemo(() => {
+    const groups = new Map<string, { patientName: string; doses: NursingMedicationDose[] }>();
+    for (const dose of pendingDoses) {
+      const name = patientNameFromDose(dose);
+      const existing = groups.get(name);
+      if (existing) {
+        existing.doses.push(dose);
+      } else {
+        groups.set(name, { patientName: name, doses: [dose] });
+      }
+    }
+    return [...groups.values()].sort((a, b) => a.patientName.localeCompare(b.patientName, undefined, { sensitivity: 'base' }));
+  }, [pendingDoses]);
+
   const administrations = useMemo(
     () => asArray<NursingMedicationAdministration>(administrationQuery.data?.data),
     [administrationQuery.data?.data]
@@ -188,11 +202,14 @@ const AdministerMedicationView: React.FC<Props> = ({ theme }) => {
             disabled={busy}
           >
             <option value="">— Select pending dose —</option>
-            {pendingDoses.map((d) => (
-              <option key={d.id} value={String(d.id)}>
-                {patientNameFromDose(d)} · {d.prescriptionItem?.medication_name || `Item #${d.prescription_item_id}`} ·{' '}
-                {formatWhen(d.scheduled_for)}
-              </option>
+            {groupedPendingDoses.map((group) => (
+              <optgroup key={group.patientName} label={group.patientName}>
+                {group.doses.map((d) => (
+                  <option key={d.id} value={String(d.id)}>
+                    {d.prescriptionItem?.medication_name || `Item #${d.prescription_item_id}`} · {formatWhen(d.scheduled_for)}
+                  </option>
+                ))}
+              </optgroup>
             ))}
           </select>
         </div>
