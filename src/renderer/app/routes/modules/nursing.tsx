@@ -3,7 +3,6 @@ import { Navigate, Route } from 'react-router-dom';
 import { NURSING_ROUTES } from '../routeConstants';
 import { SuspenseWrapper, WithThemeProp, type ThemeProp } from './shared/routeUtils';
 import {
-  MedicationTreatmentWorkspace,
   NursingEncounterWorkspace,
   TasksShiftsWorkspace,
   WardsPatientsWorkspace,
@@ -20,10 +19,6 @@ import MyTasksView from '../../../modules/nursing/ui/tasks-shifts/MyTasksView';
 import AssignTaskView from '../../../modules/nursing/ui/tasks-shifts/AssignTaskView';
 import ShiftHandoverView from '../../../modules/nursing/ui/tasks-shifts/ShiftHandoverView';
 import TaskHistoryView from '../../../modules/nursing/ui/tasks-shifts/TaskHistoryView';
-import MedicationScheduleView from '../../../modules/nursing/ui/medication-treatment/MedicationScheduleView';
-import AdministerMedicationView from '../../../modules/nursing/ui/medication-treatment/AdministerMedicationView';
-import MissedMedicationsView from '../../../modules/nursing/ui/medication-treatment/MissedMedicationsView';
-import TreatmentLogView from '../../../modules/nursing/ui/medication-treatment/TreatmentLogView';
 import NursingOverview from '../../../modules/nursing/ui/overview/NursingOverview';
 import MyWardPatientsView from '../../../modules/nursing/ui/wards-patients/MyWardPatientsView';
 
@@ -96,14 +91,6 @@ export const nursingRoutes = [
     <Route path="tasks" element={nursingTablePage(NursingEncounterTasksView)} />
     <Route path="meds" element={nursingTablePage(NursingEncounterMedsView)} />
     <Route path="notes" element={nursingTablePage(NursingEncounterNotesView)} />
-  </Route>,
-
-  <Route key="nursing-medication-treatment" path="medication-treatment" element={nursingTablePage(MedicationTreatmentWorkspace)}>
-    <Route index element={<Navigate to={NURSING_ROUTES.MEDICATION_TREATMENT_MEDICATION_SCHEDULE} replace />} />
-    <Route path="medication-schedule" element={nursingTablePage(MedicationScheduleView)} />
-    <Route path="administer-medication" element={nursingTablePage(AdministerMedicationView)} />
-    <Route path="missed-medications" element={nursingTablePage(MissedMedicationsView)} />
-    <Route path="treatment-log" element={nursingTablePage(TreatmentLogView)} />
   </Route>,
 
   <Route key="nursing-tasks-shifts" path="tasks-shifts" element={nursingTablePage(TasksShiftsWorkspace)}>

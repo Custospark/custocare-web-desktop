@@ -184,11 +184,11 @@ export const NURSING_MODULE_OPERATIONS: ModuleOperation[] = [
     label: 'Nursing Encounter',
     icon: <Stethoscope className="w-4 h-4" />,
   },
-  {
-    id: 'medication-treatment',
-    label: 'Medication & Treatment',
-    icon: <Pill className="w-4 h-4" />,
-  },
+  // {
+  //   id: 'medication-treatment',
+  //   label: 'Medication & Treatment',
+  //   icon: <Pill className="w-4 h-4" />,
+  // },
   {
     id: 'tasks-shifts',
     label: 'Tasks & Shifts',
@@ -200,7 +200,7 @@ const NURSING_NESTED_ROUTES: Record<string, string> = {
   overview: NURSING_ROUTES.OVERVIEW,
   'wards-patients': NURSING_ROUTES.WARDS_PATIENTS,
   'nursing-encounter': NURSING_ROUTES.NURSING_ENCOUNTER,
-  'medication-treatment': NURSING_ROUTES.MEDICATION_TREATMENT,
+  // 'medication-treatment': NURSING_ROUTES.MEDICATION_TREATMENT,
   'tasks-shifts': NURSING_ROUTES.TASKS_SHIFTS,
 };
 
