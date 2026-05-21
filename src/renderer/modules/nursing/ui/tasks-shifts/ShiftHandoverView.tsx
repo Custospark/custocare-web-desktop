@@ -130,7 +130,7 @@ const ShiftHandoverView: React.FC<Props> = ({ theme }) => {
   const [page, setPage] = useState(1);
   const [listPage, setListPage] = useState(1);
   const perPage = 10;
-  const searchTimer = useRef<ReturnType<typeof setTimeout>>();
+  const searchTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   useEffect(() => {
     clearTimeout(searchTimer.current);
@@ -539,7 +539,7 @@ const ShiftHandoverView: React.FC<Props> = ({ theme }) => {
       <div className={`rounded-xl border p-4 ${cardShell}`}>
         <h3 className={`text-sm font-semibold mb-3 ${isDark ? 'text-white' : 'text-gray-900'}`}>Recent handovers</h3>
         {listQuery.isLoading ? (
-          <LoadingSkeleton variant="list" rows={3} theme={isDark ? 'dark' : 'light'} />
+          <LoadingSkeleton variant="list" theme={isDark ? 'dark' : 'light'} />
         ) : rows.length === 0 ? (
           <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>No handovers recorded yet.</p>
         ) : (

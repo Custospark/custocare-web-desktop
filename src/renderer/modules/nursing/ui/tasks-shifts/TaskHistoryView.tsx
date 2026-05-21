@@ -185,7 +185,7 @@ const TaskHistoryView: React.FC<Props> = ({ theme }) => {
       </div>
 
       {query.isLoading ? (
-        <LoadingSkeleton variant="list" rows={5} theme={isDark ? 'dark' : 'light'} />
+        <LoadingSkeleton variant="list" theme={isDark ? 'dark' : 'light'} />
       ) : tasks.length === 0 ? (
         <div className={`rounded-xl border p-10 text-center ${cardShell}`}>
           <p className={isDark ? 'text-gray-400' : 'text-gray-600'}>No tasks match your filters.</p>

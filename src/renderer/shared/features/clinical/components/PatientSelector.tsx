@@ -55,6 +55,20 @@ export const PatientSelector: React.FC<PatientSelectorProps> = ({
 }) => {
   const theme = useSelector((state: RootState) => state.ui.theme);
   const [searchQuery, setSearchQuery] = useState('');
+  const [showNewPatientForm, setShowNewPatientForm] = useState(false);
+  const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
+
+  // New patient form state
+  const [newPatient, setNewPatient] = useState<Partial<Patient>>({
+    name: '',
+    age: 0,
+    gender: 'Male',
+    phone: '',
+    allergies: [],
+    currentMedications: [],
+    medicalHistory: []
+  });
+
   // Filter patients based on search
   const filteredPatients = useMemo(() => {
     if (searchQuery.trim() === '') return MOCK_PATIENTS;

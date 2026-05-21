@@ -21,6 +21,7 @@ import { useGetWards } from '../../../administration/admin-module/api/wards/ward
 import type { Ward } from '../../../administration/admin-module/api/wards/wardTypes';
 import { useGetStaffForForwarding, useGetVisitsByFacility } from '../../../pharmacy/api/dispensing/visit-queue/useVisitQueries';
 import type { ForwardingStaff, StaffPresenceStatus, Visit } from '../../../pharmacy/api/dispensing/visit-queue/visitTypes';
+import { VisitStatus } from '../../../pharmacy/api/dispensing/visit-queue/visitTypes';
 import LoadingSkeleton from '../../../../shared/components/Loading/LoadingSkeletons';
 
 interface Props { theme: 'light' | 'dark'; }
@@ -98,7 +99,7 @@ const AssignTaskView: React.FC<Props> = ({ theme }) => {
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState<StaffFilterStatus>('available');
   const [page, setPage] = useState(1);
-  const searchTimer = useRef<ReturnType<typeof setTimeout>>();
+  const searchTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   useEffect(() => {
     clearTimeout(searchTimer.current);
@@ -109,7 +110,7 @@ const AssignTaskView: React.FC<Props> = ({ theme }) => {
   const wardFilters = useMemo(() => ({ facility_id: facilityId }), [facilityId]);
 
   const staffForwardingQuery = useGetStaffForForwarding(STAFF_FORWARDING_FILTERS, { enabled: facilityId > 0 });
-  const visitsQuery = useGetVisitsByFacility(facilityId, { status: 'active,in_progress', per_page: 200 }, { enabled: facilityId > 0 });
+  const visitsQuery = useGetVisitsByFacility(facilityId, { status: `${VisitStatus.ACTIVE},${VisitStatus.IN_PROGRESS}` as unknown as VisitStatus, per_page: 200 }, { enabled: facilityId > 0 });
   const wardsQuery = useGetWards(wardFilters, { enabled: facilityId > 0 });
   const createMutation = useCreateFacilityTask();
 
