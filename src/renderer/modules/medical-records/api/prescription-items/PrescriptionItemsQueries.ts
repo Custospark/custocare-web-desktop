@@ -15,6 +15,7 @@ import { useMutation, useQuery, useQueryClient, type UseQueryOptions } from '@ta
 import type { AxiosError } from 'axios';
 import { axiosInstance } from '../../../../app/api/axiosConfig';
 import { useToast } from '../../../../app/store/contexts/toast/useToast';
+import { patientMedicalHistoryKeys } from '../patient-medical-history/patientMedicalHistoryQueries';
 import type {
   ApiErrorResponse,
   PrescriptionItem,
@@ -114,11 +115,9 @@ export const useCreatePrescriptionItem = (
       return response.data;
     },
     onSuccess: (data) => {
-      const successMessage = data.message || 'Medication added successfully!';
-      showToast('success', successMessage, 2000);
-      
       queryClient.invalidateQueries({ queryKey: prescriptionItemKeys.list(prescriptionId) });
       queryClient.invalidateQueries({ queryKey: ['prescriptions', prescriptionId] });
+      queryClient.invalidateQueries({ queryKey: patientMedicalHistoryKeys.all() });
       
       callbacks.onSuccess?.(data);
     },
@@ -156,6 +155,7 @@ export const useUpdatePrescriptionItem = (
       
       queryClient.invalidateQueries({ queryKey: prescriptionItemKeys.detail(variables.id) });
       queryClient.invalidateQueries({ queryKey: prescriptionItemKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: patientMedicalHistoryKeys.all() });
       
       callbacks.onSuccess?.(data);
     },
@@ -192,6 +192,7 @@ export const useDeletePrescriptionItem = (
       
       queryClient.invalidateQueries({ queryKey: prescriptionItemKeys.list(variables.prescriptionId) });
       queryClient.invalidateQueries({ queryKey: ['prescriptions', variables.prescriptionId] });
+      queryClient.invalidateQueries({ queryKey: patientMedicalHistoryKeys.all() });
       
       callbacks.onSuccess?.(data);
     },
@@ -206,7 +207,7 @@ export const useDeletePrescriptionItem = (
 /**
  * Bulk update prescription items (add, update, delete multiple at once).
  * 
- * @param prescriptionId - Prescription ID
+ * @param prescriptionId - PrescriptionId
  * @param callbacks - Optional onSuccess and onError callbacks
  * @returns Mutation object with mutate function and state
  */
@@ -231,6 +232,7 @@ export const useBulkUpdatePrescriptionItems = (
       
       queryClient.invalidateQueries({ queryKey: prescriptionItemKeys.list(prescriptionId) });
       queryClient.invalidateQueries({ queryKey: ['prescriptions', prescriptionId] });
+      queryClient.invalidateQueries({ queryKey: patientMedicalHistoryKeys.all() });
       
       callbacks.onSuccess?.(data);
     },

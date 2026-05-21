@@ -45,6 +45,7 @@ export const diagnosisKeys = {
   patientActive: (patientId: number) => [...diagnosisKeys.all, 'patient', patientId, 'active'] as const,
   patientPrimary: (patientId: number) => [...diagnosisKeys.all, 'patient', patientId, 'primary'] as const,
   visitList: (visitId: number) => [...diagnosisKeys.all, 'visit', visitId] as const,
+  visitPatient: (patientId: number, visitId: number) => [...diagnosisKeys.all, 'patient', patientId, 'visit', visitId] as const,
   details: () => [...diagnosisKeys.all, 'detail'] as const,
   detail: (id: number) => [...diagnosisKeys.details(), id] as const,
   statistics: (patientId: number) => [...diagnosisKeys.all, 'statistics', patientId] as const,
@@ -203,11 +204,12 @@ export const useGetActiveVisitDiagnoses = (
   >
 ) => {
   const visitId = useSelector(selectActiveVisitId);
+  const patientId = useSelector(selectActiveVisitPatientId);
   const facilityId = useSelector(getActiveFacilityId);
   const { showToast } = useToast();
 
   return useQuery<DiagnosisListSuccessResponse, AxiosError<DiagnosisSystemErrorResponse>>({
-    queryKey: diagnosisKeys.visitList(visitId ?? 0),
+    queryKey: diagnosisKeys.visitPatient(Number(patientId) || 0, visitId ?? 0),
     queryFn: async () => {
       if (!visitId) {
         throw new Error('Visit ID is required');
@@ -235,15 +237,15 @@ export const useGetVisitDiagnoses = (
   options?: Omit<
     UseQueryOptions<DiagnosisListSuccessResponse, AxiosError<DiagnosisSystemErrorResponse>>,
     'queryKey' | 'queryFn'
-  > & { facilityId?: number | null }
+  > & { facilityId?: number | null; patientId?: number }
 ) => {
   const facilityIdFromStore = useSelector(getActiveFacilityId);
-  const { facilityId: facilityOverride, ...queryOptions } = options ?? {};
+  const { facilityId: facilityOverride, patientId, ...queryOptions } = options ?? {};
   const facilityId = facilityOverride !== undefined && facilityOverride !== null ? facilityOverride : facilityIdFromStore;
   const { showToast } = useToast();
 
   return useQuery<DiagnosisListSuccessResponse, AxiosError<DiagnosisSystemErrorResponse>>({
-    queryKey: diagnosisKeys.visitList(visitId),
+    queryKey: patientId ? diagnosisKeys.visitPatient(patientId, visitId) : diagnosisKeys.visitList(visitId),
     queryFn: async () => {
       try {
         const response = await axiosInstance.get<DiagnosisListSuccessResponse>(

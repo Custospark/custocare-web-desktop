@@ -42,6 +42,7 @@ export const clinicalNoteKeys = {
   patientList: (patientId: number, filters?: ClinicalNoteFilters) => 
     [...clinicalNoteKeys.all, 'patient', patientId, filters] as const,
   visitList: (visitId: number) => [...clinicalNoteKeys.all, 'visit', visitId] as const,
+  visitPatient: (patientId: number, visitId: number) => [...clinicalNoteKeys.all, 'patient', patientId, 'visit', visitId] as const,
   details: () => [...clinicalNoteKeys.all, 'detail'] as const,
   detail: (uuid: string) => [...clinicalNoteKeys.details(), uuid] as const,
   history: (uuid: string) => [...clinicalNoteKeys.all, 'history', uuid] as const,
@@ -131,11 +132,12 @@ export const useGetActiveVisitClinicalNotes = (
   >
 ) => {
   const visitId = useSelector(selectActiveVisitId);
+  const patientId = useSelector(selectActiveVisitPatientId);
   const facilityId = useSelector(getActiveFacilityId);
   const { showToast } = useToast();
 
   return useQuery<ClinicalNoteListSuccessResponse, AxiosError<ClinicalNoteSystemErrorResponse>>({
-    queryKey: clinicalNoteKeys.visitList(visitId ?? 0),
+    queryKey: clinicalNoteKeys.visitPatient(Number(patientId) || 0, visitId ?? 0),
     queryFn: async () => {
       if (!visitId) {
         throw new Error('Visit ID is required');
@@ -163,15 +165,15 @@ export const useGetVisitClinicalNotes = (
   options?: Omit<
     UseQueryOptions<ClinicalNoteListSuccessResponse, AxiosError<ClinicalNoteSystemErrorResponse>>,
     'queryKey' | 'queryFn'
-  > & { facilityId?: number | null }
+  > & { facilityId?: number | null; patientId?: number }
 ) => {
   const facilityIdFromStore = useSelector(getActiveFacilityId);
-  const { facilityId: facilityOverride, ...queryOptions } = options ?? {};
+  const { facilityId: facilityOverride, patientId, ...queryOptions } = options ?? {};
   const facilityId = facilityOverride !== undefined && facilityOverride !== null ? facilityOverride : facilityIdFromStore;
   const { showToast } = useToast();
 
   return useQuery<ClinicalNoteListSuccessResponse, AxiosError<ClinicalNoteSystemErrorResponse>>({
-    queryKey: clinicalNoteKeys.visitList(visitId),
+    queryKey: patientId ? clinicalNoteKeys.visitPatient(patientId, visitId) : clinicalNoteKeys.visitList(visitId),
     queryFn: async () => {
       try {
         const response = await axiosInstance.get<ClinicalNoteListSuccessResponse>(

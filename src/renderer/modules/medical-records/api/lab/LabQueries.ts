@@ -97,7 +97,7 @@ export const labKeys = {
   requestRequiringAttention: (facilityId: number) => [...labKeys.requests(), 'requiring-attention', facilityId] as const,
   requestByFacility: (facilityId: number, filters?: LabRequestFilters) => [...labKeys.requests(), 'by-facility', facilityId, filters] as const,
   requestByPatient: (patientId: number, filters?: LabRequestFilters) => [...labKeys.requests(), 'by-patient', patientId, filters] as const,
-  requestByVisit: (visitId: number) => [...labKeys.requests(), 'by-visit', visitId] as const,
+  requestByVisit: (patientId: number, visitId: number) => [...labKeys.requests(), 'by-patient', patientId, 'by-visit', visitId] as const,
   requestWithItems: (uuid: string) => [...labKeys.requests(), 'with-items', uuid] as const,
   requestWithFullDetails: (uuid: string) => [...labKeys.requests(), 'with-full-details', uuid] as const,
   requestStatistics: (facilityId: number, startDate: string, endDate: string) => [...labKeys.requests(), 'statistics', facilityId, startDate, endDate] as const,
@@ -941,16 +941,17 @@ export const useGetRequestsByVisit = (
   options?: Omit<
     UseQueryOptions<LabRequest[], AxiosError<ApiResponse<null>>>,
     'queryKey' | 'queryFn'
-  >
+  > & { patientId?: number }
 ) => {
+  const { patientId, ...queryOptions } = options ?? {};
   return useQuery({
-    queryKey: labKeys.requestByVisit(visitId),
+    queryKey: patientId ? labKeys.requestByVisit(patientId, visitId) : ['lab', 'requests', 'by-visit', visitId],
     queryFn: async (): Promise<LabRequest[]> => {
       const response = await axiosInstance.get(`/lab/requests/visit/${visitId}`);
       return response.data.data.requests;
     },
     enabled: !!visitId,
-    ...options,
+    ...queryOptions,
   });
 };
 

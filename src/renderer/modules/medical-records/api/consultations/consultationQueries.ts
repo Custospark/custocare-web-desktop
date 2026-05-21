@@ -42,6 +42,7 @@ export const consultationKeys = {
   patientList: (patientId: number, filters?: ConsultationFilters) => 
     [...consultationKeys.all, 'patient', patientId, filters] as const,
   visitList: (visitId: number) => [...consultationKeys.all, 'visit', visitId] as const,
+  visitPatient: (patientId: number, visitId: number) => [...consultationKeys.all, 'patient', patientId, 'visit', visitId] as const,
   details: () => [...consultationKeys.all, 'detail'] as const,
   detail: (id: number) => [...consultationKeys.details(), id] as const,
   pending: (facilityId?: number, limit?: number) => [...consultationKeys.all, 'pending', facilityId, limit] as const,
@@ -135,11 +136,12 @@ export const useGetActiveVisitConsultations = (
   >
 ) => {
   const visitId = useSelector(selectActiveVisitId);
+  const patientId = useSelector(selectActiveVisitPatientId);
   const facilityId = useSelector(getActiveFacilityId);
   const { showToast } = useToast();
 
   return useQuery<ConsultationListSuccessResponse, AxiosError<ConsultationSystemErrorResponse>>({
-    queryKey: consultationKeys.visitList(visitId ?? 0),
+    queryKey: consultationKeys.visitPatient(Number(patientId) || 0, visitId ?? 0),
     queryFn: async () => {
       if (!visitId) {
         throw new Error('Visit ID is required');
@@ -167,15 +169,15 @@ export const useGetVisitConsultations = (
   options?: Omit<
     UseQueryOptions<ConsultationListSuccessResponse, AxiosError<ConsultationSystemErrorResponse>>,
     'queryKey' | 'queryFn'
-  > & { facilityId?: number | null }
+  > & { facilityId?: number | null; patientId?: number }
 ) => {
   const facilityIdFromStore = useSelector(getActiveFacilityId);
-  const { facilityId: facilityOverride, ...queryOptions } = options ?? {};
+  const { facilityId: facilityOverride, patientId, ...queryOptions } = options ?? {};
   const facilityId = facilityOverride !== undefined && facilityOverride !== null ? facilityOverride : facilityIdFromStore;
   const { showToast } = useToast();
 
   return useQuery<ConsultationListSuccessResponse, AxiosError<ConsultationSystemErrorResponse>>({
-    queryKey: consultationKeys.visitList(visitId),
+    queryKey: patientId ? consultationKeys.visitPatient(patientId, visitId) : consultationKeys.visitList(visitId),
     queryFn: async () => {
       try {
         const response = await axiosInstance.get<ConsultationListSuccessResponse>(

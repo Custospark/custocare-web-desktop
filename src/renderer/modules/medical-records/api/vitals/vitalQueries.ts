@@ -45,6 +45,7 @@ export const vitalKeys = {
   patientTrend: (patientId: number, vitalType: string, limit: number) => 
     [...vitalKeys.all, 'patient', patientId, 'trend', vitalType, limit] as const,
   visitList: (visitId: number) => [...vitalKeys.all, 'visit', visitId] as const,
+  visitPatient: (patientId: number, visitId: number) => [...vitalKeys.all, 'patient', patientId, 'visit', visitId] as const,
   details: () => [...vitalKeys.all, 'detail'] as const,
   detail: (id: number) => [...vitalKeys.details(), id] as const,
   abnormal: (facilityId?: number, limit?: number) => [...vitalKeys.all, 'abnormal', facilityId, limit] as const,
@@ -170,11 +171,12 @@ export const useGetActiveVisitVitals = (
   >
 ) => {
   const visitId = useSelector(selectActiveVisitId);
+  const patientId = useSelector(selectActiveVisitPatientId);
   const facilityId = useSelector(getActiveFacilityId);
   const { showToast } = useToast();
 
   return useQuery<VitalListSuccessResponse, AxiosError<VitalSystemErrorResponse>>({
-    queryKey: vitalKeys.visitList(visitId ?? 0),
+    queryKey: vitalKeys.visitPatient(Number(patientId) || 0, visitId ?? 0),
     queryFn: async () => {
       if (!visitId) {
         throw new Error('Visit ID is required');
@@ -202,15 +204,15 @@ export const useGetVisitVitals = (
   options?: Omit<
     UseQueryOptions<VitalListSuccessResponse, AxiosError<VitalSystemErrorResponse>>,
     'queryKey' | 'queryFn'
-  > & { facilityId?: number | null }
+  > & { facilityId?: number | null; patientId?: number }
 ) => {
   const facilityIdFromStore = useSelector(getActiveFacilityId);
-  const { facilityId: facilityOverride, ...queryOptions } = options ?? {};
+  const { facilityId: facilityOverride, patientId, ...queryOptions } = options ?? {};
   const facilityId = facilityOverride !== undefined && facilityOverride !== null ? facilityOverride : facilityIdFromStore;
   const { showToast } = useToast();
 
   return useQuery<VitalListSuccessResponse, AxiosError<VitalSystemErrorResponse>>({
-    queryKey: vitalKeys.visitList(visitId),
+    queryKey: patientId ? vitalKeys.visitPatient(patientId, visitId) : vitalKeys.visitList(visitId),
     queryFn: async () => {
       try {
         const response = await axiosInstance.get<VitalListSuccessResponse>(

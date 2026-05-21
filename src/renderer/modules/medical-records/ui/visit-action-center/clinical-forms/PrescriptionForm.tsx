@@ -29,7 +29,7 @@ import {
 import {
   prescriptionKeys,
   useCreatePrescription,
-  useGetPatientPrescriptions,
+  useGetVisitPrescriptions,
   useGetPrescriptionById,
   useUpdatePrescription,
   useDeletePrescription,
@@ -123,20 +123,16 @@ export const PrescriptionForm: React.FC<PrescriptionFormProps> = ({
 
   const patientNumericId = patientId ? Number(patientId) : 0;
 
-  // Query for patient's prescriptions to find the latest draft
-  const patientPrescriptionsQuery = useGetPatientPrescriptions(
-    patientNumericId,
-    [],
-    {
-      enabled: !!patientNumericId && !existingPrescription,
-    }
-  );
+  // Query for visit's prescriptions to find the latest draft
+  const visitPrescriptionsQuery = useGetVisitPrescriptions(visitId ?? 0, patientNumericId, {
+    enabled: !!visitId && !existingPrescription,
+  });
 
-  // Resolve the existing prescription (either passed in or latest draft)
+  // Resolve the existing prescription (either passed in or latest draft in this visit)
   const resolvedExistingPrescription = useMemo<Prescription | null>(() => {
     if (existingPrescription) return existingPrescription;
 
-    const prescriptions = patientPrescriptionsQuery.data?.data || [];
+    const prescriptions = visitPrescriptionsQuery.data?.data || [];
     if (!prescriptions.length) return null;
 
     // Find draft prescriptions first, then sort by date
@@ -150,7 +146,7 @@ export const PrescriptionForm: React.FC<PrescriptionFormProps> = ({
     });
 
     return sorted[0] ?? null;
-  }, [existingPrescription, patientPrescriptionsQuery.data]);
+  }, [existingPrescription, visitPrescriptionsQuery.data]);
 
   const [createdPrescriptionId, setCreatedPrescriptionId] = useState<number | null>(null);
   const [isManualRefreshing, setIsManualRefreshing] = useState(false);
@@ -543,6 +539,7 @@ export const PrescriptionForm: React.FC<PrescriptionFormProps> = ({
         await createItem.mutateAsync(itemData);
         await refreshItems();
         await refreshPrescription();
+        showToast('success', 'Medication added', 3000);
       } else {
         const tempItem = buildLocalPrescriptionItem(itemData, Date.now());
         setMedications((prev) => [...prev, tempItem]);
@@ -878,7 +875,7 @@ export const PrescriptionForm: React.FC<PrescriptionFormProps> = ({
 
   // Loading state
   const isLoadingInitial =
-    patientPrescriptionsQuery.isLoading ||
+    visitPrescriptionsQuery.isLoading ||
     allergiesQuery.isLoading ||
     (!!currentPrescriptionId && itemsQuery.isLoading);
 

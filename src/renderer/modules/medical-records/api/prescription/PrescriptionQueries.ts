@@ -20,6 +20,7 @@ import { useMutation, useQuery, useQueryClient, type UseQueryOptions } from '@ta
 import type { AxiosError } from 'axios';
 import { axiosInstance } from '../../../../app/api/axiosConfig';
 import { useToast } from '../../../../app/store/contexts/toast/useToast';
+import { patientMedicalHistoryKeys } from '../patient-medical-history/patientMedicalHistoryQueries';
 import type {
   ApiErrorResponse,
   ApplyTemplateParams,
@@ -64,6 +65,7 @@ export const prescriptionKeys = {
   billing: (patientId: number) => [...prescriptionKeys.all(), 'billing', patientId] as const,
   billingDetail: (id: PrescriptionId) => [...prescriptionKeys.all(), 'billing', 'detail', id] as const,
   visit: (visitId: number) => [...prescriptionKeys.all(), 'visit', visitId] as const,
+  visitPatient: (patientId: number, visitId: number) => [...prescriptionKeys.all(), 'patient', patientId, 'visit', visitId] as const,
 };
 
 /* -------------------------------------------------------------------------- */
@@ -178,10 +180,11 @@ export const useGetPatientPrescriptions = (
  */
 export const useGetVisitPrescriptions = (
   visitId: number,
+  patientId?: number,
   options?: Omit<UseQueryOptions<GetPatientPrescriptionsResponse, AxiosError<ApiErrorResponse>>, 'queryKey' | 'queryFn'>
 ) => {
   return useQuery<GetPatientPrescriptionsResponse, AxiosError<ApiErrorResponse>>({
-    queryKey: prescriptionKeys.visit(visitId),
+    queryKey: patientId ? prescriptionKeys.visitPatient(patientId, visitId) : prescriptionKeys.visit(visitId),
     queryFn: async () => {
       const response = await axiosInstance.get<GetPatientPrescriptionsResponse>(
         `/prescriptions/visit/${visitId}`
@@ -246,10 +249,12 @@ export const useCreatePrescription = (
       showToast('success', successMessage, 8000);
       
       // Invalidate relevant queries
-      if (data.data?.patient_id) {
-        queryClient.invalidateQueries({ queryKey: prescriptionKeys.patient(data.data.patient_id) });
+      const patientId = data.data?.patient_id;
+      if (patientId) {
+        queryClient.invalidateQueries({ queryKey: prescriptionKeys.patient(patientId) });
+        queryClient.invalidateQueries({ queryKey: patientMedicalHistoryKeys.detail(patientId) });
       }
-      queryClient.invalidateQueries({ queryKey: prescriptionKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: prescriptionKeys.all() });
       
       callbacks.onSuccess?.(data);
     },
@@ -287,10 +292,12 @@ export const useUpdatePrescription = (
       
       // Invalidate relevant queries
       queryClient.invalidateQueries({ queryKey: prescriptionKeys.detail(variables.id) });
-      if (data.data?.patient_id) {
-        queryClient.invalidateQueries({ queryKey: prescriptionKeys.patient(data.data.patient_id) });
+      const patientId = data.data?.patient_id;
+      if (patientId) {
+        queryClient.invalidateQueries({ queryKey: prescriptionKeys.patient(patientId) });
+        queryClient.invalidateQueries({ queryKey: patientMedicalHistoryKeys.detail(patientId) });
       }
-      queryClient.invalidateQueries({ queryKey: prescriptionKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: prescriptionKeys.all() });
       
       callbacks.onSuccess?.(data);
     },
@@ -326,7 +333,8 @@ export const useDeletePrescription = (
       showToast('success', successMessage, 8000);
       
       queryClient.invalidateQueries({ queryKey: prescriptionKeys.detail(variables.id) });
-      queryClient.invalidateQueries({ queryKey: prescriptionKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: patientMedicalHistoryKeys.all() });
+      queryClient.invalidateQueries({ queryKey: prescriptionKeys.all() });
       
       callbacks.onSuccess?.(data);
     },
@@ -363,10 +371,12 @@ export const useCancelPrescription = (
       showToast('success', successMessage, 8000);
       
       queryClient.invalidateQueries({ queryKey: prescriptionKeys.detail(variables.id) });
-      if (data.data?.patient_id) {
-        queryClient.invalidateQueries({ queryKey: prescriptionKeys.patient(data.data.patient_id) });
+      const patientId = data.data?.patient_id;
+      if (patientId) {
+        queryClient.invalidateQueries({ queryKey: prescriptionKeys.patient(patientId) });
+        queryClient.invalidateQueries({ queryKey: patientMedicalHistoryKeys.detail(patientId) });
       }
-      queryClient.invalidateQueries({ queryKey: prescriptionKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: prescriptionKeys.all() });
       
       callbacks.onSuccess?.(data);
     },
@@ -403,11 +413,13 @@ export const useMarkPrescriptionDispensed = (
       showToast('success', successMessage, 8000);
       
       queryClient.invalidateQueries({ queryKey: prescriptionKeys.detail(variables.id) });
-      if (data.data?.patient_id) {
-        queryClient.invalidateQueries({ queryKey: prescriptionKeys.patient(data.data.patient_id) });
-        queryClient.invalidateQueries({ queryKey: prescriptionKeys.billing(data.data.patient_id) });
+      const patientId = data.data?.patient_id;
+      if (patientId) {
+        queryClient.invalidateQueries({ queryKey: prescriptionKeys.patient(patientId) });
+        queryClient.invalidateQueries({ queryKey: patientMedicalHistoryKeys.detail(patientId) });
+        queryClient.invalidateQueries({ queryKey: prescriptionKeys.billing(patientId) });
       }
-      queryClient.invalidateQueries({ queryKey: prescriptionKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: prescriptionKeys.all() });
       
       callbacks.onSuccess?.(data);
     },
@@ -445,6 +457,8 @@ export const useApplyTemplateToPrescription = (
       showToast('success', successMessage, 8000);
       
       queryClient.invalidateQueries({ queryKey: prescriptionKeys.detail(variables.id) });
+      queryClient.invalidateQueries({ queryKey: patientMedicalHistoryKeys.all() });
+      queryClient.invalidateQueries({ queryKey: prescriptionKeys.all() });
       
       callbacks.onSuccess?.(data);
     },
