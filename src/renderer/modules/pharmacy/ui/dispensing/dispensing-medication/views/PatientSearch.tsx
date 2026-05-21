@@ -726,7 +726,7 @@ const PatientSearch: React.FC<PatientSearchProps> = ({
                           )}>
                             <span className="flex items-center gap-1">
                               <Hash className="w-3 h-3" />
-                              <span className="truncate max-w-[150px]">#{patient.patient_number}</span>
+                              <span className="truncate max-w-[150px]">{patient.patient_number}</span>
                             </span>
 
                             {patient.date_of_birth && (

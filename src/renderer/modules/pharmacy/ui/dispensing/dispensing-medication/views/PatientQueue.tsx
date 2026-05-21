@@ -863,7 +863,7 @@ const PatientQueue: React.FC<PatientQueueProps> = ({
                   {patient?.patient_number && (
                     <span className="flex items-center gap-1">
                       <Hash className="h-3 w-3" />
-                      <span className="max-w-[150px] truncate">#{patient.patient_number}</span>
+                      <span className="max-w-[150px] truncate">{patient.patient_number}</span>
                     </span>
                   )}
 

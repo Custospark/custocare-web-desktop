@@ -4,18 +4,20 @@ import { AlertCircle } from 'lucide-react';
 import { DEFAULT_TAXES, formatCurrency } from '../billing-types';
 import { type ReceiptTransactionShape } from '../../../revenue/billing-review/components/receipt-view/printable-receipt/ReceiptTypes';// Define the shape that matches what PrintableReceipt expects
 import { PrintableReceipt } from '../../../revenue/billing-review/components/receipt-view/PrintableReceipt';
+import { formatText } from '../../../revenue/stats/billing-revenue-stats-component/revenueDashboardUtils';
+import type { BillingSummaryColors } from '../billing-summary-step/billingSummaryTheme';
 interface ReceiptPreviewSectionProps {
-  colors: any;
+  colors: BillingSummaryColors;
   isReadOnly: boolean;
   status: string;
   receiptNumber: string;
   receiptRef: React.RefObject<HTMLDivElement | null>;
   selectedTransaction: ReceiptTransactionShape;
-  derivedFinancials: any;
-  cashBreakdown: any;
+  derivedFinancials: Record<string, unknown>;
+  cashBreakdown: Record<string, unknown> | null;
   isPrinting: boolean;
   additionalNotes: string;
-  billingData: any;
+  billingData: Record<string, unknown>;
   onAdditionalNotesChange: (notes: string) => void;
 }
 
@@ -64,7 +66,7 @@ export const ReceiptPreviewSection: React.FC<ReceiptPreviewSectionProps> = ({
                     : colors.status.settled
                 }`}
               >
-                {status.charAt(0).toUpperCase() + status.slice(1)}
+                {formatText(status)}
               </div>
               <div
                 className={`text-xs font-semibold px-2.5 py-1 rounded border ${colors.border.primary} ${colors.bg.secondary} ${colors.text.primary}`}

@@ -8,6 +8,7 @@ import { useVoidTransaction } from '../../../../../api/refund/RefundQueries';
 import { ActionModal, type ThemeColors } from './ModalPrimitives';
 import { cx } from '../../utils';
 import { useToast } from '../../../../../../../app/store/contexts/toast/useToast';
+import { formatText } from '../../../stats/billing-revenue-stats-component/revenueDashboardUtils';
 
 interface VoidModalProps {
   open: boolean;
@@ -35,6 +36,7 @@ export const VoidModal: React.FC<VoidModalProps> = ({
   const [confirmed, setConfirmed] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
 
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (!open) return;
 
@@ -44,6 +46,7 @@ export const VoidModal: React.FC<VoidModalProps> = ({
     setConfirmed(false);
     setValidationError(null);
   }, [open]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const billingCycleId = selectedTransaction?.billing_cycle_id || 0;
 
@@ -62,7 +65,7 @@ export const VoidModal: React.FC<VoidModalProps> = ({
         setValidationError(errorMsg);
         showToast('error', errorMsg, 4500);
       },
-      onError: (error: any) => {
+      onError: (error: { response?: { data?: { message?: string } }; message?: string }) => {
         const errorMessage =
           error?.response?.data?.message ||
           error?.message ||
@@ -177,7 +180,7 @@ export const VoidModal: React.FC<VoidModalProps> = ({
             <div>
               <p className={colors.text.secondary}>Status</p>
               <p className={cx('font-semibold capitalize', colors.text.primary)}>
-                {String(selectedTransaction.billing_status || 'unknown').replace(/_/g, ' ')}
+                {formatText(String(selectedTransaction.billing_status || 'unknown'))}
               </p>
             </div>
           </div>
