@@ -10,28 +10,17 @@ import {
 } from '../../api/shift-handover/shiftHandoverQueries';
 import type { FacilityShiftHandover } from '../../api/shift-handover/shiftHandoverTypes';
 import type { FacilityTaskUserBrief } from '../../api/facility-tasks/facilityTaskTypes';
-import { useFacilityStaffAssignees } from '../../api/facility-tasks/useFacilityStaffAssignees';
-import type { StaffAssigneeOption } from '../../api/facility-tasks/useFacilityStaffAssignees';
 import { useGetWards } from '../../../administration/admin-module/api/wards/wardQueries';
 import type { Ward } from '../../../administration/admin-module/api/wards/wardTypes';
 import { useGetStaffForForwarding } from '../../../pharmacy/api/dispensing/visit-queue/useVisitQueries';
 import type { ForwardingStaff } from '../../../pharmacy/api/dispensing/visit-queue/visitTypes';
+import LoadingSkeleton from '../../../../shared/components/Loading/LoadingSkeletons';
 
 interface Props {
   theme: 'light' | 'dark';
 }
 
 const STAFF_FORWARDING_FILTERS = { exclude_current_staff: false as const, limit: 150 };
-
-function asArray<T>(x: unknown): T[] {
-  return Array.isArray(x) ? (x as T[]) : [];
-}
-
-function resolveAssigneeUserId(staff: ForwardingStaff, staffIdToUserId: Map<number, number>): number | null {
-  if (typeof staff.user_id === 'number' && staff.user_id > 0) return staff.user_id;
-  const mapped = staffIdToUserId.get(staff.staff_id);
-  return mapped ?? null;
-}
 
 function formatPerson(u: FacilityTaskUserBrief | null | undefined): string {
   if (!u) return '—';
@@ -54,7 +43,6 @@ const ShiftHandoverView: React.FC<Props> = ({ theme }) => {
 
   const wardFilters = useMemo(() => ({ facility_id: facilityId }), [facilityId]);
 
-  const staffUserMapQuery = useFacilityStaffAssignees(facilityId > 0 ? facilityId : null);
   const staffForwardingQuery = useGetStaffForForwarding(STAFF_FORWARDING_FILTERS, {
     enabled: facilityId > 0,
   });
@@ -69,46 +57,38 @@ const ShiftHandoverView: React.FC<Props> = ({ theme }) => {
 
   const createMutation = useCreateFacilityShiftHandover();
 
-  const staffIdToUserId = useMemo(() => {
-    const m = new Map<number, number>();
-    for (const a of asArray<StaffAssigneeOption>(staffUserMapQuery.data)) {
-      if (a.staffId > 0) m.set(a.staffId, a.userId);
-    }
-    return m;
-  }, [staffUserMapQuery.data]);
-
-  const forwardingStaff = useMemo(
-    () => asArray<ForwardingStaff>(staffForwardingQuery.data?.data?.staff),
+  const forwardingStaff: ForwardingStaff[] = useMemo(
+    () => staffForwardingQuery.data?.data?.staff ?? [],
     [staffForwardingQuery.data]
   );
 
   const assigneeOptions = useMemo(() => {
     const byUserId = new Map<number, { userId: number; label: string }>();
     for (const s of forwardingStaff) {
-      const uid = resolveAssigneeUserId(s, staffIdToUserId);
-      if (uid == null) continue;
-      if (byUserId.has(uid)) continue;
+      if (!s.user_id || s.user_id <= 0) continue;
+      if (byUserId.has(s.user_id)) continue;
       const you = currentStaffId != null && s.staff_id === currentStaffId ? ' (you)' : '';
-      byUserId.set(uid, {
-        userId: uid,
+      byUserId.set(s.user_id, {
+        userId: s.user_id,
         label: `${s.full_name}${you} — ${s.role_code}`,
       });
     }
     return [...byUserId.values()].sort((a, b) =>
       a.label.localeCompare(b.label, undefined, { sensitivity: 'base' })
     );
-  }, [forwardingStaff, staffIdToUserId, currentStaffId]);
+  }, [forwardingStaff, currentStaffId]);
 
-  const wards = asArray<Ward>(wardsQuery.data);
-  const rows = asArray<FacilityShiftHandover>(listQuery.data?.data);
+  const wards: Ward[] = useMemo(
+    () => (Array.isArray(wardsQuery.data) ? wardsQuery.data : []),
+    [wardsQuery.data]
+  );
+  const rows: FacilityShiftHandover[] = useMemo(
+    () => (Array.isArray(listQuery.data?.data) ? listQuery.data!.data : []),
+    [listQuery.data]
+  );
   const meta = listQuery.data?.meta;
 
-  const busy =
-    staffForwardingQuery.isFetching ||
-    staffUserMapQuery.isFetching ||
-    wardsQuery.isFetching ||
-    listQuery.isFetching ||
-    createMutation.isPending;
+  const submitting = createMutation.isPending;
 
   const cardShell = isDark ? 'border-gray-700 bg-gray-900/60' : 'border-gray-200 bg-white';
   const inputClass = `w-full rounded-lg border px-3 py-2 text-sm ${
@@ -162,8 +142,6 @@ const ShiftHandoverView: React.FC<Props> = ({ theme }) => {
     );
   }
 
-  const staffLoadError = staffForwardingQuery.isError || staffUserMapQuery.isError;
-
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -173,13 +151,13 @@ const ShiftHandoverView: React.FC<Props> = ({ theme }) => {
             Shift handover
           </h2>
           <p className={`text-sm mt-0.5 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-            Document handover notes for this facility. Optionally designate receiving staff (same pool as assign task / visit forwarding).
+            Document handover notes for this facility.
           </p>
         </div>
         <button
           type="button"
           onClick={() => listQuery.refetch()}
-          disabled={busy}
+          disabled={listQuery.isFetching}
           className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg border text-sm cursor-pointer disabled:opacity-50 ${
             isDark ? 'border-gray-600 hover:bg-gray-800' : 'border-gray-300 hover:bg-gray-50'
           }`}
@@ -200,7 +178,6 @@ const ShiftHandoverView: React.FC<Props> = ({ theme }) => {
             onChange={(e) => setSummary(e.target.value)}
             className={`${inputClass} min-h-[120px] resize-y`}
             placeholder="Patients of concern, pending tasks, equipment, incidents…"
-            disabled={busy}
             required
           />
         </div>
@@ -210,60 +187,67 @@ const ShiftHandoverView: React.FC<Props> = ({ theme }) => {
             <label className={`block text-xs font-medium mb-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`} htmlFor="ho-ward">
               Ward (optional)
             </label>
-            <select
-              id="ho-ward"
-              value={wardId}
-              onChange={(e) => setWardId(e.target.value)}
-              className={inputClass}
-              disabled={busy || wardsQuery.isLoading}
-            >
-              <option value="">— Facility-wide / not ward-specific —</option>
-              {wards.map((w) => (
-                <option key={w.id} value={String(w.id)}>
-                  {w.name}
-                  {w.code ? ` (${w.code})` : ''}
-                </option>
-              ))}
-            </select>
+            {wardsQuery.isLoading ? (
+              <LoadingSkeleton variant="minimal" theme={isDark ? 'dark' : 'light'} />
+            ) : (
+              <select
+                id="ho-ward"
+                value={wardId}
+                onChange={(e) => setWardId(e.target.value)}
+                className={inputClass}
+              >
+                <option value="">— Facility-wide / not ward-specific —</option>
+                {wards.map((w) => (
+                  <option key={w.id} value={String(w.id)}>
+                    {w.name}
+                    {w.code ? ` (${w.code})` : ''}
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
           <div>
             <label className={`block text-xs font-medium mb-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`} htmlFor="ho-to">
               Hand over to (optional)
             </label>
-            <select
-              id="ho-to"
-              value={handoverToUserId}
-              onChange={(e) => setHandoverToUserId(e.target.value)}
-              className={inputClass}
-              disabled={busy || staffForwardingQuery.isLoading}
-            >
-              <option value="">— Not specified —</option>
-              {assigneeOptions.map((a) => (
-                <option key={a.userId} value={String(a.userId)}>
-                  {a.label}
-                </option>
-              ))}
-            </select>
-            {staffLoadError ? (
-              <p className={`text-xs mt-1 ${isDark ? 'text-rose-400' : 'text-rose-600'}`}>Could not load staff list.</p>
-            ) : null}
+            {staffForwardingQuery.isLoading ? (
+              <LoadingSkeleton variant="minimal" theme={isDark ? 'dark' : 'light'} />
+            ) : (
+              <>
+                <select
+                  id="ho-to"
+                  value={handoverToUserId}
+                  onChange={(e) => setHandoverToUserId(e.target.value)}
+                  className={inputClass}
+                >
+                  <option value="">— Not specified —</option>
+                  {assigneeOptions.map((a) => (
+                    <option key={a.userId} value={String(a.userId)}>
+                      {a.label}
+                    </option>
+                  ))}
+                </select>
+                {staffForwardingQuery.isError ? (
+                  <p className={`text-xs mt-1 ${isDark ? 'text-rose-400' : 'text-rose-600'}`}>Could not load staff list.</p>
+                ) : null}
+              </>
+            )}
           </div>
         </div>
 
         <div className="flex flex-wrap gap-2 pt-1">
           <button
             type="submit"
-            disabled={busy}
+            disabled={submitting}
             className={`inline-flex items-center justify-center px-4 py-2 rounded-lg text-sm font-medium cursor-pointer disabled:opacity-50 ${
               isDark ? 'bg-blue-600 hover:bg-blue-500 text-white' : 'bg-blue-600 hover:bg-blue-700 text-white'
             }`}
           >
-            {createMutation.isPending ? 'Saving…' : 'Record handover'}
+            {submitting ? 'Saving…' : 'Record handover'}
           </button>
           <button
             type="button"
             onClick={() => resetForm()}
-            disabled={busy}
             className={`inline-flex items-center justify-center px-4 py-2 rounded-lg text-sm border cursor-pointer disabled:opacity-50 ${
               isDark ? 'border-gray-600 text-gray-200 hover:bg-gray-800' : 'border-gray-300 text-gray-800 hover:bg-gray-50'
             }`}
@@ -276,9 +260,7 @@ const ShiftHandoverView: React.FC<Props> = ({ theme }) => {
       <div className={`rounded-xl border p-4 ${cardShell}`}>
         <h3 className={`text-sm font-semibold mb-3 ${isDark ? 'text-white' : 'text-gray-900'}`}>Recent handovers</h3>
         {listQuery.isLoading ? (
-          <div className="flex justify-center py-10">
-            <div className={`inline-block h-8 w-8 animate-spin rounded-full border-2 ${isDark ? 'border-gray-600 border-t-blue-400' : 'border-gray-200 border-t-blue-600'}`} />
-          </div>
+          <LoadingSkeleton variant="list" rows={3} theme={isDark ? 'dark' : 'light'} />
         ) : rows.length === 0 ? (
           <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>No handovers recorded yet.</p>
         ) : (
@@ -315,7 +297,7 @@ const ShiftHandoverView: React.FC<Props> = ({ theme }) => {
                 <div className="flex gap-2">
                   <button
                     type="button"
-                    disabled={page <= 1 || busy}
+                    disabled={page <= 1}
                     onClick={() => setPage((p) => Math.max(1, p - 1))}
                     className={`inline-flex items-center gap-1 px-2 py-1 rounded border text-xs cursor-pointer disabled:opacity-40 ${
                       isDark ? 'border-gray-600 hover:bg-gray-800' : 'border-gray-300 hover:bg-gray-50'
@@ -326,7 +308,7 @@ const ShiftHandoverView: React.FC<Props> = ({ theme }) => {
                   </button>
                   <button
                     type="button"
-                    disabled={!meta || page >= meta.last_page || busy}
+                    disabled={!meta || page >= meta.last_page}
                     onClick={() => setPage((p) => p + 1)}
                     className={`inline-flex items-center gap-1 px-2 py-1 rounded border text-xs cursor-pointer disabled:opacity-40 ${
                       isDark ? 'border-gray-600 hover:bg-gray-800' : 'border-gray-300 hover:bg-gray-50'

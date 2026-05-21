@@ -16,6 +16,7 @@ import {
   useGetVisitsByFacility,
 } from '../../../pharmacy/api/dispensing/visit-queue/useVisitQueries';
 import type { ForwardingStaff, Visit } from '../../../pharmacy/api/dispensing/visit-queue/visitTypes';
+import LoadingSkeleton from '../../../../shared/components/Loading/LoadingSkeletons';
 
 interface Props {
   theme: 'light' | 'dark';
@@ -116,18 +117,6 @@ const AssignTaskView: React.FC<Props> = ({ theme }) => {
     [wardsQuery.data]
   );
 
-  const visitsLoading = visitsQuery.isLoading;
-  const busy =
-    staffForwardingQuery.isFetching ||
-    visitsLoading ||
-    wardsQuery.isFetching ||
-    createMutation.isPending;
-
-  const cardShell = isDark ? 'border-gray-700 bg-gray-900/60' : 'border-gray-200 bg-white';
-  const inputClass = `w-full rounded-lg border px-3 py-2 text-sm ${
-    isDark ? 'bg-gray-950 border-gray-600 text-gray-100 placeholder:text-gray-500' : 'bg-white border-gray-300 text-gray-900 placeholder:text-gray-400'
-  }`;
-
   const resetForm = () => {
     setTitle('');
     setDescription('');
@@ -186,6 +175,12 @@ const AssignTaskView: React.FC<Props> = ({ theme }) => {
     );
   }
 
+  const cardShell = isDark ? 'border-gray-700 bg-gray-900/60' : 'border-gray-200 bg-white';
+  const inputClass = `w-full rounded-lg border px-3 py-2 text-sm ${
+    isDark ? 'bg-gray-950 border-gray-600 text-gray-100 placeholder:text-gray-500' : 'bg-white border-gray-300 text-gray-900 placeholder:text-gray-400'
+  }`;
+  const submitting = createMutation.isPending;
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -214,7 +209,6 @@ const AssignTaskView: React.FC<Props> = ({ theme }) => {
             className={inputClass}
             placeholder="Short description of the task"
             autoComplete="off"
-            disabled={busy}
             required
           />
         </div>
@@ -229,7 +223,6 @@ const AssignTaskView: React.FC<Props> = ({ theme }) => {
             onChange={(e) => setDescription(e.target.value)}
             className={`${inputClass} min-h-[88px] resize-y`}
             placeholder="Optional details"
-            disabled={busy}
           />
         </div>
 
@@ -243,7 +236,6 @@ const AssignTaskView: React.FC<Props> = ({ theme }) => {
               value={category}
               onChange={(e) => setCategory(e.target.value as FacilityTaskCategory)}
               className={inputClass}
-              disabled={busy}
             >
               {CATEGORY_OPTIONS.map((o) => (
                 <option key={o.value} value={o.value}>
@@ -261,7 +253,6 @@ const AssignTaskView: React.FC<Props> = ({ theme }) => {
               value={priority}
               onChange={(e) => setPriority(e.target.value as FacilityTaskPriority)}
               className={inputClass}
-              disabled={busy}
             >
               <option value="low">Low</option>
               <option value="normal">Normal</option>
@@ -282,28 +273,30 @@ const AssignTaskView: React.FC<Props> = ({ theme }) => {
               value={dueAtLocal}
               onChange={(e) => setDueAtLocal(e.target.value)}
               className={inputClass}
-              disabled={busy}
             />
           </div>
           <div>
             <label className={`block text-xs font-medium mb-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`} htmlFor="assign-ward">
               Ward (optional)
             </label>
-            <select
-              id="assign-ward"
-              value={wardId}
-              onChange={(e) => setWardId(e.target.value)}
-              className={inputClass}
-              disabled={busy || wardsQuery.isLoading}
-            >
-              <option value="">— None —</option>
-              {wards.map((w) => (
-                <option key={w.id} value={String(w.id)}>
-                  {w.name}
-                  {w.code ? ` (${w.code})` : ''}
-                </option>
-              ))}
-            </select>
+            {wardsQuery.isLoading ? (
+              <LoadingSkeleton variant="minimal" theme={isDark ? 'dark' : 'light'} />
+            ) : (
+              <select
+                id="assign-ward"
+                value={wardId}
+                onChange={(e) => setWardId(e.target.value)}
+                className={inputClass}
+              >
+                <option value="">— None —</option>
+                {wards.map((w) => (
+                  <option key={w.id} value={String(w.id)}>
+                    {w.name}
+                    {w.code ? ` (${w.code})` : ''}
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
         </div>
 
@@ -311,72 +304,79 @@ const AssignTaskView: React.FC<Props> = ({ theme }) => {
           <label className={`block text-xs font-medium mb-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`} htmlFor="assign-staff">
             Assign to <span className="text-rose-500">*</span>
           </label>
-          <select
-            id="assign-staff"
-            value={assignedToUserId}
-            onChange={(e) => setAssignedToUserId(e.target.value)}
-            className={inputClass}
-            disabled={busy || staffForwardingQuery.isLoading}
-            required
-          >
-            <option value="">— Select staff —</option>
-            {assigneeOptions.map((a) => (
-              <option key={a.userId} value={String(a.userId)}>
-                {a.label}
-              </option>
-            ))}
-          </select>
-          {staffForwardingQuery.isError ? (
-            <p className={`text-xs mt-1 ${isDark ? 'text-rose-400' : 'text-rose-600'}`}>
-              Could not load staff list. Try refreshing.
-            </p>
-          ) : null}
-          {!staffForwardingQuery.isLoading &&
-          !staffForwardingQuery.isError &&
-          assigneeOptions.length === 0 ? (
-            <p className={`text-xs mt-1 ${isDark ? 'text-amber-400/90' : 'text-amber-700'}`}>
-              No staff with active roles found at this facility.
-            </p>
-          ) : null}
+          {staffForwardingQuery.isLoading ? (
+            <LoadingSkeleton variant="minimal" theme={isDark ? 'dark' : 'light'} />
+          ) : (
+            <>
+              <select
+                id="assign-staff"
+                value={assignedToUserId}
+                onChange={(e) => setAssignedToUserId(e.target.value)}
+                className={inputClass}
+                required
+              >
+                <option value="">— Select staff —</option>
+                {assigneeOptions.map((a) => (
+                  <option key={a.userId} value={String(a.userId)}>
+                    {a.label}
+                  </option>
+                ))}
+              </select>
+              {staffForwardingQuery.isError ? (
+                <p className={`text-xs mt-1 ${isDark ? 'text-rose-400' : 'text-rose-600'}`}>
+                  Could not load staff list. Try refreshing.
+                </p>
+              ) : null}
+              {!staffForwardingQuery.isError && assigneeOptions.length === 0 && !staffForwardingQuery.isLoading ? (
+                <p className={`text-xs mt-1 ${isDark ? 'text-amber-400/90' : 'text-amber-700'}`}>
+                  No staff with active roles found at this facility.
+                </p>
+              ) : null}
+            </>
+          )}
         </div>
 
         <div>
           <label className={`block text-xs font-medium mb-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`} htmlFor="assign-visit-patient">
             Patient / visit (optional)
           </label>
-          <select
-            id="assign-visit-patient"
-            value={visitUuid}
-            onChange={(e) => setVisitUuid(e.target.value)}
-            className={inputClass}
-            disabled={busy || visitsLoading}
-          >
-            <option value="">— No visit linked —</option>
-            {visitPicklist.map((v) => (
-              <option key={v.visit_uuid} value={v.visit_uuid}>
-                {formatVisitPickLabel(v)}
-              </option>
-            ))}
-          </select>
-          {!visitsLoading && visitPicklist.length === 0 ? (
-            <p className={`text-xs mt-1 ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>No active or in-progress visits at this facility.</p>
-          ) : null}
+          {visitsQuery.isLoading ? (
+            <LoadingSkeleton variant="minimal" theme={isDark ? 'dark' : 'light'} />
+          ) : (
+            <>
+              <select
+                id="assign-visit-patient"
+                value={visitUuid}
+                onChange={(e) => setVisitUuid(e.target.value)}
+                className={inputClass}
+              >
+                <option value="">— No visit linked —</option>
+                {visitPicklist.map((v) => (
+                  <option key={v.visit_uuid} value={v.visit_uuid}>
+                    {formatVisitPickLabel(v)}
+                  </option>
+                ))}
+              </select>
+              {visitPicklist.length === 0 ? (
+                <p className={`text-xs mt-1 ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>No active or in-progress visits at this facility.</p>
+              ) : null}
+            </>
+          )}
         </div>
 
         <div className="flex flex-wrap gap-2 pt-2">
           <button
             type="submit"
-            disabled={busy}
+            disabled={submitting}
             className={`inline-flex items-center justify-center px-4 py-2 rounded-lg text-sm font-medium cursor-pointer disabled:opacity-50 ${
               isDark ? 'bg-blue-600 hover:bg-blue-500 text-white' : 'bg-blue-600 hover:bg-blue-700 text-white'
             }`}
           >
-            {createMutation.isPending ? 'Creating…' : 'Create task'}
+            {submitting ? 'Creating…' : 'Create task'}
           </button>
           <button
             type="button"
             onClick={() => resetForm()}
-            disabled={busy}
             className={`inline-flex items-center justify-center px-4 py-2 rounded-lg text-sm border cursor-pointer disabled:opacity-50 ${
               isDark ? 'border-gray-600 text-gray-200 hover:bg-gray-800' : 'border-gray-300 text-gray-800 hover:bg-gray-50'
             }`}

@@ -10,13 +10,10 @@ import type {
   FacilityTaskPriority,
   FacilityTaskStatus,
 } from '../../api/facility-tasks/facilityTaskTypes';
+import LoadingSkeleton from '../../../../shared/components/Loading/LoadingSkeletons';
 
 interface Props {
   theme: 'light' | 'dark';
-}
-
-function asArray<T>(x: unknown): T[] {
-  return Array.isArray(x) ? (x as T[]) : [];
 }
 
 const PRIORITY_STYLES: Record<
@@ -100,7 +97,10 @@ const TaskHistoryView: React.FC<Props> = ({ theme }) => {
     enabled: facilityId > 0,
   });
 
-  const tasks = useMemo(() => asArray<FacilityTask>(query.data?.data), [query.data?.data]);
+  const tasks: FacilityTask[] = useMemo(
+    () => (Array.isArray(query.data?.data) ? query.data!.data : []),
+    [query.data]
+  );
   const meta = query.data?.meta;
 
   const busy = query.isFetching;
@@ -124,8 +124,7 @@ const TaskHistoryView: React.FC<Props> = ({ theme }) => {
             Task history
           </h2>
           <p className={`text-sm mt-0.5 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-            All facility tasks for this site (<code className="text-xs opacity-90">GET /facility-tasks</code>). Filter by
-            status or priority.
+            All facility tasks for this site. Filter by status or priority.
           </p>
         </div>
         <button
@@ -186,9 +185,7 @@ const TaskHistoryView: React.FC<Props> = ({ theme }) => {
       </div>
 
       {query.isLoading ? (
-        <div className={`rounded-xl border p-10 text-center ${cardShell}`}>
-          <div className={`inline-block h-8 w-8 animate-spin rounded-full border-2 ${isDark ? 'border-gray-600 border-t-blue-400' : 'border-gray-200 border-t-blue-600'}`} />
-        </div>
+        <LoadingSkeleton variant="list" rows={5} theme={isDark ? 'dark' : 'light'} />
       ) : tasks.length === 0 ? (
         <div className={`rounded-xl border p-10 text-center ${cardShell}`}>
           <p className={isDark ? 'text-gray-400' : 'text-gray-600'}>No tasks match your filters.</p>
