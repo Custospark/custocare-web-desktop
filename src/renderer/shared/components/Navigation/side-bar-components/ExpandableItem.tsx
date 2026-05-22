@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
-import { ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '../../../types/cn';
 import { useSelector } from 'react-redux';
 import type { RootState } from '../../../../app/store/rootReducer';
@@ -21,6 +21,7 @@ export interface ExpandableItemProps {
   allowMultilineLabel?: boolean;
   /** Optional shortcut hint shown before the chevron (e.g. module jump ⌘1). */
   headerAside?: React.ReactNode;
+  sidebarPosition?: 'left' | 'right';
 }
 
 const TRANSITION_MS = 240;
@@ -61,7 +62,9 @@ export const ExpandableItem: React.FC<ExpandableItemProps> = ({
   disabled = false,
   allowMultilineLabel = false,
   headerAside,
+  sidebarPosition = 'left',
 }) => {
+  const isRight = sidebarPosition === 'right';
   const theme = useSelector((state: RootState) => state.ui.theme);
   const generatedId = useId();
   const regionId = `${generatedId}-region`;
@@ -204,7 +207,8 @@ export const ExpandableItem: React.FC<ExpandableItemProps> = ({
         aria-expanded={open}
         aria-controls={regionId}
         className={cn(
-          'w-full flex justify-between gap-1.5 px-3 py-2 rounded-xl border',
+          'w-full flex gap-1.5 px-3 py-2 rounded-xl border',
+          isRight ? 'flex-row-reverse' : 'justify-between',
           allowMultilineLabel ? 'items-start' : 'items-center',
           'transition-all duration-200 ease-out',
           'focus:outline-none focus:ring-2 focus:ring-offset-0',
@@ -267,18 +271,30 @@ export const ExpandableItem: React.FC<ExpandableItemProps> = ({
         </span>
 
         {headerAside != null ? (
-          <span className="shrink-0 ml-auto flex items-center">{headerAside}</span>
+          <span className={cn('shrink-0 flex items-center', isRight ? 'mr-auto' : 'ml-auto')}>{headerAside}</span>
         ) : null}
 
-        <ChevronRight
-          className={cn(
-            'w-4 h-4 shrink-0 transition-transform duration-200 ease-out',
-            allowMultilineLabel && 'mt-1',
-            open && 'rotate-90',
-            active && !disabled ? activeIconClass : iconClass
-          )}
-          aria-hidden="true"
-        />
+        {isRight ? (
+          <ChevronLeft
+            className={cn(
+              'w-4 h-4 shrink-0 transition-transform duration-200 ease-out',
+              allowMultilineLabel && 'mt-1',
+              open && '-rotate-90',
+              active && !disabled ? activeIconClass : iconClass
+            )}
+            aria-hidden="true"
+          />
+        ) : (
+          <ChevronRight
+            className={cn(
+              'w-4 h-4 shrink-0 transition-transform duration-200 ease-out',
+              allowMultilineLabel && 'mt-1',
+              open && 'rotate-90',
+              active && !disabled ? activeIconClass : iconClass
+            )}
+            aria-hidden="true"
+          />
+        )}
       </button>
 
       <div
@@ -292,7 +308,8 @@ export const ExpandableItem: React.FC<ExpandableItemProps> = ({
         <div 
           ref={contentRef} 
           className={cn(
-            'mt-1.5 pl-4 pr-1 py-0.5 space-y-1.5 border-l transition-colors',
+            'mt-1.5 py-0.5 space-y-1.5 transition-colors',
+            isRight ? 'pr-4 pl-1 border-r' : 'pl-4 pr-1 border-l',
             theme === 'dark' ? 'border-gray-800' : 'border-gray-200'
           )}
         >
