@@ -116,7 +116,7 @@ export function useCreatePlatformHubProductUpdate() {
     },
     onMutate: async () => {
       await qc.cancelQueries({ queryKey: platformHubProductUpdateKeys.all });
-      const prev = qc.getQueryData(platformHubProductUpdateKeys.all);
+      const prev = qc.getQueryData<ApiPaginatedResponse<PlatformHubProductUpdateRowDto>>(platformHubProductUpdateKeys.all);
       return { prev };
     },
     onError: (_err, _vars, ctx) => {
@@ -146,7 +146,7 @@ export function useUpdatePlatformHubProductUpdate() {
     },
     onMutate: async ({ id, payload }) => {
       await qc.cancelQueries({ queryKey: platformHubProductUpdateKeys.all });
-      const prev = qc.getQueryData(platformHubProductUpdateKeys.all);
+      const prev = qc.getQueryData<ApiPaginatedResponse<PlatformHubProductUpdateRowDto>>(platformHubProductUpdateKeys.all);
       qc.setQueryData<ApiPaginatedResponse<PlatformHubProductUpdateRowDto>>(platformHubProductUpdateKeys.all, (old) => {
         if (!old?.data) return old;
         return { ...old, data: old.data.map((item) => (item.id === id ? { ...item, ...payload } : item)) };
@@ -172,7 +172,7 @@ export function useDeletePlatformHubProductUpdate() {
     },
     onMutate: async ({ id }) => {
       await qc.cancelQueries({ queryKey: platformHubProductUpdateKeys.all });
-      const prev = qc.getQueryData(platformHubProductUpdateKeys.all);
+      const prev = qc.getQueryData<ApiPaginatedResponse<PlatformHubProductUpdateRowDto>>(platformHubProductUpdateKeys.all);
       qc.setQueryData<ApiPaginatedResponse<PlatformHubProductUpdateRowDto>>(platformHubProductUpdateKeys.all, (old) => {
         if (!old?.data) return old;
         return { ...old, data: old.data.filter((item) => item.id !== id) };

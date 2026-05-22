@@ -98,7 +98,7 @@ export function useUpdatePlatformHubFeedback() {
     },
     onMutate: async ({ id, payload }) => {
       await qc.cancelQueries({ queryKey: platformHubFeedbackKeys.all });
-      const prev = qc.getQueryData(platformHubFeedbackKeys.all);
+      const prev = qc.getQueryData<ApiResponse<PlatformHubFeedbackRowDto[]>>(platformHubFeedbackKeys.all);
       qc.setQueryData<ApiResponse<PlatformHubFeedbackRowDto[]>>(platformHubFeedbackKeys.all, (old) => {
         if (!old?.data) return old;
         return { ...old, data: old.data.map((item) => (item.id === id ? { ...item, ...payload } : item)) };

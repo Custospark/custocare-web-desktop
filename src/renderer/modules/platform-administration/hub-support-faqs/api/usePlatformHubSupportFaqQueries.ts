@@ -63,7 +63,7 @@ export function useCreatePlatformHubSupportFaq() {
     },
     onMutate: async () => {
       await qc.cancelQueries({ queryKey: platformHubSupportFaqKeys.all });
-      const prev = qc.getQueryData(platformHubSupportFaqKeys.all);
+      const prev = qc.getQueryData<ApiResponse<PlatformSupportFaqAdminDto[]>>(platformHubSupportFaqKeys.all);
       return { prev };
     },
     onError: (_err, _vars, ctx) => {
@@ -93,7 +93,7 @@ export function useUpdatePlatformHubSupportFaq() {
     },
     onMutate: async ({ id, payload }) => {
       await qc.cancelQueries({ queryKey: platformHubSupportFaqKeys.all });
-      const prev = qc.getQueryData(platformHubSupportFaqKeys.all);
+      const prev = qc.getQueryData<ApiResponse<PlatformSupportFaqAdminDto[]>>(platformHubSupportFaqKeys.all);
       qc.setQueryData<ApiResponse<PlatformSupportFaqAdminDto[]>>(platformHubSupportFaqKeys.all, (old) => {
         if (!old?.data) return old;
         return { ...old, data: old.data.map((item) => (item.id === id ? { ...item, ...payload } : item)) };
@@ -119,7 +119,7 @@ export function useDeletePlatformHubSupportFaq() {
     },
     onMutate: async ({ id }) => {
       await qc.cancelQueries({ queryKey: platformHubSupportFaqKeys.all });
-      const prev = qc.getQueryData(platformHubSupportFaqKeys.all);
+      const prev = qc.getQueryData<ApiResponse<PlatformSupportFaqAdminDto[]>>(platformHubSupportFaqKeys.all);
       qc.setQueryData<ApiResponse<PlatformSupportFaqAdminDto[]>>(platformHubSupportFaqKeys.all, (old) => {
         if (!old?.data) return old;
         return { ...old, data: old.data.filter((item) => item.id !== id) };

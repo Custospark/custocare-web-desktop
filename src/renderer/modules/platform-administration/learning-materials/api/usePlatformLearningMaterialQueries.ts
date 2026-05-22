@@ -63,7 +63,7 @@ export function useCreateLearningMaterial() {
     },
     onMutate: async () => {
       await qc.cancelQueries({ queryKey: platformLearningMaterialKeys.all });
-      const prev = qc.getQueryData(platformLearningMaterialKeys.all);
+      const prev = qc.getQueryData<ApiResponse<LearningMaterialDto[]>>(platformLearningMaterialKeys.all);
       return { prev };
     },
     onError: (_err, _vars, ctx) => {
@@ -93,7 +93,7 @@ export function useUpdateLearningMaterial() {
     },
     onMutate: async ({ id, payload }) => {
       await qc.cancelQueries({ queryKey: platformLearningMaterialKeys.all });
-      const prev = qc.getQueryData(platformLearningMaterialKeys.all);
+      const prev = qc.getQueryData<ApiResponse<LearningMaterialDto[]>>(platformLearningMaterialKeys.all);
       qc.setQueryData<ApiResponse<LearningMaterialDto[]>>(platformLearningMaterialKeys.all, (old) => {
         if (!old?.data) return old;
         return { ...old, data: old.data.map((item) => (item.id === id ? { ...item, ...payload } : item)) };
@@ -157,7 +157,7 @@ export function useDeleteLearningMaterial() {
     },
     onMutate: async ({ id }) => {
       await qc.cancelQueries({ queryKey: platformLearningMaterialKeys.all });
-      const prev = qc.getQueryData(platformLearningMaterialKeys.all);
+      const prev = qc.getQueryData<ApiResponse<LearningMaterialDto[]>>(platformLearningMaterialKeys.all);
       qc.setQueryData<ApiResponse<LearningMaterialDto[]>>(platformLearningMaterialKeys.all, (old) => {
         if (!old?.data) return old;
         return { ...old, data: old.data.filter((item) => item.id !== id) };

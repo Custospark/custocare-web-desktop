@@ -108,7 +108,7 @@ export function useUpdatePlatformHubSupportTicket() {
     },
     onMutate: async ({ id, payload }) => {
       await qc.cancelQueries({ queryKey: platformHubSupportTicketKeys.all });
-      const prev = qc.getQueryData(platformHubSupportTicketKeys.all);
+      const prev = qc.getQueryData<ApiResponse<PlatformHubSupportTicketRowDto[]>>(platformHubSupportTicketKeys.all);
       qc.setQueryData<ApiResponse<PlatformHubSupportTicketRowDto[]>>(platformHubSupportTicketKeys.all, (old) => {
         if (!old?.data) return old;
         return { ...old, data: old.data.map((item) => (item.id === id ? { ...item, ...payload } : item)) };
