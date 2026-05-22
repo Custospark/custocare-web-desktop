@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { Pill } from 'lucide-react';
@@ -12,10 +12,8 @@ import {
   type QueueVisitItem,
 } from '../../../api/dispensing/visit-queue/visitTypes';
 import { useToast } from '../../../../../app/store/contexts/toast/useToast';
-import { useGetPrescriptions } from '../../../../medical-records/api/prescription/PrescriptionQueries';
-import { PrescriptionStatus } from '../../../../medical-records/api/prescription/PrescriptionTypes';
 
-import { setActiveVisit, emergencyClearVisit, setMedicationEncounterQueue } from '../../../../../app/store/slices/visitSlice';
+import { setActiveVisit, emergencyClearVisit } from '../../../../../app/store/slices/visitSlice';
 import { clearAll } from '../../../../medical-records/ui/visit-action-center/billing-space';
 import { useAppSelector } from '../../../../../app/store/hooks/useApp';
 import {
@@ -32,8 +30,7 @@ export interface PharmacyPatientQueueProps {
 }
 
 /**
- * Queue lists only visits that have at least one prescription **ready for dispensing**
- * (Active – Ready for Dispensing, or Partially Dispensed). Counts/stats use the same filtered set.
+ * Queue lists all visits routed to the Pharmacy workflow.
  * Selecting a row loads the visit into visitSlice and opens the medication encounter workflow.
  */
 const PharmacyPatientQueue: React.FC<PharmacyPatientQueueProps> = ({ theme, className = '' }) => {
@@ -45,43 +42,6 @@ const PharmacyPatientQueue: React.FC<PharmacyPatientQueueProps> = ({ theme, clas
   const facilityId = useAppSelector(getActiveFacilityId);
   const staffId = useAppSelector(getStaffId);
   const hasCompleteStaff = useAppSelector(hasCompleteStaffContext);
-
-  const activeRxQuery = useGetPrescriptions(
-    { facility_id: facilityId ?? undefined, status: PrescriptionStatus.ACTIVE },
-    { enabled: !!facilityId, refetchInterval: 15000 }
-  );
-
-  const partialRxQuery = useGetPrescriptions(
-    { facility_id: facilityId ?? undefined, status: PrescriptionStatus.PARTIALLY_DISPENSED },
-    { enabled: !!facilityId, refetchInterval: 15000 }
-  );
-
-  const rxReady = activeRxQuery.isFetched && partialRxQuery.isFetched;
-  // const rxFetching = activeRxQuery.isFetching || partialRxQuery.isFetching;
-
-  const visitIdsWithRxReadyForDispensing = useMemo(() => {
-    const ids = new Set<number>();
-    for (const p of activeRxQuery.data?.data ?? []) {
-      if (p.visit_id != null) ids.add(p.visit_id);
-    }
-    for (const p of partialRxQuery.data?.data ?? []) {
-      if (p.visit_id != null) ids.add(p.visit_id);
-    }
-    return ids;
-  }, [activeRxQuery.data, partialRxQuery.data]);
-
-  useEffect(() => {
-    if (!rxReady) return;
-    dispatch(setMedicationEncounterQueue({ visitIds: [...visitIdsWithRxReadyForDispensing] }));
-  }, [dispatch, rxReady, visitIdsWithRxReadyForDispensing]);
-
-  const filterVisit = useCallback(
-    (visit: QueueVisitItem) => {
-      if (!rxReady) return false;
-      return visit.visit_id != null && visitIdsWithRxReadyForDispensing.has(visit.visit_id);
-    },
-    [rxReady, visitIdsWithRxReadyForDispensing]
-  );
 
   const handleTakeAction = async (visit: QueueVisitItem) => {
     if (!hasCompleteStaff) {
@@ -152,8 +112,8 @@ const PharmacyPatientQueue: React.FC<PharmacyPatientQueueProps> = ({ theme, clas
     <div className={cn(className)}>
       <PatientQueue
         title="Queue & patient intake"
-        description="Visits with prescriptions ready for dispensing (active or partially dispensed). Counts match this list."
-        filterVisit={filterVisit}
+        description="Patients routed to the Pharmacy workflow for medication management."
+        
         onTakeAction={handleTakeAction}
         onNewPatientRegistration={handleCreateNewPatient}
         actionButtonText={isProcessing ? 'Loading...' : 'Take Action'}
@@ -167,11 +127,6 @@ const PharmacyPatientQueue: React.FC<PharmacyPatientQueueProps> = ({ theme, clas
         showNewPatientRegistration={true}
         theme={theme}
         className="cursor-default"
-        isLoading={
-          !!facilityId &&
-          !rxReady &&
-          (activeRxQuery.isLoading || partialRxQuery.isLoading)
-        }
         initialFilters={queueApiFilters}
         showCompletedWorkTab
       />
