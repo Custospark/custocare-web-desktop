@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
-import { ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '../../../types/cn';
 import { useSelector } from 'react-redux';
 import type { RootState } from '../../../../app/store/rootReducer';
@@ -21,6 +21,7 @@ export interface ExpandableItemProps {
   allowMultilineLabel?: boolean;
   /** Optional shortcut hint shown before the chevron (e.g. module jump ⌘1). */
   headerAside?: React.ReactNode;
+  sidebarPosition?: 'left' | 'right';
 }
 
 const TRANSITION_MS = 240;
@@ -61,6 +62,7 @@ export const ExpandableItem: React.FC<ExpandableItemProps> = ({
   disabled = false,
   allowMultilineLabel = false,
   headerAside,
+  sidebarPosition = 'left',
 }) => {
   const theme = useSelector((state: RootState) => state.ui.theme);
   const generatedId = useId();
@@ -204,7 +206,8 @@ export const ExpandableItem: React.FC<ExpandableItemProps> = ({
         aria-expanded={open}
         aria-controls={regionId}
         className={cn(
-          'w-full flex justify-between gap-1.5 px-3 py-2 rounded-xl border',
+          'w-full flex gap-1.5 px-3 py-2 rounded-xl border',
+          sidebarPosition === 'right' ? '' : 'justify-between',
           allowMultilineLabel ? 'items-start' : 'items-center',
           'transition-all duration-200 ease-out',
           'focus:outline-none focus:ring-2 focus:ring-offset-0',
@@ -232,6 +235,7 @@ export const ExpandableItem: React.FC<ExpandableItemProps> = ({
         <span
           className={cn(
             'flex gap-1.5 min-w-0 flex-1',
+            sidebarPosition === 'right' ? 'order-3 flex-row-reverse' : '',
             allowMultilineLabel ? 'items-start' : 'items-center',
           )}
         >
@@ -249,36 +253,51 @@ export const ExpandableItem: React.FC<ExpandableItemProps> = ({
           <span
             className={cn(
               'min-w-0 flex-1 text-sm font-semibold text-left',
+              sidebarPosition === 'right' && 'text-right',
               allowMultilineLabel ? 'break-words whitespace-normal' : 'truncate',
               active && !disabled ? activeTextClass : textClass,
             )}
           >
             {label}
           </span>
-          {badge !== undefined && badge !== null && (
-            <span className={cn(
-              'shrink-0 text-xs font-bold rounded-full px-1.5 py-0.5 transition-all duration-200',
-              allowMultilineLabel && 'mt-0.5',
-              getBadgeClasses()
-            )}>
-              {badge}
-            </span>
-          )}
         </span>
 
+        {badge !== undefined && badge !== null && (
+          <span className={cn(
+            'shrink-0 text-xs font-bold rounded-full px-1.5 py-0.5 transition-all duration-200',
+            sidebarPosition === 'right' ? 'order-1' : '',
+            allowMultilineLabel && 'mt-0.5',
+            getBadgeClasses()
+          )}>
+            {badge}
+          </span>
+        )}
+
         {headerAside != null ? (
-          <span className="shrink-0 ml-auto flex items-center">{headerAside}</span>
+          <span className={cn('shrink-0 flex items-center', sidebarPosition === 'right' ? 'order-2' : 'ml-auto')}>{headerAside}</span>
         ) : null}
 
-        <ChevronRight
-          className={cn(
-            'w-4 h-4 shrink-0 transition-transform duration-200 ease-out',
-            allowMultilineLabel && 'mt-1',
-            open && 'rotate-90',
-            active && !disabled ? activeIconClass : iconClass
-          )}
-          aria-hidden="true"
-        />
+        {sidebarPosition === 'right' ? (
+          <ChevronLeft
+            className={cn(
+              'w-4 h-4 shrink-0 transition-transform duration-200 ease-out order-0',
+              allowMultilineLabel && 'mt-1',
+              open && '-rotate-90',
+              active && !disabled ? activeIconClass : iconClass
+            )}
+            aria-hidden="true"
+          />
+        ) : (
+          <ChevronRight
+            className={cn(
+              'w-4 h-4 shrink-0 transition-transform duration-200 ease-out',
+              allowMultilineLabel && 'mt-1',
+              open && 'rotate-90',
+              active && !disabled ? activeIconClass : iconClass
+            )}
+            aria-hidden="true"
+          />
+        )}
       </button>
 
       <div
@@ -292,7 +311,8 @@ export const ExpandableItem: React.FC<ExpandableItemProps> = ({
         <div 
           ref={contentRef} 
           className={cn(
-            'mt-1.5 pl-4 pr-1 py-0.5 space-y-1.5 border-l transition-colors',
+            'mt-1.5 py-0.5 space-y-1.5 transition-colors',
+            sidebarPosition === 'right' ? 'pr-4 pl-1 border-r' : 'pl-4 pr-1 border-l',
             theme === 'dark' ? 'border-gray-800' : 'border-gray-200'
           )}
         >

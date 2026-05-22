@@ -35,6 +35,7 @@ interface SidebarNavigationProps {
   handleNavigation: (e: React.MouseEvent, route: string) => void;
   navContainerRef: React.RefObject<HTMLElement | null>;
   activeItemRef: React.RefObject<HTMLAnchorElement | null>;
+  sidebarPosition?: 'left' | 'right';
 }
 
 const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
@@ -50,6 +51,7 @@ const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
   handleNavigation,
   navContainerRef,
   activeItemRef,
+  sidebarPosition = 'left',
 }) => {
   const OPEN_PARENT_STORAGE_KEY = 'sidebar-collapsible-open-parent';
   const nestedItems = useMemo(() => Object.values(groupedMenuItems).flat(), [groupedMenuItems]);
@@ -104,6 +106,7 @@ const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
         onClick={(e) => handleNavigation(e, item.route)}
         className={cn(
           'group relative flex items-center',
+          sidebarPosition === 'right' && 'flex-row-reverse',
           'rounded-xl transition-all duration-300 ease-out',
           'border',
           isActive
@@ -127,7 +130,10 @@ const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
         aria-current={isActive ? 'page' : undefined}
       >
         {isActive && !collapsed && (
-          <div className="absolute -left-1 top-1/2 -translate-y-1/2 w-1.5 h-12 rounded-r-full bg-linear-to-b from-blue-500 via-cyan-400 to-blue-500 shadow-xl shadow-blue-500/70" />
+          <div className={cn(
+            'absolute top-1/2 -translate-y-1/2 w-1.5 h-12 bg-linear-to-b from-blue-500 via-cyan-400 to-blue-500 shadow-xl shadow-blue-500/70',
+            sidebarPosition === 'right' ? '-right-1 rounded-l-full' : '-left-1 rounded-r-full',
+          )} />
         )}
 
         <div className={cn('relative shrink-0', collapsed ? 'mx-auto' : '')}>
@@ -161,8 +167,8 @@ const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
         </div>
 
         {!collapsed && (
-          <div className="flex-1 min-w-0 space-y-1.5">
-            <div className="flex items-center justify-between gap-2">
+          <div className={cn('flex-1 min-w-0 space-y-1.5', sidebarPosition === 'right' && 'text-right')}>
+            <div className={cn('flex items-center gap-2', sidebarPosition === 'right' ? 'flex-row-reverse' : 'justify-between')}>
               <span
                 className={cn(
                   'font-semibold text-sm sm:text-sm leading-snug break-words whitespace-normal',
@@ -182,6 +188,7 @@ const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
             <p
               className={cn(
                 'text-xs sm:text-[11px] leading-relaxed break-words whitespace-normal',
+                sidebarPosition === 'right' && 'text-right',
                 isActive
                   ? isDark
                     ? 'text-gray-300'
@@ -194,7 +201,7 @@ const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
               {item.description}
             </p>
 
-            <div className="flex items-center justify-between pt-0.5">
+            <div className={cn('flex items-center pt-0.5', sidebarPosition === 'right' ? 'flex-row-reverse justify-end gap-2' : 'justify-between')}>
               {item.stats && (
                 <span
                   className={cn(
@@ -254,7 +261,8 @@ const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
         aria-label={operation.label}
         onClick={(e) => handleNavigation(e, operation.route)}
         className={cn(
-          'flex gap-2.5 rounded-lg px-2 py-2 text-sm text-left transition-all duration-200',
+          'flex gap-2.5 rounded-lg px-2 py-2 text-sm transition-all duration-200',
+          sidebarPosition === 'right' ? 'flex-row-reverse text-right' : 'text-left',
           enableNestedNavigation ? 'items-start' : 'items-center',
           enableNestedNavigation && isOperationActive && 'my-2',
           'border border-transparent',
@@ -284,13 +292,15 @@ const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
         </span>
         <span
           className={cn(
-            'min-w-0 flex-1 flex gap-2 items-start justify-between',
+            'min-w-0 flex-1 flex gap-2 items-start',
+            sidebarPosition === 'right' ? 'flex-row-reverse justify-end' : 'justify-between',
             enableNestedNavigation ? '' : 'items-center',
           )}
         >
           <span
             className={cn(
               'min-w-0 leading-snug',
+              sidebarPosition === 'right' && 'text-right',
               enableNestedNavigation ? 'break-words whitespace-normal' : 'truncate',
             )}
           >
@@ -328,6 +338,7 @@ const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
                     <p
                       className={cn(
                         'text-xs font-bold uppercase tracking-wider px-2',
+                        sidebarPosition === 'right' && 'text-right',
                         isDark ? 'text-gray-400' : 'text-gray-500',
                       )}
                     >
@@ -362,6 +373,7 @@ const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
                           badge={item.operations?.length}
                           isOpen={openParentId === item.id}
                           headerAside={headerAside}
+                          sidebarPosition={sidebarPosition}
                           onToggle={(nextOpen) => {
                             if (nextOpen) {
                               setOpenParentId(item.id);
@@ -390,6 +402,7 @@ const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
                     <p
                       className={cn(
                         'text-xs font-bold uppercase tracking-wider px-2',
+                        sidebarPosition === 'right' && 'text-right',
                         isDark ? 'text-gray-400' : 'text-gray-500',
                       )}
                     >
