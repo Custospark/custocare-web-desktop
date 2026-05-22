@@ -95,7 +95,7 @@ export const WorkspaceCard: React.FC<WorkspaceCardProps> = ({
       <div className="flex flex-col lg:flex-row">
         {/* Image Section - Only if imageUrl provided */}
         {imageUrl && (
-          <div className="relative w-full lg:w-64 h-48 lg:h-auto overflow-hidden shrink-0">
+          <div className="relative w-full lg:w-64 h-48 lg:h-full min-h-0 overflow-hidden shrink-0">
             <img
               src={imageUrl || DEFAULT_WORKSPACE_IMAGE}
               alt={title}

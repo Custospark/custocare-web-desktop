@@ -4,7 +4,7 @@
  * ============================================================================
  */
 
-import React, { useMemo } from 'react';
+import React from 'react';
 import { motion } from 'framer-motion';
 import { Sparkles, Globe, Sun, Sunrise, Sunset } from 'lucide-react';
 import { cn } from '../../../../../../shared/types/cn';
@@ -27,8 +27,8 @@ export const WelcomeSection: React.FC<WelcomeSectionProps> = ({
   hasGlobalCapabilities,
   theme,
 }) => {
-  // Get time-based greeting
-  const timeGreeting = useMemo(() => {
+  // Get time-based greeting using browser local time
+  const timeGreeting = (() => {
     const hour = new Date().getHours();
     
     if (hour >= 5 && hour < 12) {
@@ -38,7 +38,7 @@ export const WelcomeSection: React.FC<WelcomeSectionProps> = ({
       return { text: 'Good Afternoon', emoji: '🌤️', icon: Sun };
     }
     return { text: 'Good Evening', emoji: '🌙', icon: Sunset };
-  }, []);
+  })();
 
   const getWelcomeMessage = () => {
     if (isStaffWithFacility) {

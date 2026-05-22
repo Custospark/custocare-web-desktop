@@ -903,7 +903,6 @@ export const useBulkReassignStaff = (
       return response.data;
     },
     onSuccess: (data) => {
-      showToast('success', data.message || 'Visits reassigned successfully.', 6000);
       queryClient.invalidateQueries({ queryKey: visitKeys.queue({}) });
       queryClient.invalidateQueries({ queryKey: visitKeys.lists() });
       callbacks.onSuccess?.(data);

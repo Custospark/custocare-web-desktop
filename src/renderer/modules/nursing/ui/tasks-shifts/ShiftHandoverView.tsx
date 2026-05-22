@@ -473,13 +473,13 @@ const ShiftHandoverView: React.FC<Props> = ({ theme }) => {
                   ) : null}
 
                   <div className="flex gap-2 text-xs mt-2">
-                    <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300">
+                    <span className="px-2 py-0.5 rounded font-medium bg-emerald-100 text-emerald-800 dark:bg-emerald-800/60 dark:text-emerald-200">
                       Available: {summaryData.available}
                     </span>
-                    <span className="px-2 py-0.5 rounded bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300">
+                    <span className="px-2 py-0.5 rounded font-medium bg-amber-100 text-amber-800 dark:bg-amber-800/60 dark:text-amber-200">
                       Busy: {summaryData.busy}
                     </span>
-                    <span className="px-2 py-0.5 rounded bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400">
+                    <span className="px-2 py-0.5 rounded font-medium bg-gray-100 text-gray-700 dark:bg-gray-600 dark:text-gray-100">
                       Total: {summaryData.total}
                     </span>
                   </div>

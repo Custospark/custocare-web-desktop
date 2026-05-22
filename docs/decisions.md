@@ -1,5 +1,62 @@
 # Architecture Decision Records
 
+---
+
+## 2026-05-22: Portal Selector — Image Height Constraint + Greeting Uses Browser Local Time
+
+**Context:** The workspace card image on the Portal Selector page took its natural height on large screens (`lg:h-auto`), making it disproportionately tall compared to the card's content area. Additionally, the greeting was computed once on mount via `useMemo([], [])`, so it could show the wrong time-of-day greeting if the component stayed mounted across time boundaries.
+
+**Decisions:**
+
+1. **Image height** — Changed `lg:h-auto` to `lg:h-full` + `min-h-0` in `WorkspaceCard.tsx:98`. On large screens (flex row layout), the image container now fills the card's full height instead of taking its natural image height. The `object-cover` class on the `<img>` already crops the image proportionally, so it stays sharp.
+
+2. **Greeting** — Removed `useMemo` and replaced with an IIFE that computes `new Date().getHours()` at render time. This ensures the greeting always reflects the user's browser local time whenever the component re-renders (instead of being frozen on mount).
+
+**Files changed (FE — 2 files):**
+- `WorkspaceCard.tsx` — image container: `lg:h-auto` → `lg:h-full min-h-0`
+- `WelcomeSection.tsx` — removed `useMemo` import, greeting computed at render time via IIFE
+
+**Trade-offs:**
+- `lg:h-full` depends on the flex container's implicit height (stretch behavior). In a flex row, children stretch to match the tallest child by default, so the image fills the full card height correctly.
+- Computing the greeting at render time means it updates whenever React re-renders (triggered by state/prop changes or parent re-render). For a portal selector page where users spend seconds, this is sufficient — no timer needed.
+
+## 2026-05-22: Nursing Tasks & Shifts — Count Badge Contrast Fix
+
+**Context:** The Available/Busy/Total count badges in `AssignTaskView` and `ShiftHandoverView` used overly subtle backgrounds on dark theme (`dark:bg-emerald-900/50`, `dark:bg-amber-900/50`, `dark:bg-gray-800`) with low-contrast text, making them barely visible. Light theme contrast was also poor.
+
+**Decision:**
+- Increased background opacity on dark theme: `dark:bg-emerald-800/60`, `dark:bg-amber-800/60`, `dark:bg-gray-600`
+- Brighter text on dark theme: `dark:text-emerald-200`, `dark:text-amber-200`, `dark:text-gray-100`
+- Added `font-medium` for better readability at `text-xs`
+- Light theme kept the same background levels (100) but text bumped to 800/700 for extra contrast
+
+**Files changed (FE — 2 files):**
+- `AssignTaskView.tsx` — 3 badge class strings updated
+- `ShiftHandoverView.tsx` — 3 badge class strings updated
+
+**Trade-offs:**
+- Solid/opaque backgrounds on dark mode trade subtlety for readability. The 60% opacity backgrounds still show some of the underlying page color while being clearly distinct pill shapes.
+- No structural or logic changes — purely class string updates.
+
+---
+
+## 2026-05-22: Shift Handover — Removed Duplicate Success Toast
+
+**Context:** After a successful shift handover, two success toasts fired. The `useBulkReassignStaff` mutation in `useVisitQueries.ts` had its own `onSuccess` toast ("Visits reassigned successfully."), and the `ShiftHandoverView.submit()` handler showed a second toast ("Shift handover recorded. X visit(s) reassigned.").
+
+**Decision:**
+- Removed the toast from `useBulkReassignStaff.onSuccess` in `useVisitQueries.ts:905`
+- The caller (`ShiftHandoverView`) already handles the success toast with a more specific message that includes the reassignment count and context
+
+**Files changed (FE — 1 file):**
+- `useVisitQueries.ts` — removed redundant `showToast` call from `useBulkReassignStaff.onSuccess`
+
+**Trade-offs:**
+- `useBulkReassignStaff` is only used by `ShiftHandoverView`, so removing the mutation-level toast has no impact on other callers. If a future component uses this hook, it will need to show its own success toast.
+- The `onError` toast is kept in the mutation (no caller-level error toast), so errors still show feedback. Only the success toast was duplicated.
+
+---
+
 > Each entry records a design decision, its context, and the trade-offs considered.
 > Read this before starting any feature to avoid repeating past mistakes.
 
