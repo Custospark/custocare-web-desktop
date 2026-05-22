@@ -236,6 +236,7 @@ export const ExpandableItem: React.FC<ExpandableItemProps> = ({
         <span
           className={cn(
             'flex gap-1.5 min-w-0 flex-1',
+            !isRight && 'flex-row-reverse',
             allowMultilineLabel ? 'items-start' : 'items-center',
           )}
         >
@@ -252,7 +253,8 @@ export const ExpandableItem: React.FC<ExpandableItemProps> = ({
           )}
           <span
             className={cn(
-              'min-w-0 flex-1 text-sm font-semibold text-left',
+              'min-w-0 flex-1 text-sm font-semibold',
+              isRight ? 'text-left' : 'text-right',
               allowMultilineLabel ? 'break-words whitespace-normal' : 'truncate',
               active && !disabled ? activeTextClass : textClass,
             )}

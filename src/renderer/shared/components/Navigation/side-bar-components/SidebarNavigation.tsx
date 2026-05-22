@@ -106,8 +106,7 @@ const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
         href={item.href}
         onClick={(e) => handleNavigation(e, item.route)}
         className={cn(
-          'group relative flex items-center',
-          isRight && 'flex-row-reverse',
+          'group relative flex items-center flex-row-reverse',
           'rounded-xl transition-all duration-300 ease-out',
           'border',
           isActive
@@ -263,8 +262,7 @@ const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
         aria-label={operation.label}
         onClick={(e) => handleNavigation(e, operation.route)}
         className={cn(
-          'flex gap-2.5 rounded-lg px-2 py-2 text-sm transition-all duration-200',
-          isRight ? 'flex-row-reverse text-right justify-end' : 'text-left',
+          'flex gap-2.5 rounded-lg px-2 py-2 text-sm transition-all duration-200 flex-row-reverse text-right justify-end',
           enableNestedNavigation ? 'items-start' : 'items-center',
           enableNestedNavigation && isOperationActive && 'my-2',
           'border border-transparent',
