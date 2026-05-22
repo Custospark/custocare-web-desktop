@@ -63,7 +63,32 @@ export function useCreateHubFeedback() {
       const res = await axiosInstance.post<ApiResponse<HubFeedbackMineDto>>('/hub-feedback', payload);
       return res.data;
     },
-    onSuccess: () => {
+    onMutate: async (payload) => {
+      await qc.cancelQueries({ queryKey: hubFeedbackKeys.mine() });
+      const prev = qc.getQueryData<ApiResponse<HubFeedbackMineDto[]>>(hubFeedbackKeys.mine());
+      if (prev?.data) {
+        const optimistic: HubFeedbackMineDto = {
+          uuid: `optimistic-${Date.now()}`,
+          category: payload.category,
+          subject: payload.subject,
+          body: payload.body,
+          status: 'submitted',
+          staff_reply: null,
+          created_at: new Date().toISOString(),
+        } as HubFeedbackMineDto;
+        qc.setQueryData<ApiResponse<HubFeedbackMineDto[]>>(hubFeedbackKeys.mine(), {
+          ...prev,
+          data: [optimistic, ...prev.data],
+        });
+      }
+      return { prev };
+    },
+    onError: (_err, _payload, context) => {
+      if (context?.prev) {
+        qc.setQueryData(hubFeedbackKeys.mine(), context.prev);
+      }
+    },
+    onSettled: () => {
       void qc.invalidateQueries({ queryKey: hubFeedbackKeys.mine() });
       void qc.invalidateQueries({ queryKey: hubFeedbackKeys.roadmap() });
     },
@@ -80,7 +105,31 @@ export function useVoteHubFeedback() {
       );
       return res.data;
     },
-    onSuccess: () => {
+    onMutate: async (uuid) => {
+      await qc.cancelQueries({ queryKey: hubFeedbackKeys.roadmap() });
+      const prev = qc.getQueryData<ApiResponse<HubFeedbackRoadmapItemDto[]>>(hubFeedbackKeys.roadmap());
+      if (prev?.data) {
+        qc.setQueryData<ApiResponse<HubFeedbackRoadmapItemDto[]>>(hubFeedbackKeys.roadmap(), {
+          ...prev,
+          data: prev.data.map((item) =>
+            item.uuid === uuid
+              ? {
+                  ...item,
+                  votes_count: item.voted_by_you ? item.votes_count - 1 : item.votes_count + 1,
+                  voted_by_you: !item.voted_by_you,
+                }
+              : item,
+          ),
+        });
+      }
+      return { prev };
+    },
+    onError: (_err, _uuid, context) => {
+      if (context?.prev) {
+        qc.setQueryData(hubFeedbackKeys.roadmap(), context.prev);
+      }
+    },
+    onSettled: () => {
       void qc.invalidateQueries({ queryKey: hubFeedbackKeys.roadmap() });
     },
   });

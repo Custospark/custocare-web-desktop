@@ -26,7 +26,7 @@ const HubProductUpdatesAdminPage: React.FC<HubProductUpdatesAdminPageProps> = ({
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState(emptyForm);
 
-  const { data, isLoading, isError, error, refetch } = usePlatformHubProductUpdates({ page, q: appliedQ });
+  const { data, isLoading, isError, error, refetch, isFetching } = usePlatformHubProductUpdates({ page, q: appliedQ });
   const detailQuery = usePlatformHubProductUpdateDetail(editingId, {
     enabled: modalOpen && editingId != null,
   });
@@ -131,12 +131,13 @@ const HubProductUpdatesAdminPage: React.FC<HubProductUpdatesAdminPageProps> = ({
           <button
             type="button"
             onClick={() => void refetch()}
+            disabled={isFetching}
             className={cn(
-              'inline-flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium',
+              'inline-flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium disabled:opacity-50',
               isDark ? 'border-gray-700 text-gray-200 hover:bg-gray-800' : 'border-gray-200 text-gray-800 hover:bg-gray-50',
             )}
           >
-            <RefreshCw className="h-4 w-4" aria-hidden />
+            <RefreshCw className={cn('h-4 w-4', isFetching && 'animate-spin')} aria-hidden />
             Refresh
           </button>
           <button

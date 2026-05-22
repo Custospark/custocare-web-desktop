@@ -105,7 +105,19 @@ export function useUpdatePlatformHubSupportTicket() {
       );
       return res.data;
     },
-    onSuccess: () => {
+    onMutate: async ({ id, payload }) => {
+      await qc.cancelQueries({ queryKey: platformHubSupportTicketKeys.all });
+      const prev = qc.getQueryData(platformHubSupportTicketKeys.all);
+      qc.setQueryData<ApiResponse<PlatformHubSupportTicketRowDto[]>>(platformHubSupportTicketKeys.all, (old) => {
+        if (!old?.data) return old;
+        return { ...old, data: old.data.map((item) => (item.id === id ? { ...item, ...payload } : item)) };
+      });
+      return { prev };
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.prev) qc.setQueryData(platformHubSupportTicketKeys.all, ctx.prev);
+    },
+    onSettled: () => {
       void qc.invalidateQueries({ queryKey: platformHubSupportTicketKeys.all });
       void qc.invalidateQueries({ queryKey: hubSupportTicketKeys.all });
     },

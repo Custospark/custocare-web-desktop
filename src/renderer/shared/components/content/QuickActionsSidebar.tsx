@@ -856,7 +856,7 @@ export const QuickActionsSidebar: React.FC<QuickActionsSidebarProps> = ({
               {!collapsedSide && (
                 <div className="flex flex-col gap-0.5">
                   <span className={cn('text-xs font-mono', theme === 'dark' ? 'text-gray-500' : 'text-gray-400')}>
-                    {workspaceShortcutRangeLegend()} sections · ⌘K / Ctrl+K search
+                   Press ⌘K / Ctrl+K for search
                   </span>
                 </div>
               )}

@@ -145,7 +145,7 @@ export function HubActionPanel({ theme }: HubActionPanelProps) {
       } else if (channel === 'product_update') {
         heading = 'Product updates';
         description =
-          'Official announcements from Custocare. These posts are published by platform administrators and are read-only here.';
+          'Official announcements from Custocare.';
       }
       return (
         <CommunityChannelView

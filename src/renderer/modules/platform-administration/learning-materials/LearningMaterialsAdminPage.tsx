@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react';
-import { GraduationCap, ImageIcon, Loader2, Pencil, Plus, Sparkles, Trash2, Upload, X } from 'lucide-react';
+import { GraduationCap, ImageIcon, Loader2, Pencil, Plus, RefreshCw, Sparkles, Trash2, Upload, X } from 'lucide-react';
 import { imperativeToast } from '../../../app/store/contexts/toast/imperativeToast';
 import { cn } from '../../../shared/utils/classNameUtils';
 import type { LearningMaterialDto } from '../../custocare-hub/api/learning/learningMaterialTypes';
@@ -33,7 +33,7 @@ const emptyForm: LearningMaterialPayload = {
 
 const LearningMaterialsAdminPage: React.FC<LearningMaterialsAdminPageProps> = ({ theme }) => {
   const isDark = theme === 'dark';
-  const { data, isLoading, isError, error, refetch } = usePlatformLearningMaterials({});
+  const { data, isLoading, isError, error, refetch, isFetching } = usePlatformLearningMaterials({});
   const createMut = useCreateLearningMaterial();
   const updateMut = useUpdateLearningMaterial();
   const deleteMut = useDeleteLearningMaterial();
@@ -184,17 +184,31 @@ const LearningMaterialsAdminPage: React.FC<LearningMaterialsAdminPageProps> = ({
             </p>
           </div>
         </div>
-        <button
-          type="button"
-          onClick={openCreate}
-          className={cn(
-            'inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-colors',
-            isDark ? 'bg-cyan-600 text-white hover:bg-cyan-500' : 'bg-blue-600 text-white hover:bg-blue-700',
-          )}
-        >
-          <Plus className="h-4 w-4" aria-hidden />
-          Add material
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => void refetch()}
+            disabled={isFetching}
+            className={cn(
+              'inline-flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium disabled:opacity-50',
+              isDark ? 'border-gray-700 text-gray-200 hover:bg-gray-800' : 'border-gray-200 text-gray-800 hover:bg-gray-50',
+            )}
+          >
+            <RefreshCw className={cn('h-4 w-4', isFetching && 'animate-spin')} aria-hidden />
+            Refresh
+          </button>
+          <button
+            type="button"
+            onClick={openCreate}
+            className={cn(
+              'inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-colors',
+              isDark ? 'bg-cyan-600 text-white hover:bg-cyan-500' : 'bg-blue-600 text-white hover:bg-blue-700',
+            )}
+          >
+            <Plus className="h-4 w-4" aria-hidden />
+            Add material
+          </button>
+        </div>
       </div>
 
       {isError && (

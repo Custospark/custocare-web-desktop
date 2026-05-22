@@ -1,6 +1,6 @@
 // Footer.tsx
 import React from 'react';
-import { ExternalLink } from 'lucide-react';
+import { ExternalLink, Heart } from 'lucide-react';
 import { useSelector } from 'react-redux';
 import { type FooterProps } from '../../types/index';
 import { cn } from '../../types/cn';
@@ -19,7 +19,7 @@ export const Footer: React.FC<FooterProps> = ({
   return (
     <footer
       className={cn(
-        'relative w-full px-3 sm:px-4 md:px-6 py-3 sm:py-4',
+        'relative w-full px-3 sm:px-4 md:px-6 py-2 sm:py-3',
         'border-t backdrop-blur-xl',
         'transition-all duration-300',
         isDark
@@ -28,10 +28,9 @@ export const Footer: React.FC<FooterProps> = ({
         className
       )}
     >
-      <div className="flex flex-col lg:flex-row items-center justify-between gap-3 lg:gap-4 max-w-7xl mx-auto">
-        {/* Left side - All text content */}
+      <div className="flex flex-col lg:flex-row items-center justify-between gap-2 lg:gap-4 max-w-7xl mx-auto">
+        {/* Left side - Brand & attribution */}
         <div className="flex flex-wrap items-center justify-center lg:justify-start gap-x-2 gap-y-1">
-          {/* Brand with logo */}
           <div className="flex items-center gap-1.5">
             <LogoImage />
            <BrandName/>
@@ -62,14 +61,31 @@ export const Footer: React.FC<FooterProps> = ({
           </a>
         </div>
 
-        {/* Right side - Copyright */}
+        {/* Right side - Copyright & tagline */}
         {showCopyright && (
-          <p className={cn(
-            'text-sm sm:text-base font-medium tabular-nums',
-            isDark ? 'text-gray-600' : 'text-gray-400'
-          )}>
-            © {currentYear} Custocare
-          </p>
+          <div className="flex items-center gap-3">
+            <span className={cn(
+              'hidden sm:inline text-xs',
+              isDark ? 'text-gray-600' : 'text-gray-400'
+            )}>
+              Continuous Care. Clinical Excellence.
+            </span>
+            <span className={cn(
+              'hidden sm:inline text-xs',
+              isDark ? 'text-gray-600' : 'text-gray-300'
+            )}>
+              |
+            </span>
+            <div className={cn(
+              'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium',
+              isDark
+                ? 'bg-gray-800/80 text-gray-400 border border-gray-700/50'
+                : 'bg-gray-100/80 text-gray-500 border border-gray-200/50'
+            )}>
+              <Heart className="w-3 h-3 text-blue-400" />
+              <span>© {currentYear} Custocare</span>
+            </div>
+          </div>
         )}
       </div>
     </footer>

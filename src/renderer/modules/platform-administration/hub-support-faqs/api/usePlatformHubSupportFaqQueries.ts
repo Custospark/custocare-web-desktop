@@ -61,7 +61,15 @@ export function useCreatePlatformHubSupportFaq() {
       const res = await axiosInstance.post<ApiResponse<PlatformSupportFaqAdminDto>>('/platform-admin/hub-support-faqs', payload);
       return res.data;
     },
-    onSuccess: () => {
+    onMutate: async () => {
+      await qc.cancelQueries({ queryKey: platformHubSupportFaqKeys.all });
+      const prev = qc.getQueryData(platformHubSupportFaqKeys.all);
+      return { prev };
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.prev) qc.setQueryData(platformHubSupportFaqKeys.all, ctx.prev);
+    },
+    onSettled: () => {
       void qc.invalidateQueries({ queryKey: platformHubSupportFaqKeys.all });
       void qc.invalidateQueries({ queryKey: supportFaqKeys.all });
     },
@@ -82,7 +90,19 @@ export function useUpdatePlatformHubSupportFaq() {
       );
       return res.data;
     },
-    onSuccess: () => {
+    onMutate: async ({ id, payload }) => {
+      await qc.cancelQueries({ queryKey: platformHubSupportFaqKeys.all });
+      const prev = qc.getQueryData(platformHubSupportFaqKeys.all);
+      qc.setQueryData<ApiResponse<PlatformSupportFaqAdminDto[]>>(platformHubSupportFaqKeys.all, (old) => {
+        if (!old?.data) return old;
+        return { ...old, data: old.data.map((item) => (item.id === id ? { ...item, ...payload } : item)) };
+      });
+      return { prev };
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.prev) qc.setQueryData(platformHubSupportFaqKeys.all, ctx.prev);
+    },
+    onSettled: () => {
       void qc.invalidateQueries({ queryKey: platformHubSupportFaqKeys.all });
       void qc.invalidateQueries({ queryKey: supportFaqKeys.all });
     },
@@ -96,7 +116,19 @@ export function useDeletePlatformHubSupportFaq() {
       const res = await axiosInstance.delete<ApiResponse<null>>(`/platform-admin/hub-support-faqs/${id}`);
       return res.data;
     },
-    onSuccess: () => {
+    onMutate: async ({ id }) => {
+      await qc.cancelQueries({ queryKey: platformHubSupportFaqKeys.all });
+      const prev = qc.getQueryData(platformHubSupportFaqKeys.all);
+      qc.setQueryData<ApiResponse<PlatformSupportFaqAdminDto[]>>(platformHubSupportFaqKeys.all, (old) => {
+        if (!old?.data) return old;
+        return { ...old, data: old.data.filter((item) => item.id !== id) };
+      });
+      return { prev };
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.prev) qc.setQueryData(platformHubSupportFaqKeys.all, ctx.prev);
+    },
+    onSettled: () => {
       void qc.invalidateQueries({ queryKey: platformHubSupportFaqKeys.all });
       void qc.invalidateQueries({ queryKey: supportFaqKeys.all });
     },

@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronLeft, Loader2, MessageCircle } from 'lucide-react';
+import { ChevronLeft, Loader2, MessageCircle, RefreshCw } from 'lucide-react';
 import { imperativeToast } from '../../../../app/store/contexts/toast/imperativeToast';
 import { custocareHubActionPath } from '../../../../app/routes/constants/custocare-hub.paths';
 import { cn } from '../../../../shared/utils/classNameUtils';
@@ -245,19 +245,33 @@ export function CommunityChannelView({ theme, channel, heading, description }: C
           <h3 className={cn('text-lg font-semibold', isDark ? 'text-gray-100' : 'text-gray-900')}>{heading}</h3>
           <p className={cn('mt-1 text-sm', isDark ? 'text-gray-400' : 'text-gray-600')}>{description}</p>
         </div>
-        {!readOnly && (
-          <Link
-            to={`${custocareHubActionPath('community', 'create-post')}?channel=${channel}`}
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => void listQuery.refetch()}
+            disabled={listQuery.isFetching}
             className={cn(
-              'inline-flex shrink-0 cursor-pointer items-center justify-center rounded-lg border px-3 py-2 text-sm font-semibold transition-colors',
-              isDark
-                ? 'border-blue-700/50 text-blue-200 hover:bg-gray-800'
-                : 'border-blue-200 text-blue-700 hover:bg-blue-50',
+              'inline-flex shrink-0 cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm font-semibold transition-colors disabled:opacity-50',
+              isDark ? 'border-gray-700 text-gray-200 hover:bg-gray-800' : 'border-gray-200 text-gray-800 hover:bg-gray-50',
             )}
           >
-            New post
-          </Link>
-        )}
+            <RefreshCw className={cn('h-4 w-4', listQuery.isFetching && 'animate-spin')} />
+            Refresh
+          </button>
+          {!readOnly && (
+            <Link
+              to={`${custocareHubActionPath('community', 'create-post')}?channel=${channel}`}
+              className={cn(
+                'inline-flex shrink-0 cursor-pointer items-center justify-center rounded-lg border px-3 py-2 text-sm font-semibold transition-colors',
+                isDark
+                  ? 'border-blue-700/50 text-blue-200 hover:bg-gray-800'
+                  : 'border-blue-200 text-blue-700 hover:bg-blue-50',
+              )}
+            >
+              New post
+            </Link>
+          )}
+        </div>
       </div>
 
       {listQuery.isLoading && (

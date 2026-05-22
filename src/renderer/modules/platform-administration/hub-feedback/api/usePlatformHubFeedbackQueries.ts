@@ -95,7 +95,19 @@ export function useUpdatePlatformHubFeedback() {
       );
       return res.data;
     },
-    onSuccess: () => {
+    onMutate: async ({ id, payload }) => {
+      await qc.cancelQueries({ queryKey: platformHubFeedbackKeys.all });
+      const prev = qc.getQueryData(platformHubFeedbackKeys.all);
+      qc.setQueryData<ApiResponse<PlatformHubFeedbackRowDto[]>>(platformHubFeedbackKeys.all, (old) => {
+        if (!old?.data) return old;
+        return { ...old, data: old.data.map((item) => (item.id === id ? { ...item, ...payload } : item)) };
+      });
+      return { prev };
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.prev) qc.setQueryData(platformHubFeedbackKeys.all, ctx.prev);
+    },
+    onSettled: () => {
       void qc.invalidateQueries({ queryKey: platformHubFeedbackKeys.all });
       void qc.invalidateQueries({ queryKey: ['hub-feedback'] });
     },

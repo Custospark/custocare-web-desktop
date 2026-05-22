@@ -35,7 +35,7 @@ const HubFeedbackAdminPage: React.FC<HubFeedbackAdminPageProps> = ({ theme }) =>
     [appliedQ, categoryFilter, statusFilter],
   );
 
-  const { data, isLoading, isError, error, refetch } = usePlatformHubFeedbackList(filters);
+  const { data, isLoading, isError, error, refetch, isFetching } = usePlatformHubFeedbackList(filters);
   const detailQuery = usePlatformHubFeedbackDetail(selectedId);
   const updateMut = useUpdatePlatformHubFeedback();
 
@@ -90,12 +90,13 @@ const HubFeedbackAdminPage: React.FC<HubFeedbackAdminPageProps> = ({ theme }) =>
         <button
           type="button"
           onClick={() => void refetch()}
+          disabled={isFetching}
           className={cn(
-            'inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium',
+            'inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium disabled:opacity-50',
             isDark ? 'border-gray-700 text-gray-200 hover:bg-gray-800' : 'border-gray-200 text-gray-800 hover:bg-gray-50',
           )}
         >
-          <RefreshCw className="h-4 w-4" aria-hidden />
+          <RefreshCw className={cn('h-4 w-4', isFetching && 'animate-spin')} aria-hidden />
           Refresh
         </button>
       </div>

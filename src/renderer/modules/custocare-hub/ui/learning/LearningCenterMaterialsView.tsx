@@ -1,4 +1,5 @@
-import { ExternalLink, PlayCircle, BookOpen } from 'lucide-react';
+import { ExternalLink, PlayCircle, BookOpen, RefreshCw } from 'lucide-react';
+import { cn } from '../../../../shared/utils/classNameUtils';
 import { usePublishedLearningMaterials } from '../../api/learning/useLearningMaterialQueries';
 import { resolveLearningMaterialThumbnailSrc } from '../../api/learning/learningMaterialThumbnail';
 import { LEARNING_CENTER_CATEGORIES } from '../../api/learning/learningMaterialTypes';
@@ -19,7 +20,7 @@ function excerpt(text: string | null, max = 180): string {
 
 export function LearningCenterMaterialsView({ theme, category }: LearningCenterMaterialsViewProps) {
   const isDark = theme === 'dark';
-  const { data, isLoading, isError, error } = usePublishedLearningMaterials(category);
+  const { data, isLoading, isError, isFetching, error, refetch } = usePublishedLearningMaterials(category);
 
   const categoryLabel =
     LEARNING_CENTER_CATEGORIES.find((c) => c.value === category)?.label ?? category.replace(/-/g, ' ');
@@ -29,10 +30,26 @@ export function LearningCenterMaterialsView({ theme, category }: LearningCenterM
   return (
     <div className="space-y-5">
       <div>
-        <h2 className={`text-lg font-semibold ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>{categoryLabel}</h2>
-        <p className={`mt-1 text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-          Curated by your platform team. Select a card to open the video in a new tab.
-        </p>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h2 className={`text-lg font-semibold ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>{categoryLabel}</h2>
+            <p className={`mt-1 text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+              Curated by your platform team. Select a card to open the video in a new tab.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => void refetch()}
+            disabled={isFetching}
+            className={cn(
+              'inline-flex shrink-0 cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm font-semibold transition-colors disabled:opacity-50',
+              isDark ? 'border-gray-700 text-gray-200 hover:bg-gray-800' : 'border-gray-200 text-gray-800 hover:bg-gray-50',
+            )}
+          >
+            <RefreshCw className={cn('h-4 w-4', isFetching && 'animate-spin')} />
+            Refresh
+          </button>
+        </div>
       </div>
 
       {isLoading && (

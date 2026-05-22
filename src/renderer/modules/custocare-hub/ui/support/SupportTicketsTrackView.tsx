@@ -126,7 +126,9 @@ export function SupportTicketsTrackView({ theme }: SupportTicketsTrackViewProps)
           )}
           role="alert"
         >
-          {error?.response?.data?.message ?? error?.message ?? 'Could not load the ticket.'}
+          {error?.response?.data?.message?.includes('could not be found')
+            ? 'Ticket not found. Please check your reference number and try again.'
+            : error?.response?.data?.message ?? error?.message ?? 'Could not load the ticket.'}
         </div>
       )}
 

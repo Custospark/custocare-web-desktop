@@ -61,7 +61,15 @@ export function useCreateLearningMaterial() {
       );
       return response.data;
     },
-    onSuccess: () => {
+    onMutate: async () => {
+      await qc.cancelQueries({ queryKey: platformLearningMaterialKeys.all });
+      const prev = qc.getQueryData(platformLearningMaterialKeys.all);
+      return { prev };
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.prev) qc.setQueryData(platformLearningMaterialKeys.all, ctx.prev);
+    },
+    onSettled: () => {
       void qc.invalidateQueries({ queryKey: platformLearningMaterialKeys.all });
       void qc.invalidateQueries({ queryKey: ['learning-materials'] });
     },
@@ -82,7 +90,19 @@ export function useUpdateLearningMaterial() {
       );
       return response.data;
     },
-    onSuccess: () => {
+    onMutate: async ({ id, payload }) => {
+      await qc.cancelQueries({ queryKey: platformLearningMaterialKeys.all });
+      const prev = qc.getQueryData(platformLearningMaterialKeys.all);
+      qc.setQueryData<ApiResponse<LearningMaterialDto[]>>(platformLearningMaterialKeys.all, (old) => {
+        if (!old?.data) return old;
+        return { ...old, data: old.data.map((item) => (item.id === id ? { ...item, ...payload } : item)) };
+      });
+      return { prev };
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.prev) qc.setQueryData(platformLearningMaterialKeys.all, ctx.prev);
+    },
+    onSettled: () => {
       void qc.invalidateQueries({ queryKey: platformLearningMaterialKeys.all });
       void qc.invalidateQueries({ queryKey: ['learning-materials'] });
     },
@@ -134,7 +154,19 @@ export function useDeleteLearningMaterial() {
       const response = await axiosInstance.delete<ApiResponse<null>>(`/platform-admin/learning-materials/${id}`);
       return response.data;
     },
-    onSuccess: () => {
+    onMutate: async ({ id }) => {
+      await qc.cancelQueries({ queryKey: platformLearningMaterialKeys.all });
+      const prev = qc.getQueryData(platformLearningMaterialKeys.all);
+      qc.setQueryData<ApiResponse<LearningMaterialDto[]>>(platformLearningMaterialKeys.all, (old) => {
+        if (!old?.data) return old;
+        return { ...old, data: old.data.filter((item) => item.id !== id) };
+      });
+      return { prev };
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.prev) qc.setQueryData(platformLearningMaterialKeys.all, ctx.prev);
+    },
+    onSettled: () => {
       void qc.invalidateQueries({ queryKey: platformLearningMaterialKeys.all });
       void qc.invalidateQueries({ queryKey: ['learning-materials'] });
     },

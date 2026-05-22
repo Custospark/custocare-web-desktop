@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
-import { HelpCircle, Loader2, Search } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { ChevronDown, HelpCircle, Loader2, Search } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '../../../../shared/utils/classNameUtils';
 import { usePublishedSupportFaqs } from '../../api/support/useSupportFaqQueries';
 
@@ -22,6 +23,12 @@ export function SupportFaqsView({ theme, variant }: SupportFaqsViewProps) {
   const searchParam = debounced.length > 0 ? debounced : undefined;
   const { data, isLoading, isError, error, refetch } = usePublishedSupportFaqs(searchParam);
   const items = useMemo(() => (Array.isArray(data?.data) ? data!.data : []), [data]);
+
+  const [openUuid, setOpenUuid] = useState<string | null>(null);
+
+  const toggleFaq = useCallback((uuid: string) => {
+    setOpenUuid((prev) => (prev === uuid ? null : uuid));
+  }, []);
 
   const heading = variant === 'search' ? 'Search help' : 'Frequently asked questions';
   const sub =
@@ -108,37 +115,62 @@ export function SupportFaqsView({ theme, variant }: SupportFaqsViewProps) {
             {items.length} article{items.length === 1 ? '' : 's'}
           </p>
           <div className="space-y-2">
-            {items.map((item) => (
-              <details
-                key={item.uuid}
-                name="custocare-hub-faq"
-                className={cn(
-                  'group rounded-xl border transition-colors',
-                  isDark ? 'border-gray-800 bg-gray-900/40 open:border-blue-900/50' : 'border-gray-200 bg-white open:border-blue-200',
-                )}
-              >
-                <summary
-                  className={cn(
-                    'cursor-pointer list-none px-4 py-3 pr-10 text-sm font-semibold leading-snug outline-none [&::-webkit-details-marker]:hidden',
-                    isDark ? 'text-gray-100 hover:bg-gray-800/50' : 'text-gray-900 hover:bg-gray-50',
-                  )}
-                >
-                  <span className="block">{item.question}</span>
-                </summary>
+            {items.map((item) => {
+              const isOpen = openUuid === item.uuid;
+              return (
                 <div
+                  key={item.uuid}
                   className={cn(
-                    'border-t px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap',
-                    isDark ? 'border-gray-800 text-gray-300' : 'border-gray-100 text-gray-700',
+                    'rounded-xl border overflow-hidden transition-colors',
+                    isOpen
+                      ? isDark ? 'border-blue-900/50 bg-gray-900/60' : 'border-blue-200 bg-white'
+                      : isDark ? 'border-gray-800 bg-gray-900/40' : 'border-gray-200 bg-white',
                   )}
                 >
-                  {item.answer}
+                  <button
+                    type="button"
+                    onClick={() => toggleFaq(item.uuid)}
+                    className={cn(
+                      'w-full flex items-start justify-between gap-3 px-4 py-3 text-left text-sm font-semibold leading-snug cursor-pointer transition-colors',
+                      isDark
+                        ? 'text-gray-100 hover:bg-gray-800/50'
+                        : 'text-gray-900 hover:bg-gray-50',
+                    )}
+                  >
+                    <span className="flex-1">{item.question}</span>
+                    <ChevronDown
+                      className={cn(
+                        'w-4 h-4 mt-0.5 shrink-0 transition-transform duration-300',
+                        isOpen && 'rotate-180',
+                        isDark ? 'text-gray-500' : 'text-gray-400',
+                      )}
+                    />
+                  </button>
+                  <AnimatePresence initial={false}>
+                    {isOpen && (
+                      <motion.div
+                        key="content"
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.25, ease: 'easeInOut' }}
+                        className="overflow-hidden"
+                      >
+                        <div
+                          className={cn(
+                            'border-t px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap',
+                            isDark ? 'border-gray-800 text-gray-300' : 'border-gray-100 text-gray-700',
+                          )}
+                        >
+                          {item.answer}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
-              </details>
-            ))}
+              );
+            })}
           </div>
-          <p className={cn('text-xs', isDark ? 'text-gray-500' : 'text-gray-500')}>
-            Panels use an exclusive accordion where your browser supports it (same group name on each entry).
-          </p>
         </div>
       )}
     </div>

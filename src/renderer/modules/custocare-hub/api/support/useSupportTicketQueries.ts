@@ -65,7 +65,10 @@ export function useCreateHubSupportTicket() {
         throw e;
       }
     },
-    onSuccess: () => {
+    onError: (_err) => {
+      console.error('Failed to create support ticket:', _err);
+    },
+    onSettled: () => {
       void qc.invalidateQueries({ queryKey: hubSupportTicketKeys.all });
     },
   });

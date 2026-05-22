@@ -1,6 +1,9 @@
 import React from 'react';
-import { Bell, HeadphonesIcon, Users } from 'lucide-react';
+import { Bell, HeadphonesIcon, MessageSquareHeart, Users } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { cn } from '../../../types/cn';
+import { CUSTOCARE_HUB_ROUTES } from '../../../../app/routes/constants/custocare-hub.paths';
+
 interface SidebarFooterProps {
   collapsed: boolean;
   isDark: boolean;
@@ -20,6 +23,7 @@ const SidebarFooter: React.FC<SidebarFooterProps> = ({
   inPatientMode,
   patientNumber,
 }) => {
+  const navigate = useNavigate();
   return (
     <div className={cn('shrink-0 p-4 border-t', isDark ? 'border-gray-800/50' : 'border-gray-200/50')}>
       {!collapsed ? (
@@ -64,6 +68,17 @@ const SidebarFooter: React.FC<SidebarFooterProps> = ({
                     <span className="hidden xs:inline">📞</span>
                     +256 (756) 697-871
                   </a>
+
+                  <button
+                    onClick={() => navigate(CUSTOCARE_HUB_ROUTES.FEEDBACK_REQUESTS)}
+                    className={cn(
+                      'text-xs truncate hover:underline inline-flex items-center gap-1 cursor-pointer',
+                      isDark ? 'text-cyan-400 hover:text-cyan-300' : 'text-cyan-600 hover:text-cyan-700',
+                    )}
+                  >
+                    <MessageSquareHeart className="w-3 h-3" />
+                    Send Feedback
+                  </button>
                 </div>
               </div>
             </div>

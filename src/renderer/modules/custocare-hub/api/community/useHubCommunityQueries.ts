@@ -94,7 +94,39 @@ export function useCreateHubCommunityPost() {
       const res = await axiosInstance.post<ApiResponse<HubCommunityPostDetailDto>>('/hub-community/posts', payload);
       return res.data;
     },
-    onSuccess: () => {
+    onMutate: async (payload) => {
+      await qc.cancelQueries({ queryKey: hubCommunityKeys.posts(payload.channel, 1) });
+      const previous = qc.getQueryData<ApiPaginatedResponse<HubCommunityPostSummaryDto>>(
+        hubCommunityKeys.posts(payload.channel, 1),
+      );
+      if (previous) {
+        const optimisticPost: HubCommunityPostSummaryDto = {
+          uuid: `temp-${Date.now()}`,
+          channel: payload.channel,
+          title: payload.title,
+          excerpt: payload.body.slice(0, 150),
+          comments_count: 0,
+          author: { id: null, display_name: 'You' },
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        };
+        qc.setQueryData<ApiPaginatedResponse<HubCommunityPostSummaryDto>>(
+          hubCommunityKeys.posts(payload.channel, 1),
+          {
+            ...previous,
+            data: [optimisticPost, ...previous.data],
+            meta: { ...previous.meta, total: previous.meta.total + 1 },
+          },
+        );
+      }
+      return { previous };
+    },
+    onError: (_err, _payload, context) => {
+      if (context?.previous) {
+        qc.setQueryData(hubCommunityKeys.posts(_payload.channel, 1), context.previous);
+      }
+    },
+    onSettled: () => {
       void qc.invalidateQueries({ queryKey: hubCommunityKeys.all });
     },
   });
@@ -114,7 +146,37 @@ export function useCreateHubCommunityComment() {
       );
       return res.data;
     },
-    onSuccess: (_data, vars) => {
+    onMutate: async (vars) => {
+      await qc.cancelQueries({ queryKey: hubCommunityKeys.post(vars.postUuid) });
+      const previous = qc.getQueryData<ApiResponse<HubCommunityPostDetailResponse>>(
+        hubCommunityKeys.post(vars.postUuid),
+      );
+      if (previous?.data) {
+        const optimisticComment: HubCommunityCommentDto = {
+          uuid: `temp-${Date.now()}`,
+          body: vars.body,
+          author: { id: null, display_name: 'You' },
+          created_at: new Date().toISOString(),
+        };
+        qc.setQueryData<ApiResponse<HubCommunityPostDetailResponse>>(
+          hubCommunityKeys.post(vars.postUuid),
+          {
+            ...previous,
+            data: {
+              ...previous.data,
+              comments: [...previous.data.comments, optimisticComment],
+            },
+          },
+        );
+      }
+      return { previous };
+    },
+    onError: (_err, vars, context) => {
+      if (context?.previous) {
+        qc.setQueryData(hubCommunityKeys.post(vars.postUuid), context.previous);
+      }
+    },
+    onSettled: (_data, _err, vars) => {
       void qc.invalidateQueries({ queryKey: hubCommunityKeys.post(vars.postUuid) });
       void qc.invalidateQueries({ queryKey: hubCommunityKeys.all });
     },

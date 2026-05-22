@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Loader2, Send } from 'lucide-react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { ArrowLeft, Loader2, Send } from 'lucide-react';
 import { imperativeToast } from '../../../../app/store/contexts/toast/imperativeToast';
 import { custocareHubActionPath } from '../../../../app/routes/constants/custocare-hub.paths';
 import { cn } from '../../../../shared/utils/classNameUtils';
@@ -64,7 +64,8 @@ export function CommunityCreatePostView({ theme, suggestedChannel }: CommunityCr
         title: title.trim(),
         body: body.trim(),
       });
-      imperativeToast.show('success', res.message ?? 'Post created.');
+      const ref = res.data?.uuid ? ` Ref: ${res.data.uuid.slice(0, 8)}…` : '';
+      imperativeToast.show('success', `${res.message ?? 'Post created.'}${ref}`);
       navigate(custocareHubActionPath('community', listPathForChannel(channel)));
     } catch (e: unknown) {
       const msg =
@@ -84,6 +85,17 @@ export function CommunityCreatePostView({ theme, suggestedChannel }: CommunityCr
           administrators only.
         </p>
       </div>
+
+      <Link
+        to={custocareHubActionPath('community', listPathForChannel(channel))}
+        className={cn(
+          'inline-flex cursor-pointer items-center gap-1 text-sm font-medium',
+          isDark ? 'text-blue-300 hover:text-blue-200' : 'text-blue-700 hover:text-blue-800',
+        )}
+      >
+        <ArrowLeft className="h-4 w-4" />
+        Back to {channel === 'discussion' ? 'Discussions' : 'Feature Ideas'}
+      </Link>
 
       <div className="space-y-4">
         <div>

@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { Heart, Loader2 } from 'lucide-react';
+import { Heart, Loader2, RefreshCw } from 'lucide-react';
 import { imperativeToast } from '../../../../app/store/contexts/toast/imperativeToast';
 import { cn } from '../../../../shared/utils/classNameUtils';
 import { useHubFeedbackRoadmap, useVoteHubFeedback } from '../../api/feedback/useHubFeedbackQueries';
@@ -10,7 +10,7 @@ export interface FeedbackRoadmapViewProps {
 
 export function FeedbackRoadmapView({ theme }: FeedbackRoadmapViewProps) {
   const isDark = theme === 'dark';
-  const { data, isLoading, isError, error, refetch } = useHubFeedbackRoadmap();
+  const { data, isLoading, isFetching, isError, error, refetch } = useHubFeedbackRoadmap();
   const voteMut = useVoteHubFeedback();
   const items = Array.isArray(data?.data) ? data!.data : [];
 
@@ -32,12 +32,26 @@ export function FeedbackRoadmapView({ theme }: FeedbackRoadmapViewProps) {
 
   return (
     <div className="space-y-4">
-      <div>
-        <h3 className={cn('text-lg font-semibold', isDark ? 'text-gray-100' : 'text-gray-900')}>Vote on ideas</h3>
-        <p className={cn('mt-1 text-sm', isDark ? 'text-gray-400' : 'text-gray-600')}>
-          Feature requests that authors chose to list publicly. Vote once per idea; you cannot vote on your own
-          submission.
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h3 className={cn('text-lg font-semibold', isDark ? 'text-gray-100' : 'text-gray-900')}>Vote on ideas</h3>
+          <p className={cn('mt-1 text-sm', isDark ? 'text-gray-400' : 'text-gray-600')}>
+            Feature requests that authors chose to list publicly. Vote once per idea; you cannot vote on your own
+            submission.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => void refetch()}
+          disabled={isLoading || voteMut.isPending}
+          className={cn(
+            'inline-flex shrink-0 cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm font-semibold transition-colors disabled:opacity-50',
+            isDark ? 'border-gray-700 text-gray-200 hover:bg-gray-800' : 'border-gray-200 text-gray-800 hover:bg-gray-50',
+          )}
+        >
+          <RefreshCw className={cn('h-4 w-4', isFetching && 'animate-spin')} />
+          Refresh
+        </button>
       </div>
 
       {isLoading && (

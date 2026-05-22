@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { CircleHelp, Loader2, Pencil, Plus, Search, Trash2, X } from 'lucide-react';
+import { CircleHelp, Loader2, Pencil, Plus, RefreshCw, Search, Trash2, X } from 'lucide-react';
 import { imperativeToast } from '../../../app/store/contexts/toast/imperativeToast';
 import { cn } from '../../../shared/utils/classNameUtils';
 import {
@@ -38,7 +38,7 @@ const HubSupportFaqsAdminPage: React.FC<HubSupportFaqsAdminPageProps> = ({ theme
     return f;
   }, [appliedQ, includeTrash, publishedFilter]);
 
-  const { data, isLoading, isError, error, refetch } = usePlatformHubSupportFaqs(filters);
+  const { data, isLoading, isError, error, refetch, isFetching } = usePlatformHubSupportFaqs(filters);
   const createMut = useCreatePlatformHubSupportFaq();
   const updateMut = useUpdatePlatformHubSupportFaq();
   const deleteMut = useDeletePlatformHubSupportFaq();
@@ -136,17 +136,31 @@ const HubSupportFaqsAdminPage: React.FC<HubSupportFaqsAdminPageProps> = ({ theme
             </p>
           </div>
         </div>
-        <button
-          type="button"
-          onClick={openCreate}
-          className={cn(
-            'inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-colors',
-            isDark ? 'bg-cyan-600 text-white hover:bg-cyan-500' : 'bg-blue-600 text-white hover:bg-blue-700',
-          )}
-        >
-          <Plus className="h-4 w-4" aria-hidden />
-          Add FAQ
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => void refetch()}
+            disabled={isFetching}
+            className={cn(
+              'inline-flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium disabled:opacity-50',
+              isDark ? 'border-gray-700 text-gray-200 hover:bg-gray-800' : 'border-gray-200 text-gray-800 hover:bg-gray-50',
+            )}
+          >
+            <RefreshCw className={cn('h-4 w-4', isFetching && 'animate-spin')} aria-hidden />
+            Refresh
+          </button>
+          <button
+            type="button"
+            onClick={openCreate}
+            className={cn(
+              'inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-colors',
+              isDark ? 'bg-cyan-600 text-white hover:bg-cyan-500' : 'bg-blue-600 text-white hover:bg-blue-700',
+            )}
+          >
+            <Plus className="h-4 w-4" aria-hidden />
+            Add FAQ
+          </button>
+        </div>
       </div>
 
       <div className={cn('flex flex-col gap-3 p-4', shell, 'lg:flex-row lg:flex-wrap lg:items-end')}>

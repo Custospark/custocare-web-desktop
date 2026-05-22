@@ -1,8 +1,9 @@
+// Optimistic update handled in useCreateHubFeedback hook
 import { useCallback, useState } from 'react';
 import { Loader2, Send } from 'lucide-react';
 import { imperativeToast } from '../../../../app/store/contexts/toast/imperativeToast';
 import { cn } from '../../../../shared/utils/classNameUtils';
-import type { HubFeedbackCategory } from '../../api/feedback/hubFeedbackTypes';
+import type { HubFeedbackCategory, HubFeedbackMineDto } from '../../api/feedback/hubFeedbackTypes';
 import { useCreateHubFeedback } from '../../api/feedback/useHubFeedbackQueries';
 
 export interface FeedbackSubmitFormProps {
@@ -18,6 +19,7 @@ export function FeedbackSubmitForm({ theme, defaultCategory, heading, descriptio
   const [subject, setSubject] = useState('');
   const [body, setBody] = useState('');
   const [includeInRoadmap, setIncludeInRoadmap] = useState(defaultCategory === 'feature_request');
+  const [createdItem, setCreatedItem] = useState<HubFeedbackMineDto | null>(null);
 
   const onSubmit = useCallback(async () => {
     const s = subject.trim();
@@ -27,12 +29,13 @@ export function FeedbackSubmitForm({ theme, defaultCategory, heading, descriptio
       return;
     }
     try {
-      await createMut.mutateAsync({
+      const res = await createMut.mutateAsync({
         category: defaultCategory,
         subject: s,
         body: b,
         include_in_roadmap: defaultCategory === 'feature_request' ? includeInRoadmap : false,
       });
+      setCreatedItem(res.data);
       imperativeToast.show('success', 'Thanks — your message was sent to the platform team.');
       setSubject('');
       setBody('');
@@ -122,6 +125,28 @@ export function FeedbackSubmitForm({ theme, defaultCategory, heading, descriptio
           </div>
         </div>
       </div>
+
+      {createdItem ? (
+        <div
+          className={cn(
+            'rounded-xl border p-4',
+            isDark ? 'border-blue-900/50 bg-blue-950/30 text-blue-100' : 'border-blue-100 bg-blue-50 text-blue-900',
+          )}
+        >
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="font-semibold">Submission received</p>
+            <p className={cn('text-xs', isDark ? 'text-blue-100' : 'text-blue-900')}>
+              Ref: <span className="font-mono">{createdItem.uuid}</span>
+            </p>
+          </div>
+          <p className={cn('mt-2 whitespace-pre-wrap text-sm leading-relaxed', isDark ? 'text-blue-100' : 'text-blue-900')}>
+            {createdItem.subject}
+          </p>
+          <p className={cn('mt-1 text-xs opacity-80', isDark ? 'text-blue-200' : 'text-blue-800')}>
+            Save this reference number to track your request later under Track Request Status.
+          </p>
+        </div>
+      ) : null}
     </div>
   );
 }

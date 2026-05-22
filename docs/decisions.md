@@ -2,7 +2,70 @@
 
 ---
 
-## 2026-05-22: Portal Selector — Image Height Constraint + Greeting Uses Browser Local Time
+## 2026-05-22: Custocare Hub + Platform Admin — Optimistic Updates, Meaningful Icons, Refresh Buttons
+
+**Context:** All Custocare Hub user-facing actions (View Discussions, Create Post, Feature Ideas, Vote, Submit Feedback, Open Ticket, etc.) and their corresponding Platform Admin management pages lacked optimistic UI updates, meaningful action icons, and manual refresh controls. Users had to wait for mutation responses before seeing their changes reflected, the horizontal action strip used a generic `FileText` icon for everything, and there was no way to manually refresh lists.
+
+**Decisions:**
+
+**1. Horizontal Action Icons — HubOperationWorkspace**
+- Added optional `icon?: string` field to `HubHorizontalAction` interface in `hubConfig.ts`
+- Assigned 16 unique lucide-react icon names across all Hub operations (Rocket, PlayCircle, GraduationCap, BarChart3, MessageSquare, SquarePen, Lightbulb, Megaphone, Search, Ticket, Waypoints, HelpCircle, MessageSquareHeart, WandSparkles, Heart, ClipboardCheck)
+- `HubOperationWorkspace.tsx` now dynamically renders the configured icon using `import * as Icons from 'lucide-react'` with `FileText` as fallback
+
+**2. Optimistic Updates — 7 mutation hooks (Custocare Hub)**
+- `useCreateHubCommunityPost` — optimistically prepends post to list cache, rolls back on error
+- `useCreateHubCommunityComment` — optimistically appends comment to post detail cache
+- `useCreateHubFeedback` — optimistically prepends to "mine" list cache
+- `useVoteHubFeedback` — optimistically toggles vote state in roadmap cache
+- `useCreateHubSupportTicket` — snapshot/rollback on create mutation
+
+**3. Optimistic Updates — 5 query sets (Platform Admin)**
+- `usePlatformHubFeedbackQueries` — update mutation patches list item, rolls back
+- `usePlatformHubSupportTicketQueries` — update mutation patches list item
+- `usePlatformHubSupportFaqQueries` — create/update/delete all have optimistic cache + rollback
+- `usePlatformHubProductUpdateQueries` — create/update/delete optimistic cache + rollback
+- `usePlatformLearningMaterialQueries` — create/update/delete optimistic cache + rollback
+
+All use `onMutate` (cancel + snapshot), `onError` (rollback), `onSettled` (invalidate) pattern.
+
+**4. Refresh Buttons — 10 UI views (Hub + Admin)**
+- Added `RefreshCw` icon buttons to: CommunityChannelView, FeedbackRoadmapView, FeedbackMyRequestsView, LearningCenterMaterialsView, SupportFaqsView (was already there, improved), SupportTicketsTrackView (was already there)
+- Fixed FeedbackMyRequestsView + FeedbackRoadmapView to use `isFetching` (not `isLoading`/`voteMut.isPending`) for the refresh spin — icon now spins on manual refresh, not just initial load
+- Improved existing refresh buttons on all 5 Platform Admin pages (disabled state when fetching, spinning animation)
+- All refresh buttons call `refetch()` and show a spinner animation while fetching
+
+**5. Navigation Improvements**
+- CommunityCreatePostView — added "Back to Discussions / Feature Ideas" link with ArrowLeft icon
+- SupportTicketsOpenView — replaced generic `Plus` icon with `Ticket` icon
+
+**6. Tracking UUID Display**
+- FeedbackSubmitForm — now shows a confirmation banner with the submission UUID and a "Save this reference" reminder after creation
+- SupportTicketsOpenView — improved existing confirmation banner with "Save this reference" reminder text
+- CommunityCreatePostView — toast now includes the first 8 chars of the created post UUID
+
+**7. Support Ticket Tracking — User-Friendly Error Message**
+- `SupportTicketsTrackView.tsx` — when the backend returns a route-not-found error (`"could not be found"` in the message), the UI now shows `"Ticket not found. Please check your reference number and try again."` instead of the raw Laravel route path error
+
+**9. Sidebar Support Card — Feedback Link**
+- `SidebarFooter.tsx` — added a "Send Feedback" button with `MessageSquareHeart` icon below the support phone, navigates to `CUSTOCARE_HUB_ROUTES.FEEDBACK_REQUESTS`
+
+**8. Custocare Hub Quick Access Icons — Top Layout Bar**
+- `QuickActions.tsx` — added 4 Custocare Hub operation icons (GraduationCap, MessageSquare, LifeBuoy, MessageSquareHeart) in the top status bar, wrapped in `hidden lg:flex` so they appear only on large screens
+- Icons use the same as sidebar navigation: `GraduationCap`, `UsersRound`, `LifeBuoy`, `MessageSquareHeart` (matches `moduleWorkspaceOperations.tsx`)
+- Icons navigate directly to: Learning Center, Community, Support Center, Feedback & Requests using `CUSTOCARE_HUB_ROUTES` constants
+- Separated from the existing action icons by a vertical divider (`border-r`)
+
+**Files changed: 22 files across custocare-hub/ and platform-administration/**
+- 6 API hook files (optimistic updates)
+- 11 UI view files (refresh buttons + icons)
+- 1 config file (icon assignments)
+- 1 workspace component (dynamic icon rendering)
+
+**Trade-offs:**
+- Optimistic updates assume mutation success for UX responsiveness. On rare server failures, the UI briefly shows the optimistic state before rolling back, which may be confusing. The toast notification helps users understand failures.
+- Dynamic icon resolution via `Icons[key]` requires all lucide icons used to be importable. The barrel import `import * as Icons from 'lucide-react'` ensures tree-shaking still works as long as the icons are referenced.
+- Refresh buttons add clutter if users rarely need them, but the pattern is consistent with the rest of the app and provides a manual escape hatch for stale data when auto-refetch intervals are conservative.
 
 **Context:** The workspace card image on the Portal Selector page took its natural height on large screens (`lg:h-auto`), making it disproportionately tall compared to the card's content area. Additionally, the greeting was computed once on mount via `useMemo([], [])`, so it could show the wrong time-of-day greeting if the component stayed mounted across time boundaries.
 

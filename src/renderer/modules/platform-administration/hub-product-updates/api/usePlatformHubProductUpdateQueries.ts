@@ -114,7 +114,15 @@ export function useCreatePlatformHubProductUpdate() {
       );
       return res.data;
     },
-    onSuccess: () => {
+    onMutate: async () => {
+      await qc.cancelQueries({ queryKey: platformHubProductUpdateKeys.all });
+      const prev = qc.getQueryData(platformHubProductUpdateKeys.all);
+      return { prev };
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.prev) qc.setQueryData(platformHubProductUpdateKeys.all, ctx.prev);
+    },
+    onSettled: () => {
       void qc.invalidateQueries({ queryKey: platformHubProductUpdateKeys.all });
       void qc.invalidateQueries({ queryKey: hubCommunityKeys.all });
     },
@@ -135,7 +143,19 @@ export function useUpdatePlatformHubProductUpdate() {
       );
       return res.data;
     },
-    onSuccess: () => {
+    onMutate: async ({ id, payload }) => {
+      await qc.cancelQueries({ queryKey: platformHubProductUpdateKeys.all });
+      const prev = qc.getQueryData(platformHubProductUpdateKeys.all);
+      qc.setQueryData<ApiPaginatedResponse<PlatformHubProductUpdateRowDto>>(platformHubProductUpdateKeys.all, (old) => {
+        if (!old?.data) return old;
+        return { ...old, data: old.data.map((item) => (item.id === id ? { ...item, ...payload } : item)) };
+      });
+      return { prev };
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.prev) qc.setQueryData(platformHubProductUpdateKeys.all, ctx.prev);
+    },
+    onSettled: () => {
       void qc.invalidateQueries({ queryKey: platformHubProductUpdateKeys.all });
       void qc.invalidateQueries({ queryKey: hubCommunityKeys.all });
     },
@@ -149,7 +169,19 @@ export function useDeletePlatformHubProductUpdate() {
       const res = await axiosInstance.delete<ApiResponse<null>>(`/platform-admin/hub-product-updates/${id}`);
       return res.data;
     },
-    onSuccess: () => {
+    onMutate: async ({ id }) => {
+      await qc.cancelQueries({ queryKey: platformHubProductUpdateKeys.all });
+      const prev = qc.getQueryData(platformHubProductUpdateKeys.all);
+      qc.setQueryData<ApiPaginatedResponse<PlatformHubProductUpdateRowDto>>(platformHubProductUpdateKeys.all, (old) => {
+        if (!old?.data) return old;
+        return { ...old, data: old.data.filter((item) => item.id !== id) };
+      });
+      return { prev };
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.prev) qc.setQueryData(platformHubProductUpdateKeys.all, ctx.prev);
+    },
+    onSettled: () => {
       void qc.invalidateQueries({ queryKey: platformHubProductUpdateKeys.all });
       void qc.invalidateQueries({ queryKey: hubCommunityKeys.all });
     },

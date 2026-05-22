@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
-import { Loader2, Plus } from 'lucide-react';
+import { Loader2, Ticket } from 'lucide-react';
 import { imperativeToast } from '../../../../app/store/contexts/toast/imperativeToast';
 import { cn } from '../../../../shared/utils/classNameUtils';
 import type {
@@ -158,7 +158,7 @@ export function SupportTicketsOpenView({ theme }: SupportTicketsOpenViewProps) {
                 isDark ? 'bg-blue-600 text-white hover:bg-blue-500' : 'bg-blue-600 text-white hover:bg-blue-700',
               )}
             >
-              {createMut.isPending ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : <Plus className="h-4 w-4" aria-hidden />}
+              {createMut.isPending ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : <Ticket className="h-4 w-4" aria-hidden />}
               {createMut.isPending ? 'Submitting…' : 'Submit ticket'}
             </button>
           </div>
@@ -180,6 +180,9 @@ export function SupportTicketsOpenView({ theme }: SupportTicketsOpenViewProps) {
           </div>
           <p className={cn('mt-2 whitespace-pre-wrap text-sm leading-relaxed', isDark ? 'text-blue-100' : 'text-blue-900')}>
             {createdTicket.subject}
+          </p>
+          <p className={cn('mt-1 text-xs opacity-80', isDark ? 'text-blue-200' : 'text-blue-800')}>
+            Save this reference number to track your ticket later under Track Ticket.
           </p>
         </div>
       ) : null}

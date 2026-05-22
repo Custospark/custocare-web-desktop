@@ -1,9 +1,10 @@
 // components/statusbar/QuickActions.tsx
 import React, { useMemo, useCallback, useRef } from 'react';
-import { Settings, Sun, Moon, PanelRight, Mail, ChevronsUpDown } from 'lucide-react';
+import { Settings, Sun, Moon, PanelRight, Mail, ChevronsUpDown, GraduationCap, UsersRound, LifeBuoy, MessageSquareHeart } from 'lucide-react';
 import { cn } from '../../../utils/classNameUtils';
 import { useNavigate } from 'react-router-dom';
 import { ACCOUNT_ROUTES } from '../../../../app/routes/routeConstants';
+import { CUSTOCARE_HUB_ROUTES } from '../../../../app/routes/constants/custocare-hub.paths';
 import { dockSidebarLeftShortcut, dockSidebarRightShortcut } from '../../../keyboard/layoutShortcutLabels';
 
 // Import Redux hooks and actions
@@ -150,6 +151,15 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
     debouncedNavigate(ACCOUNT_ROUTES.SETTINGS_PROFILE);
   }, [debouncedNavigate]);
 
+  const handleHubNavigation = useCallback((path: string) => {
+    const now = Date.now();
+    if (now - lastClickTimeRef.current < 500) {
+      return;
+    }
+    lastClickTimeRef.current = now;
+    debouncedNavigate(path);
+  }, [debouncedNavigate]);
+
   const positionToggleIcon = useMemo(() => {
     const isLeft = sidebarPosition === 'left';
     
@@ -181,6 +191,66 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
 
   return (
     <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
+      {/* ---- HUB SHORTCUTS - visible on large screens only ---- */}
+      <div className="hidden lg:flex items-center gap-1 sm:gap-1.5 mr-1 pr-2 border-r border-gray-300/40 dark:border-gray-600/40">
+        <button
+          onClick={() => handleHubNavigation(CUSTOCARE_HUB_ROUTES.LEARNING_CENTER)}
+          aria-label="Learning Center"
+          title="Learning Center"
+          className={cn(
+            'p-2 sm:p-1.5 rounded-lg transition-all duration-300 hover:scale-105 active:scale-95',
+            'focus:outline-none focus:ring-2 focus:ring-offset-1 cursor-pointer',
+            theme === 'dark'
+              ? 'text-gray-400 hover:text-cyan-400 hover:bg-gray-800/60 focus:ring-cyan-500/50'
+              : 'text-gray-600 hover:text-blue-600 hover:bg-gray-100/80 focus:ring-blue-500/50'
+          )}
+        >
+          <GraduationCap className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
+        </button>
+        <button
+          onClick={() => handleHubNavigation(CUSTOCARE_HUB_ROUTES.COMMUNITY)}
+          aria-label="Community"
+          title="Community"
+          className={cn(
+            'p-2 sm:p-1.5 rounded-lg transition-all duration-300 hover:scale-105 active:scale-95',
+            'focus:outline-none focus:ring-2 focus:ring-offset-1 cursor-pointer',
+            theme === 'dark'
+              ? 'text-gray-400 hover:text-cyan-400 hover:bg-gray-800/60 focus:ring-cyan-500/50'
+              : 'text-gray-600 hover:text-blue-600 hover:bg-gray-100/80 focus:ring-blue-500/50'
+          )}
+        >
+          <UsersRound className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
+        </button>
+        <button
+          onClick={() => handleHubNavigation(CUSTOCARE_HUB_ROUTES.SUPPORT_CENTER)}
+          aria-label="Support Center"
+          title="Support Center"
+          className={cn(
+            'p-2 sm:p-1.5 rounded-lg transition-all duration-300 hover:scale-105 active:scale-95',
+            'focus:outline-none focus:ring-2 focus:ring-offset-1 cursor-pointer',
+            theme === 'dark'
+              ? 'text-gray-400 hover:text-cyan-400 hover:bg-gray-800/60 focus:ring-cyan-500/50'
+              : 'text-gray-600 hover:text-blue-600 hover:bg-gray-100/80 focus:ring-blue-500/50'
+          )}
+        >
+          <LifeBuoy className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
+        </button>
+        <button
+          onClick={() => handleHubNavigation(CUSTOCARE_HUB_ROUTES.FEEDBACK_REQUESTS)}
+          aria-label="Feedback & Requests"
+          title="Feedback & Requests"
+          className={cn(
+            'p-2 sm:p-1.5 rounded-lg transition-all duration-300 hover:scale-105 active:scale-95',
+            'focus:outline-none focus:ring-2 focus:ring-offset-1 cursor-pointer',
+            theme === 'dark'
+              ? 'text-gray-400 hover:text-cyan-400 hover:bg-gray-800/60 focus:ring-cyan-500/50'
+              : 'text-gray-600 hover:text-blue-600 hover:bg-gray-100/80 focus:ring-blue-500/50'
+          )}
+        >
+          <MessageSquareHeart className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
+        </button>
+      </div>
+
       {/* 1. NOTIFICATIONS - High priority, time-sensitive with real-time unread count */}
       <button
         onClick={handleNotificationClick}
