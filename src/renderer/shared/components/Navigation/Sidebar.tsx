@@ -103,7 +103,6 @@ interface SidebarExtendedProps extends SidebarProps {
   collapsed: boolean;
   enableNestedNavigation?: boolean;
   onToggleCollapse: () => void; // currently unused, kept for API compatibility
-  sidebarPosition?: 'left' | 'right';
 }
 
 const CONTENT_SCROLL_SELECTOR = '[data-app-scroll-container="true"]';
@@ -115,7 +114,6 @@ export const Sidebar: React.FC<SidebarExtendedProps> = ({
   enableNestedNavigation = false,
   className,
   theme = 'dark',
-  sidebarPosition = 'left',
 }) => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -609,7 +607,6 @@ const menuConfig: MenuItem[] = useMemo(
         handleNavigation={handleNavigation}
         navContainerRef={navContainerRef}
         activeItemRef={activeItemRef}
-        sidebarPosition={sidebarPosition}
       />
 
       <SidebarFooter
@@ -620,7 +617,6 @@ const menuConfig: MenuItem[] = useMemo(
         staffNumber={staffNumber}
         inPatientMode={inPatientMode}
         patientNumber={patientNumber}
-        sidebarPosition={sidebarPosition}
       />
     </aside>
   );

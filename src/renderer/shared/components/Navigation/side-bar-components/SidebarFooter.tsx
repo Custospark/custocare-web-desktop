@@ -12,7 +12,6 @@ interface SidebarFooterProps {
   staffNumber?: string | null;
   inPatientMode: boolean;
   patientNumber?: string | null;
-  sidebarPosition?: 'left' | 'right';
 }
 
 const SidebarFooter: React.FC<SidebarFooterProps> = ({
@@ -23,9 +22,7 @@ const SidebarFooter: React.FC<SidebarFooterProps> = ({
   staffNumber,
   inPatientMode,
   patientNumber,
-  sidebarPosition = 'left',
 }) => {
-  const isRight = sidebarPosition === 'right';
   const navigate = useNavigate();
   return (
     <div className={cn('shrink-0 p-4 border-t', isDark ? 'border-gray-800/50' : 'border-gray-200/50')}>
@@ -39,7 +36,7 @@ const SidebarFooter: React.FC<SidebarFooterProps> = ({
                 : 'bg-linear-to-br from-gray-50 to-gray-100/50 border-gray-200/50',
             )}
           >
-            <div className={cn('flex items-center gap-3', isRight && 'flex-row-reverse')}>
+            <div className="flex items-center gap-3">
               <div className={cn('p-2 rounded-lg shrink-0', isDark ? 'bg-cyan-500/20' : 'bg-cyan-100')}>
                 <HeadphonesIcon className={cn('w-4 h-4', isDark ? 'text-cyan-400' : 'text-cyan-600')} />
               </div>

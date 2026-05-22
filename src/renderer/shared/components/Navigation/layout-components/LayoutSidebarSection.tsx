@@ -82,7 +82,6 @@ export const LayoutSidebarSection: React.FC<LayoutSidebarSectionProps> = ({
           enableNestedNavigation={enableNestedNavigation}
           onToggleCollapse={onToggleSidebar}
           theme={theme}
-          sidebarPosition={sidebarPosition}
         />
       </aside>
     </>
