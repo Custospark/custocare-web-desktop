@@ -167,8 +167,8 @@ const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
         </div>
 
         {!collapsed && (
-          <div className={cn('flex-1 min-w-0 space-y-1.5', sidebarPosition === 'right' && 'text-right')}>
-            <div className={cn('flex items-center gap-2', sidebarPosition === 'right' ? 'flex-row-reverse' : 'justify-between')}>
+          <div className="flex-1 min-w-0 space-y-1.5">
+            <div className="flex items-center gap-2">
               <span
                 className={cn(
                   'font-semibold text-sm sm:text-sm leading-snug break-words whitespace-normal',
@@ -187,8 +187,7 @@ const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
 
             <p
               className={cn(
-                'text-xs sm:text-[11px] leading-relaxed break-words whitespace-normal',
-                sidebarPosition === 'right' && 'text-right',
+                'text-xs sm:text-[11px] leading-relaxed break-words whitespace-normal text-left',
                 isActive
                   ? isDark
                     ? 'text-gray-300'
@@ -262,7 +261,7 @@ const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
         onClick={(e) => handleNavigation(e, operation.route)}
         className={cn(
           'flex gap-2.5 rounded-lg px-2 py-2 text-sm transition-all duration-200',
-          sidebarPosition === 'right' ? 'flex-row-reverse text-right' : 'text-left',
+          sidebarPosition === 'right' ? 'flex-row-reverse text-left' : 'text-left',
           enableNestedNavigation ? 'items-start' : 'items-center',
           enableNestedNavigation && isOperationActive && 'my-2',
           'border border-transparent',
@@ -299,8 +298,7 @@ const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
         >
           <span
             className={cn(
-              'min-w-0 leading-snug',
-              sidebarPosition === 'right' && 'text-right',
+              'min-w-0 leading-snug text-left',
               enableNestedNavigation ? 'break-words whitespace-normal' : 'truncate',
             )}
           >
@@ -337,8 +335,7 @@ const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
                   <>
                     <p
                       className={cn(
-                        'text-xs font-bold uppercase tracking-wider px-2',
-                        sidebarPosition === 'right' && 'text-right',
+                        'text-xs font-bold uppercase tracking-wider px-2 text-left',
                         isDark ? 'text-gray-400' : 'text-gray-500',
                       )}
                     >
@@ -401,8 +398,7 @@ const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
                   <>
                     <p
                       className={cn(
-                        'text-xs font-bold uppercase tracking-wider px-2',
-                        sidebarPosition === 'right' && 'text-right',
+                        'text-xs font-bold uppercase tracking-wider px-2 text-left',
                         isDark ? 'text-gray-400' : 'text-gray-500',
                       )}
                     >

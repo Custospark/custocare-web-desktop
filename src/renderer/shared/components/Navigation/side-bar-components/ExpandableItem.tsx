@@ -253,7 +253,7 @@ export const ExpandableItem: React.FC<ExpandableItemProps> = ({
           <span
             className={cn(
               'min-w-0 flex-1 text-sm font-semibold text-left',
-              sidebarPosition === 'right' && 'text-right',
+              'text-left',
               allowMultilineLabel ? 'break-words whitespace-normal' : 'truncate',
               active && !disabled ? activeTextClass : textClass,
             )}
