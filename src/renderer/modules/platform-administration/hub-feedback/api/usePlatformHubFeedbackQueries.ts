@@ -86,7 +86,8 @@ export function useUpdatePlatformHubFeedback() {
   return useMutation<
     ApiResponse<PlatformHubFeedbackDetailDto>,
     AxiosError<ApiErrorResponse>,
-    { id: number; payload: PlatformHubFeedbackUpdatePayload }
+    { id: number; payload: PlatformHubFeedbackUpdatePayload },
+    { prev: ApiResponse<PlatformHubFeedbackRowDto[]> | undefined }
   >({
     mutationFn: async ({ id, payload }) => {
       const res = await axiosInstance.patch<ApiResponse<PlatformHubFeedbackDetailDto>>(

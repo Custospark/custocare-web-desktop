@@ -58,7 +58,7 @@ export interface CreateHubFeedbackPayload {
 
 export function useCreateHubFeedback() {
   const qc = useQueryClient();
-  return useMutation<ApiResponse<HubFeedbackMineDto>, AxiosError<ApiErrorResponse>, CreateHubFeedbackPayload>({
+  return useMutation<ApiResponse<HubFeedbackMineDto>, AxiosError<ApiErrorResponse>, CreateHubFeedbackPayload, { prev: ApiResponse<HubFeedbackMineDto[]> | undefined }>({
     mutationFn: async (payload) => {
       const res = await axiosInstance.post<ApiResponse<HubFeedbackMineDto>>('/hub-feedback', payload);
       return res.data;
@@ -97,7 +97,7 @@ export function useCreateHubFeedback() {
 
 export function useVoteHubFeedback() {
   const qc = useQueryClient();
-  return useMutation<ApiResponse<{ uuid: string; votes_count: number; voted_by_you: boolean }>, AxiosError<ApiErrorResponse>, string>({
+  return useMutation<ApiResponse<{ uuid: string; votes_count: number; voted_by_you: boolean }>, AxiosError<ApiErrorResponse>, string, { prev: ApiResponse<HubFeedbackRoadmapItemDto[]> | undefined }>({
     mutationFn: async (uuid) => {
       const res = await axiosInstance.post<ApiResponse<{ uuid: string; votes_count: number; voted_by_you: boolean }>>(
         `/hub-feedback/${uuid}/vote`,

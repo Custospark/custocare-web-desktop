@@ -106,7 +106,7 @@ export interface HubProductUpdatePayload {
 
 export function useCreatePlatformHubProductUpdate() {
   const qc = useQueryClient();
-  return useMutation<ApiResponse<PlatformHubProductUpdateDetailDto>, AxiosError<ApiErrorResponse>, HubProductUpdatePayload>({
+  return useMutation<ApiResponse<PlatformHubProductUpdateDetailDto>, AxiosError<ApiErrorResponse>, HubProductUpdatePayload, { prev: ApiPaginatedResponse<PlatformHubProductUpdateRowDto> | undefined }>({
     mutationFn: async (payload) => {
       const res = await axiosInstance.post<ApiResponse<PlatformHubProductUpdateDetailDto>>(
         '/platform-admin/hub-product-updates',
@@ -134,7 +134,8 @@ export function useUpdatePlatformHubProductUpdate() {
   return useMutation<
     ApiResponse<PlatformHubProductUpdateDetailDto>,
     AxiosError<ApiErrorResponse>,
-    { id: number; payload: Partial<HubProductUpdatePayload> }
+    { id: number; payload: Partial<HubProductUpdatePayload> },
+    { prev: ApiPaginatedResponse<PlatformHubProductUpdateRowDto> | undefined }
   >({
     mutationFn: async ({ id, payload }) => {
       const res = await axiosInstance.put<ApiResponse<PlatformHubProductUpdateDetailDto>>(
@@ -164,7 +165,7 @@ export function useUpdatePlatformHubProductUpdate() {
 
 export function useDeletePlatformHubProductUpdate() {
   const qc = useQueryClient();
-  return useMutation<ApiResponse<null>, AxiosError<ApiErrorResponse>, { id: number }>({
+  return useMutation<ApiResponse<null>, AxiosError<ApiErrorResponse>, { id: number }, { prev: ApiPaginatedResponse<PlatformHubProductUpdateRowDto> | undefined }>({
     mutationFn: async ({ id }) => {
       const res = await axiosInstance.delete<ApiResponse<null>>(`/platform-admin/hub-product-updates/${id}`);
       return res.data;

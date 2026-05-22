@@ -56,7 +56,7 @@ export interface SupportFaqPayload {
 
 export function useCreatePlatformHubSupportFaq() {
   const qc = useQueryClient();
-  return useMutation<ApiResponse<PlatformSupportFaqAdminDto>, AxiosError<ApiErrorResponse>, SupportFaqPayload>({
+  return useMutation<ApiResponse<PlatformSupportFaqAdminDto>, AxiosError<ApiErrorResponse>, SupportFaqPayload, { prev: ApiResponse<PlatformSupportFaqAdminDto[]> | undefined }>({
     mutationFn: async (payload) => {
       const res = await axiosInstance.post<ApiResponse<PlatformSupportFaqAdminDto>>('/platform-admin/hub-support-faqs', payload);
       return res.data;
@@ -81,7 +81,8 @@ export function useUpdatePlatformHubSupportFaq() {
   return useMutation<
     ApiResponse<PlatformSupportFaqAdminDto>,
     AxiosError<ApiErrorResponse>,
-    { id: number; payload: Partial<SupportFaqPayload> }
+    { id: number; payload: Partial<SupportFaqPayload> },
+    { prev: ApiResponse<PlatformSupportFaqAdminDto[]> | undefined }
   >({
     mutationFn: async ({ id, payload }) => {
       const res = await axiosInstance.put<ApiResponse<PlatformSupportFaqAdminDto>>(
@@ -111,7 +112,7 @@ export function useUpdatePlatformHubSupportFaq() {
 
 export function useDeletePlatformHubSupportFaq() {
   const qc = useQueryClient();
-  return useMutation<ApiResponse<null>, AxiosError<ApiErrorResponse>, { id: number }>({
+  return useMutation<ApiResponse<null>, AxiosError<ApiErrorResponse>, { id: number }, { prev: ApiResponse<PlatformSupportFaqAdminDto[]> | undefined }>({
     mutationFn: async ({ id }) => {
       const res = await axiosInstance.delete<ApiResponse<null>>(`/platform-admin/hub-support-faqs/${id}`);
       return res.data;

@@ -88,7 +88,8 @@ export function useCreateHubCommunityPost() {
   return useMutation<
     ApiResponse<HubCommunityPostDetailDto>,
     AxiosError<ApiErrorResponse>,
-    CreateHubCommunityPostPayload
+    CreateHubCommunityPostPayload,
+    { previous: ApiPaginatedResponse<HubCommunityPostSummaryDto> | undefined }
   >({
     mutationFn: async (payload) => {
       const res = await axiosInstance.post<ApiResponse<HubCommunityPostDetailDto>>('/hub-community/posts', payload);
@@ -137,7 +138,8 @@ export function useCreateHubCommunityComment() {
   return useMutation<
     ApiResponse<HubCommunityCommentDto>,
     AxiosError<ApiErrorResponse>,
-    { postUuid: string; body: string }
+    { postUuid: string; body: string },
+    { previous: ApiResponse<HubCommunityPostDetailResponse> | undefined }
   >({
     mutationFn: async ({ postUuid, body }) => {
       const res = await axiosInstance.post<ApiResponse<HubCommunityCommentDto>>(

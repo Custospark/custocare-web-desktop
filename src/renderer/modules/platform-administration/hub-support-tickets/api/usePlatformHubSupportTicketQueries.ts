@@ -96,7 +96,8 @@ export function useUpdatePlatformHubSupportTicket() {
   return useMutation<
     ApiResponse<PlatformHubSupportTicketDetailDto>,
     AxiosError<ApiErrorResponse>,
-    { id: number; payload: PlatformHubSupportTicketUpdatePayload }
+    { id: number; payload: PlatformHubSupportTicketUpdatePayload },
+    { prev: ApiResponse<PlatformHubSupportTicketRowDto[]> | undefined }
   >({
     mutationFn: async ({ id, payload }) => {
       const res = await axiosInstance.patch<ApiResponse<PlatformHubSupportTicketDetailDto>>(

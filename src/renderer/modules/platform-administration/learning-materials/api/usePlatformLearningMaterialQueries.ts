@@ -53,7 +53,7 @@ export interface LearningMaterialPayload {
 
 export function useCreateLearningMaterial() {
   const qc = useQueryClient();
-  return useMutation<ApiResponse<LearningMaterialDto>, AxiosError<ApiErrorResponse>, LearningMaterialPayload>({
+  return useMutation<ApiResponse<LearningMaterialDto>, AxiosError<ApiErrorResponse>, LearningMaterialPayload, { prev: ApiResponse<LearningMaterialDto[]> | undefined }>({
     mutationFn: async (payload) => {
       const response = await axiosInstance.post<ApiResponse<LearningMaterialDto>>(
         '/platform-admin/learning-materials',
@@ -81,7 +81,8 @@ export function useUpdateLearningMaterial() {
   return useMutation<
     ApiResponse<LearningMaterialDto>,
     AxiosError<ApiErrorResponse>,
-    { id: number; payload: Partial<LearningMaterialPayload> }
+    { id: number; payload: Partial<LearningMaterialPayload> },
+    { prev: ApiResponse<LearningMaterialDto[]> | undefined }
   >({
     mutationFn: async ({ id, payload }) => {
       const response = await axiosInstance.put<ApiResponse<LearningMaterialDto>>(
@@ -149,7 +150,7 @@ export function useUploadLearningThumbnail() {
 
 export function useDeleteLearningMaterial() {
   const qc = useQueryClient();
-  return useMutation<ApiResponse<null>, AxiosError<ApiErrorResponse>, { id: number }>({
+  return useMutation<ApiResponse<null>, AxiosError<ApiErrorResponse>, { id: number }, { prev: ApiResponse<LearningMaterialDto[]> | undefined }>({
     mutationFn: async ({ id }) => {
       const response = await axiosInstance.delete<ApiResponse<null>>(`/platform-admin/learning-materials/${id}`);
       return response.data;
