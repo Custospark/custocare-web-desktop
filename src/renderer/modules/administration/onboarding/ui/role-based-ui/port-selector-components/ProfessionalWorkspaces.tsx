@@ -107,7 +107,7 @@ export const ProfessionalWorkspaces: React.FC<ProfessionalWorkspacesProps> = ({
 
       {/* Staff With Facilities - Workspace Cards */}
       {isStaffWithFacility && (
-        <div className="space-y-3 sm:space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           {facilityRoles.map((facilityRole) => {
             const badges = [
               { label: 'Active', variant: 'success' as const, animated: true },
@@ -126,7 +126,7 @@ export const ProfessionalWorkspaces: React.FC<ProfessionalWorkspacesProps> = ({
                 id={`${facilityRole.facility_id}-${facilityRole.role_code}`}
                 title={facilityRole.facility_name || `Facility ${facilityRole.facility_id}`}
                 subtitle={getRoleDisplayName(facilityRole.role_code)}
-                description={`Access your ${getRoleDisplayName(facilityRole.role_code).toLowerCase()} dashboard to manage patients, review clinical data, and coordinate care.`}
+                description={`Access your ${getRoleDisplayName(facilityRole.role_code).toLowerCase()} dashboard.`}
                 icon={Sparkles}
                 iconGradient="bg-gradient-to-br from-blue-500 to-cyan-500"
                 buttonText="Open Dashboard"
