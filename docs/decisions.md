@@ -5,6 +5,24 @@
 
 ---
 
+## 2026-05-22: Walk-in Label — "Customer" → "Patient" in Pharmacy Walk-in UI
+
+**Context:** The Pharmacy Dispense Medication entry point showed "Customer Walk-in" as the tab label and "Walk-in for unknown customers" in the help guide. The term "Customer" is pharmacy/commercial terminology, but the rest of the app uses "Patient" (the medical/clinical term). The backend already returns `display_name => 'Walk-in Patient'` in the API response, so only the frontend UI labels needed updating.
+
+**Decision:**
+- Changed tab label from `'Customer Walk-in'` → `'Walk-in Patient'`
+- Changed help text from `'Walk-in for unknown customers'` → `'Walk-in for unknown patients'`
+- Updated inline comment from `'Customer Walk-in'` → `'Walk-in Patient'`
+
+**Files changed (FE — 1 file):**
+- `DispenseMedication.tsx` — 3 user-facing string replacements
+
+**Trade-offs:**
+- No backend changes needed — the `display_name` was already `'Walk-in Patient'`.
+- Internal code naming (component name `CustomerWalkIn`, module directory `customer-walkin/`, types `CustomerWalkInProps`) was not changed to minimize diff scope. These are internal identifiers not visible to users.
+
+---
+
 ## 2026-05-21: Refund Amount Capped at Total Paid — Prevents Over-Refunding Partial Payments
 
 **Context:** When a patient made a partial payment of 5000 on a total of 5500, the system allowed a full refund of 5500 (the grand total) instead of capping at 5000 (what was actually paid). Three root causes were identified:

@@ -3,7 +3,7 @@
  * ============================================================================
  * DISPENSE MEDICATION - MAIN COMPONENT
  * ============================================================================
- * Four entry points: Customer Walk-in, Patient Search, Quick Create, Queue
+ * Four entry points: Walk-in Patient, Patient Search, Quick Create, Queue
  */
 
 import React from 'react';
@@ -33,7 +33,7 @@ const DispenseMedication: React.FC<DispenseMedicationProps> = ({ theme }) => {
   const entryPoints: EntryPointConfig[] = [
     {
       key: 'walk-in',
-      label: 'Customer Walk-in',
+      label: 'Walk-in Patient',
       icon: <UserPlus className="w-5 h-5" />,
       to: PHARMACY_ROUTES.WALKIN_PATIENT,
       description: 'Create system-generated user & visit',
@@ -128,7 +128,7 @@ const DispenseMedication: React.FC<DispenseMedicationProps> = ({ theme }) => {
             Quick Guide
           </h4>
           <ul className={`text-xs space-y-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-            <li>• Walk-in for unknown customers</li>
+            <li>• Walk-in for unknown patients</li>
             <li>• Search for existing patients</li>
             <li>• Quick create for new patients</li>
             <li>• Queue for pending prescriptions</li>
