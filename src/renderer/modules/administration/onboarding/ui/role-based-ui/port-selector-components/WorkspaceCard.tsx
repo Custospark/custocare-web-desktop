@@ -22,6 +22,11 @@ interface Badge {
   animated?: boolean;
 }
 
+interface MetadataItem {
+  label: string;
+  value: string;
+}
+
 interface WorkspaceCardProps {
   id: string;
   title: string;
@@ -33,6 +38,7 @@ interface WorkspaceCardProps {
   buttonGradient: string;
   features?: Feature[];
   badges?: Badge[];
+  metadata?: MetadataItem[];
   imageUrl?: string;
   theme: 'light' | 'dark';
   onClick: () => void;
@@ -50,6 +56,7 @@ export const WorkspaceCard: React.FC<WorkspaceCardProps> = ({
   buttonGradient,
   features = [],
   badges = [],
+  metadata = [],
   imageUrl,
   theme,
   onClick,
@@ -186,6 +193,24 @@ export const WorkspaceCard: React.FC<WorkspaceCardProps> = ({
                     >
                       <feature.icon className="w-3 h-3 shrink-0" />
                       <span className="truncate max-w-24">{feature.label}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Metadata - details section */}
+              {metadata.length > 0 && (
+                <div className="space-y-1 pt-1">
+                  {metadata.map((item, index) => (
+                    <div
+                      key={index}
+                      className={cn(
+                        'flex items-center justify-between text-[11px] px-2 py-1 rounded-md',
+                        theme === 'dark' ? 'bg-gray-800/50 text-gray-300' : 'bg-gray-50 text-gray-700'
+                      )}
+                    >
+                      <span className="font-medium">{item.label}</span>
+                      <span className={theme === 'dark' ? 'text-gray-100' : 'text-gray-900'}>{item.value}</span>
                     </div>
                   ))}
                 </div>
