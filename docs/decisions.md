@@ -2,6 +2,19 @@
 
 ---
 
+## 2026-05-23: Error Boundary — Friendlier Icon & Visual Tone
+
+**Context:** Users found the `AlertTriangle` icon with `animate-pulse` on the error boundary page alarming and unsettling. The red-tinted background gradient also contributed to a stressful experience during errors.
+
+**Decisions:**
+- Replaced `AlertTriangle` (lucide-react) with `Frown` — a sympathetic sad face icon conveys empathy rather than alarm
+- Removed `animate-pulse` so the icon is static and calm
+- Changed background gradient from `red-50/orange-50/yellow-50` to `blue-50/indigo-50/purple-50` — a calming cool palette
+- Changed icon color from `text-red-500` to `text-amber-400` — softer, less urgent
+- Messaging ("Something Went Wrong" + friendly description) was already correct and unchanged
+
+---
+
 ## 2026-05-22: Custocare Hub + Platform Admin — Optimistic Updates, Meaningful Icons, Refresh Buttons
 
 **Context:** All Custocare Hub user-facing actions (View Discussions, Create Post, Feature Ideas, Vote, Submit Feedback, Open Ticket, etc.) and their corresponding Platform Admin management pages lacked optimistic UI updates, meaningful action icons, and manual refresh controls. Users had to wait for mutation responses before seeing their changes reflected, the horizontal action strip used a generic `FileText` icon for everything, and there was no way to manually refresh lists.

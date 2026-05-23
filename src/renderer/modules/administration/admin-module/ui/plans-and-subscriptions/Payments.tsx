@@ -936,6 +936,7 @@ export const Payments: React.FC<PaymentsProps> = ({ theme }) => {
   const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
   const [currentPage, setCurrentPage]     = useState(1);
   const [itemsPerPage, setItemsPerPage]   = useState(10);
+  const [selectedMethod, setSelectedMethod] = useState<string | null>(null);
 
   const {
     data: paymentsResponse, isLoading, error, refetch,
@@ -980,13 +981,6 @@ export const Payments: React.FC<PaymentsProps> = ({ theme }) => {
   }, [filteredPayments, currentPage, itemsPerPage]);
 
   const totalPages = Math.ceil(filteredPayments.length / itemsPerPage);
-
-  const stats = useMemo(() => ({
-    total:         payments.reduce((s, p) => s + p.amount, 0),
-    approved:      payments.filter(p => p.status === PaymentStatus.APPROVED).reduce((s, p) => s + p.amount, 0),
-    pending:       payments.filter(p => p.status === PaymentStatus.PENDING).length,
-    pendingAmount: payments.filter(p => p.status === PaymentStatus.PENDING).reduce((s, p) => s + p.amount, 0),
-  }), [payments]);
 
   // ── Direct submission — no nested confirm dialog ──────────────────────────
   const handleRecordPayment = (data: RecordPaymentFormData) => {
@@ -1062,25 +1056,74 @@ export const Payments: React.FC<PaymentsProps> = ({ theme }) => {
         </button>
       </div>
 
-      {/* Bank Details Banner — always visible */}
-      <BankDetailsCard theme={theme} compact />
-
-      {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {[
-          { label: 'Total Submitted', value: `${stats.total.toLocaleString()} UGX`, color: '' },
-          { label: 'Approved', value: `${stats.approved.toLocaleString()} UGX`, color: 'text-green-500' },
-          { label: 'Pending Count', value: stats.pending, color: 'text-yellow-500' },
-          { label: 'Pending Amount', value: `${stats.pendingAmount.toLocaleString()} UGX`, color: 'text-yellow-500' },
-        ].map(({ label, value, color }) => (
-          <div key={label} className={cn(
-            'rounded-xl p-4 border',
-            isDark ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200',
-          )}>
-            <p className={cn('text-sm mb-1', isDark ? 'text-gray-400' : 'text-gray-500')}>{label}</p>
-            <p className={cn('text-xl font-bold', color)}>{value}</p>
+      {/* Payment Method Selector */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <button
+          onClick={() => setSelectedMethod(selectedMethod === 'bank' ? null : 'bank')}
+          className={cn(
+            'relative rounded-xl border-2 p-5 text-left transition-all cursor-pointer',
+            selectedMethod === 'bank'
+              ? isDark
+                ? 'border-blue-500 bg-blue-500/10 shadow-lg shadow-blue-500/10'
+                : 'border-blue-500 bg-blue-50 shadow-lg shadow-blue-500/10'
+              : isDark
+                ? 'border-gray-700 bg-gray-800/40 hover:border-gray-600'
+                : 'border-gray-200 bg-white hover:border-gray-300'
+          )}
+        >
+          <div className="flex items-center gap-3 mb-2">
+            <div className={cn(
+              'w-10 h-10 rounded-lg flex items-center justify-center',
+              selectedMethod === 'bank' ? 'bg-blue-600 text-white' : isDark ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-600'
+            )}>
+              <Landmark className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className={cn('font-bold text-sm', isDark ? 'text-white' : 'text-gray-900')}>Bank Transfer</h3>
+              <p className={cn('text-xs', isDark ? 'text-gray-400' : 'text-gray-500')}>
+                Transfer directly to our bank account
+              </p>
+            </div>
           </div>
-        ))}
+          {selectedMethod === 'bank' && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              className="mt-3"
+            >
+              <BankDetailsCard theme={theme} />
+            </motion.div>
+          )}
+        </button>
+
+        <div className={cn(
+          'relative rounded-xl border-2 border-dashed p-5 text-left',
+          isDark ? 'border-gray-700 bg-gray-800/20' : 'border-gray-300 bg-gray-50/50'
+        )}>
+          <div className="flex items-center gap-3 mb-2">
+            <div className={cn(
+              'w-10 h-10 rounded-lg flex items-center justify-center',
+              isDark ? 'bg-gray-700 text-gray-400' : 'bg-gray-100 text-gray-400'
+            )}>
+              <Smartphone className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className={cn('font-bold text-sm', isDark ? 'text-gray-400' : 'text-gray-500')}>Mobile Money</h3>
+              <p className={cn('text-xs', isDark ? 'text-gray-500' : 'text-gray-400')}>
+                Coming soon — MTN MoMo, Airtel Money
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className={cn(
+        'rounded-xl border border-dashed p-4 text-center',
+        isDark ? 'border-gray-700 bg-gray-800/10' : 'border-gray-200 bg-gray-50/50'
+      )}>
+        <p className={cn('text-xs', isDark ? 'text-gray-500' : 'text-gray-500')}>
+          More payment methods are being integrated — card payments (Flutterwave), PayPal, and regional gateways.
+        </p>
       </div>
 
       {/* Filter Bar */}
