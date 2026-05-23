@@ -9,7 +9,7 @@
  */
 
 import  { Component, type ErrorInfo, type ReactNode } from 'react';
-import { AlertTriangle, RefreshCw, Home } from 'lucide-react';
+import { Frown, RefreshCw, Home } from 'lucide-react';
 
 interface Props {
   children: ReactNode;
@@ -52,11 +52,11 @@ class ErrorBoundary extends Component<Props, State> {
       }
 
       return (
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-red-50 via-orange-50 to-yellow-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-800 p-4">
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-800 p-4">
           <div className="text-center max-w-2xl w-full">
             {/* Icon */}
             <div className="mb-8">
-              <AlertTriangle className="w-24 h-24 text-red-500 dark:text-red-400 mx-auto animate-pulse" />
+              <Frown className="w-24 h-24 text-amber-400 dark:text-amber-300 mx-auto" />
             </div>
 
             {/* Title */}

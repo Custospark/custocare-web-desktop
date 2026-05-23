@@ -323,7 +323,7 @@ export const AvailablePlans: React.FC<AvailablePlansProps> = ({ theme }) => {
 
                 {isCurrent && isInTrial && (
                   <button
-                    onClick={() => navigate(ADMINISTRATION_PLANS_SUBSCRIPTIONS_ROUTES.SUBSCRIPTIONS)}
+                    onClick={() => navigate(ADMINISTRATION_PLANS_SUBSCRIPTIONS_ROUTES.PAYMENTS)}
                     className="w-full py-2.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-emerald-600 text-white shadow-lg hover:shadow-xl hover:scale-[1.02] cursor-pointer"
                   >
                     <CreditCard className="w-3.5 h-3.5" />
@@ -345,6 +345,20 @@ export const AvailablePlans: React.FC<AvailablePlansProps> = ({ theme }) => {
                     ) : (
                       <><Crown className="w-3.5 h-3.5" /> Start Free Trial</>
                     )}
+                  </button>
+                )}
+
+                {isInTrial && !isCurrent && (
+                  <button
+                    onClick={() => handlePlanAction(plan.id)}
+                    disabled={createSubscription.isPending}
+                    className={cn(
+                      "w-full py-2.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer bg-gradient-to-r from-blue-600 to-indigo-700 text-white shadow-lg hover:shadow-xl hover:scale-[1.02]",
+                      createSubscription.isPending && "opacity-60 cursor-wait"
+                    )}
+                  >
+                    <Crown className="w-3.5 h-3.5" />
+                    Subscribe
                   </button>
                 )}
 

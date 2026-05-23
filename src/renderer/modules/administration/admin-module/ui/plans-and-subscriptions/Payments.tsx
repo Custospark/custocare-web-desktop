@@ -1428,6 +1428,21 @@ export const Payments: React.FC<PaymentsProps> = ({ theme }) => {
             onClose={() => setSelectedPayment(null)}
           />
         )}
+        {/* Coming Soon — Additional Payment Methods */}
+        <div className={cn(
+          'rounded-2xl border-2 border-dashed p-8 text-center',
+          isDark ? 'border-gray-700 bg-gray-800/20' : 'border-gray-300 bg-gray-50/50'
+        )}>
+          <Smartphone className={cn('w-10 h-10 mx-auto mb-3', isDark ? 'text-gray-500' : 'text-gray-400')} />
+          <h3 className={cn('font-bold text-sm mb-1', isDark ? 'text-gray-300' : 'text-gray-700')}>
+            More payment methods coming soon
+          </h3>
+          <p className={cn('text-xs max-w-md mx-auto', isDark ? 'text-gray-500' : 'text-gray-500')}>
+            We are integrating mobile money (MTN MoMo, Airtel Money), card payments via Flutterwave,
+            and other regional payment gateways. You will be notified as soon as they become available.
+          </p>
+        </div>
+
         {showRecordModal && (
           <RecordPaymentModal
             theme={theme}

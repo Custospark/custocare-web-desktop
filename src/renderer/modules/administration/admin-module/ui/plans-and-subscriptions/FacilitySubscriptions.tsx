@@ -22,9 +22,6 @@ import {
   Eye,
   EyeOff,
   ArrowLeft,
-  Copy,
-  CheckCheck,
-  Landmark,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -44,13 +41,6 @@ import LoadingSkeleton from '../../../../../shared/components/Loading/LoadingSke
 import { useConfirm } from '../../../../../shared/components/Feedback/ConfirmDialog/ConfirmContext';
 import { ADMINISTRATION_PLANS_SUBSCRIPTIONS_ROUTES } from '../../../../../app/routes/constants/administration.paths';
 import { cn } from '../../../../../shared/utils/classNameUtils';
-
-// ─── Bank Details ─────────────────────────────────────────────────────────────
-const BANK_DETAILS = {
-  bank: 'Stanbic Bank Uganda',
-  accountName: 'Custospark Company Ltd',
-  accountNumber: '9030027316580',
-};
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface FacilitySubscriptionsProps {
@@ -112,49 +102,7 @@ const SubscriptionStatusBadge: React.FC<SubscriptionStatusBadgeProps> = ({
   );
 };
 
-// ─── Bank Details Mini Card ───────────────────────────────────────────────────
-const BankMiniCard: React.FC<{ theme: 'light' | 'dark' }> = ({ theme }) => {
-  const isDark = theme === 'dark';
-  const [copied, setCopied] = useState<string | null>(null);
-
-  const copy = (val: string, key: string) => {
-    navigator.clipboard.writeText(val).then(() => {
-      setCopied(key);
-      setTimeout(() => setCopied(null), 2000);
-    });
-  };
-
-  const rows = [
-    { label: 'Bank', value: BANK_DETAILS.bank, key: 'bank' },
-    { label: 'Account Name', value: BANK_DETAILS.accountName, key: 'name' },
-    { label: 'Account No.', value: BANK_DETAILS.accountNumber, key: 'num', mono: true },
-  ];
-
-  return (
-    <div className={cn('rounded-xl border overflow-hidden', isDark ? 'border-blue-700/50 bg-blue-900/20' : 'border-blue-200 bg-blue-50')}>
-      <div className={cn('flex items-center gap-2 px-4 py-2.5 border-b', isDark ? 'border-blue-700/40 bg-blue-900/30' : 'border-blue-200 bg-blue-100')}>
-        <Landmark className={cn('w-4 h-4', isDark ? 'text-blue-400' : 'text-blue-600')} />
-        <span className={cn('text-sm font-semibold', isDark ? 'text-blue-300' : 'text-blue-700')}>
-          Payment Bank Details
-        </span>
-      </div>
-      {rows.map(({ label, value, key, mono }) => (
-        <div key={key} className={cn('flex items-center justify-between px-4 py-2 gap-3', isDark ? 'divide-blue-700/20' : '')}>
-          <div className="flex-1 min-w-0">
-            <p className={cn('text-xs', isDark ? 'text-blue-400' : 'text-blue-500')}>{label}</p>
-            <p className={cn('font-semibold text-sm', mono ? 'font-mono tracking-wide uppercase' : '', isDark ? 'text-blue-100' : 'text-blue-900')}>
-              {value}
-            </p>
-          </div>
-          <button type="button" onClick={() => copy(value, key)}
-            className={cn('p-1.5 rounded-lg flex-shrink-0', isDark ? 'hover:bg-blue-800/50 text-blue-400' : 'hover:bg-blue-200 text-blue-600')}>
-            {copied === key ? <CheckCheck className="w-3.5 h-3.5 text-green-500" /> : <Copy className="w-3.5 h-3.5" />}
-          </button>
-        </div>
-      ))}
-    </div>
-  );
-};
+// Bank details moved to Payments page
 
 // ─── Timeline Component ───────────────────────────────────────────────────────
 const SubscriptionTimeline: React.FC<{
@@ -332,10 +280,9 @@ const InactiveSubscriptionBanner: React.FC<{
       {/* Bank Details */}
       {!isCancelled && (
         <div className="max-w-md">
-          <p className={cn('text-sm font-medium mb-2', isDark ? 'text-gray-300' : 'text-gray-700')}>
-            To restore access, pay to:
+          <p className={cn('text-sm', isDark ? 'text-gray-400' : 'text-gray-600')}>
+            Go to Payments to submit a payment and restore access.
           </p>
-          <BankMiniCard theme={theme} />
         </div>
       )}
     </div>
@@ -787,13 +734,12 @@ export const FacilitySubscriptions: React.FC<FacilitySubscriptionsProps> = ({
             </div>
           </div>
 
-          {/* Bank Details — show in trial to prompt payment */}
+          {/* Prompt to make payment — only during trial */}
           {isTrial && (
             <div>
-              <p className={cn('text-sm font-medium mb-2', isDark ? 'text-gray-300' : 'text-gray-700')}>
-                Pay to this account to activate:
+              <p className={cn('text-sm', isDark ? 'text-gray-400' : 'text-gray-600')}>
+                Make a payment to activate your subscription. Go to Payments to submit your payment.
               </p>
-              <BankMiniCard theme={theme} />
             </div>
           )}
 
