@@ -76,11 +76,11 @@ const ComparisonModal: React.FC<ComparisonModalProps> = ({ theme, plans, onClose
 
   const formatFeatureValue = (plan: Plan, feature: string): string => {
     if (feature === 'pricing') {
-      return `${plan.pricing.ugx.toLocaleString()} UGX / ${plan.pricing.billing_cycle}`;
+      return `$${plan.pricing.usd} USD / ${plan.pricing.billing_cycle}`;
     }
     if (feature === 'onboarding_fee') {
       return plan.onboarding_fee.applicable
-        ? `${plan.onboarding_fee.ugx.toLocaleString()} UGX`
+        ? `$${plan.onboarding_fee.usd} USD`
         : 'No fee';
     }
     if (feature === 'trial_days') {
@@ -168,9 +168,9 @@ const ComparisonModal: React.FC<ComparisonModalProps> = ({ theme, plans, onClose
                         )}
                       </div>
                       <div className="text-2xl font-bold">
-                        {plan.pricing.ugx.toLocaleString()} UGX
+                        ${plan.pricing.usd}
                         <span className={cn('text-sm font-normal ml-1', isDark ? 'text-gray-400' : 'text-gray-500')}>
-                          /{plan.pricing.billing_cycle}
+                          USD / {plan.pricing.billing_cycle}
                         </span>
                       </div>
                     </div>
@@ -275,7 +275,7 @@ const PlanCard: React.FC<PlanCardProps> = ({
     { name: 'Departments', value: plan.limits.max_departments === null ? 'Unlimited' : `Up to ${plan.limits.max_departments}` },
     { name: 'Patients/Month', value: plan.limits.max_patients_per_month === null ? 'Unlimited' : `Up to ${plan.limits.max_patients_per_month}` },
     { name: 'Trial Period', value: `${plan.trial_days} days` },
-    { name: 'Onboarding Fee', value: plan.onboarding_fee.applicable ? `${plan.onboarding_fee.ugx.toLocaleString()} UGX` : 'No fee' },
+    { name: 'Onboarding Fee', value: plan.onboarding_fee.applicable ? `$${plan.onboarding_fee.usd} USD` : 'No fee' },
   ];
 
   // Add feature flags from the features object
@@ -351,14 +351,19 @@ const PlanCard: React.FC<PlanCardProps> = ({
         {/* Price */}
         <div className="text-center mb-6">
           <div className="flex items-baseline justify-center gap-1">
-            <span className="text-4xl font-bold">{plan.pricing.ugx.toLocaleString()}</span>
+            <span className="text-4xl font-bold">${plan.pricing.usd}</span>
             <span className={cn('text-sm', isDark ? 'text-gray-400' : 'text-gray-500')}>
-              UGX / {plan.pricing.billing_cycle}
+              USD / {plan.pricing.billing_cycle}
             </span>
           </div>
-          {plan.onboarding_fee.applicable && (
+          {plan.pricing.ugx > 0 && (
             <div className={cn('text-xs mt-1', isDark ? 'text-gray-500' : 'text-gray-500')}>
-              + {plan.onboarding_fee.ugx.toLocaleString()} UGX one-time setup
+              ~{plan.pricing.ugx.toLocaleString()} UGX
+            </div>
+          )}
+          {plan.onboarding_fee.applicable && (
+            <div className={cn('text-xs', isDark ? 'text-gray-500' : 'text-gray-500')}>
+              + ${plan.onboarding_fee.usd} USD one-time setup
             </div>
           )}
         </div>

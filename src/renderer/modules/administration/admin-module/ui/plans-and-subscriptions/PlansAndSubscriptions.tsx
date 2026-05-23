@@ -6,7 +6,7 @@
  */
 
 import React from 'react';
-import { CreditCard, Clock, Zap } from 'lucide-react';
+import { CreditCard, Clock, Zap, FileText } from 'lucide-react';
 import { BaseActionWorkspace } from '../../../../../shared/components/workspace/BaseActionWorkspace';
 
 import { ADMINISTRATION_PLANS_SUBSCRIPTIONS_ROUTES } from '../../../../../app/routes/constants/administration.paths';
@@ -41,6 +41,12 @@ const PlansAndSubscriptions: React.FC<PlansAndSubscriptionsProps> = ({ theme }) 
           label: 'Payments', 
           icon: <CreditCard className="w-4 h-4" />, 
           to: ADMINISTRATION_PLANS_SUBSCRIPTIONS_ROUTES.PAYMENTS 
+        },
+        { 
+          key: 'invoices', 
+          label: 'Invoices', 
+          icon: <FileText className="w-4 h-4" />, 
+          to: ADMINISTRATION_PLANS_SUBSCRIPTIONS_ROUTES.INVOICES 
         },
       ]}
     />
