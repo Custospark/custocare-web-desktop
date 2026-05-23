@@ -102,6 +102,7 @@ export const AvailablePlans: React.FC<AvailablePlansProps> = ({ theme }) => {
   const handlePlanAction = async (planId: number) => {
     const plan = sorted.find(p => p.id === planId);
     if (!plan) return;
+    const currentName = currentPlan?.name || '';
 
     dispatch(selectPlan({
       planId: plan.id,
@@ -113,7 +114,7 @@ export const AvailablePlans: React.FC<AvailablePlansProps> = ({ theme }) => {
     if (!hasActiveSubscription) {
       const confirmed = await confirm({
         title: 'Subscribe to Plan',
-        message: 'You are about to start a subscription. A 7-day free trial will begin immediately.',
+        message: `You are about to start a ${plan.name} subscription. A 7-day free trial will begin immediately.`,
         confirmText: 'Start Free Trial',
         cancelText: 'Cancel',
         variant: 'info',
@@ -125,17 +126,36 @@ export const AvailablePlans: React.FC<AvailablePlansProps> = ({ theme }) => {
       return;
     }
 
+    if (isInTrial) {
+      const confirmed = await confirm({
+        title: 'Switch Plan',
+        message: `You are currently on ${currentName} (trial). You will be subscribed to ${plan.name}. Your trial will transition to the new plan.`,
+        confirmText: 'Switch & Continue',
+        cancelText: 'Cancel',
+        variant: 'info',
+        theme,
+      });
+      if (!confirmed) return;
+      cancelSubscription.mutate({}, {
+        onSuccess: () => {
+          createSubscription.mutate({ data: { plan_id: planId } });
+          navigate(ADMINISTRATION_PLANS_SUBSCRIPTIONS_ROUTES.PAYMENTS);
+        },
+      });
+      return;
+    }
+
     if (isUpgrade(planId)) {
       const confirmed = await confirm({
         title: 'Upgrade Plan',
-        message: 'Your plan will be upgraded immediately. Your new billing rate will take effect now.',
+        message: `You are currently on ${currentName}. Your plan will be upgraded to ${plan.name}.`,
         confirmText: 'Upgrade',
         cancelText: 'Cancel',
         variant: 'info',
         theme,
       });
       if (!confirmed) return;
-      cancelSubscription.mutate(undefined, {
+      cancelSubscription.mutate({}, {
         onSuccess: () => {
           createSubscription.mutate({ data: { plan_id: planId } });
           navigate(ADMINISTRATION_PLANS_SUBSCRIPTIONS_ROUTES.PAYMENTS);
@@ -147,14 +167,14 @@ export const AvailablePlans: React.FC<AvailablePlansProps> = ({ theme }) => {
     if (isDowngrade(planId)) {
       const confirmed = await confirm({
         title: 'Downgrade Plan',
-        message: 'Your plan will be downgraded. Some features may be limited. Changes take effect next billing cycle.',
+        message: `You are currently on ${currentName}. Your plan will be downgraded to ${plan.name}. Some features may be limited.`,
         confirmText: 'Downgrade',
         cancelText: 'Cancel',
         variant: 'warning',
         theme,
       });
       if (!confirmed) return;
-      cancelSubscription.mutate(undefined, {
+      cancelSubscription.mutate({}, {
         onSuccess: () => {
           createSubscription.mutate({ data: { plan_id: planId } });
           navigate(ADMINISTRATION_PLANS_SUBSCRIPTIONS_ROUTES.PAYMENTS);

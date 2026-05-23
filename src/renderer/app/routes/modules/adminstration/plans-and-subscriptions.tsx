@@ -6,6 +6,7 @@ import FacilitySubscriptions from "../../../../modules/administration/admin-modu
 
 const AvailablePlans = React.lazy(() => import("../../../../modules/administration/admin-module/ui/plans-and-subscriptions/AvailablePlans"));
 const Payments = React.lazy(() => import("../../../../modules/administration/admin-module/ui/plans-and-subscriptions/Payments"));
+const Invoices = React.lazy(() => import("../../../../modules/administration/admin-module/ui/plans-and-subscriptions/Invoices"));
 
 export const plansSubscriptionsRoutes = [
   <Route
@@ -34,6 +35,16 @@ export const plansSubscriptionsRoutes = [
     element={
       <SuspenseWrapper variant="table">
         <WithThemeProp Component={Payments} />
+      </SuspenseWrapper>
+    }
+  />,
+
+  <Route
+    key="invoices"
+    path={ADMINISTRATION_PLANS_SUBSCRIPTIONS_ROUTES.INVOICES}
+    element={
+      <SuspenseWrapper variant="table">
+        <WithThemeProp Component={Invoices} />
       </SuspenseWrapper>
     }
   />,

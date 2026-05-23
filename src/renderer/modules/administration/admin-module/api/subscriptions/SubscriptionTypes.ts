@@ -525,6 +525,126 @@ export interface AdminRejectPaymentParams {
 }
 
 // ============================================================================
+// INVOICE ENUMS & TYPES
+// ============================================================================
+
+export enum InvoiceStatus {
+  PAID = 'paid',
+  UNPAID = 'unpaid',
+  OVERDUE = 'overdue',
+  PARTIALLY_PAID = 'partially_paid',
+  CANCELLED = 'cancelled',
+  REFUNDED = 'refunded',
+}
+
+export enum InvoiceType {
+  SUBSCRIPTION = 'subscription',
+  RENEWAL = 'renewal',
+  ONBOARDING = 'onboarding',
+  ADJUSTMENT = 'adjustment',
+}
+
+export interface InvoiceLineItem {
+  description: string;
+  quantity: number;
+  unit_price: number;
+  total: number;
+}
+
+export interface Invoice {
+  id: number;
+  facility_id: number;
+  subscription_id: number;
+  invoice_number: string;
+  invoice_type: InvoiceType | string;
+  invoice_type_label: string;
+  status: InvoiceStatus | string;
+  status_label: string;
+  amount: number;
+  currency: string;
+  paid_amount: number;
+  balance_due: number;
+  description: string | null;
+  line_items: InvoiceLineItem[] | null;
+  issued_at: string | null;
+  due_at: string | null;
+  paid_at: string | null;
+  cancelled_at: string | null;
+  subscription?: {
+    id: number;
+    status: string;
+    plan?: { id: number; name: string; slug: string } | null;
+  } | null;
+  facility?: {
+    id: number;
+    facility_name: string | null;
+    facility_code: string | null;
+  } | null;
+  created_at: string | null;
+}
+
+/** GET /facilities/{facility}/invoices */
+export type GetFacilityInvoicesResponse = PaginatedResponse<Invoice>;
+
+/** GET /admin/billing/invoices */
+export type GetAdminInvoicesResponse = PaginatedResponse<Invoice>;
+
+/** GET /facilities/{facility}/invoices/{invoice} */
+export type GetInvoiceResponse = ApiSuccessResponse<Invoice>;
+
+/** Filters for GET /facilities/{facility}/invoices */
+export interface FacilityInvoiceFilters {
+  status?: InvoiceStatus | string;
+  invoice_type?: InvoiceType | string;
+  date_from?: string;
+  date_to?: string;
+  per_page?: number;
+}
+
+/** Filters for GET /admin/billing/invoices */
+export interface AdminInvoiceFilters {
+  status?: InvoiceStatus | string;
+  facility_id?: number;
+  invoice_type?: InvoiceType | string;
+  per_page?: number;
+}
+
+/** POST /admin/billing/invoices/{invoice}/mark-paid */
+export interface MarkInvoicePaidRequest {
+  amount: number;
+  paid_at?: string | null;
+}
+
+/** POST /admin/billing/invoices/{invoice}/mark-paid params */
+export interface AdminMarkInvoicePaidParams {
+  invoiceId: number;
+  data: MarkInvoicePaidRequest;
+}
+
+/** POST /admin/billing/invoices/{invoice}/cancel params */
+export interface AdminCancelInvoiceParams {
+  invoiceId: number;
+}
+
+/** Labels for invoice statuses (mirrors backend InvoiceStatus::label()). */
+export const INVOICE_STATUS_LABELS: Record<InvoiceStatus, string> = {
+  [InvoiceStatus.PAID]: 'Paid',
+  [InvoiceStatus.UNPAID]: 'Unpaid',
+  [InvoiceStatus.OVERDUE]: 'Overdue',
+  [InvoiceStatus.PARTIALLY_PAID]: 'Partially Paid',
+  [InvoiceStatus.CANCELLED]: 'Cancelled',
+  [InvoiceStatus.REFUNDED]: 'Refunded',
+};
+
+/** Labels for invoice types (mirrors backend InvoiceType::label()). */
+export const INVOICE_TYPE_LABELS: Record<InvoiceType, string> = {
+  [InvoiceType.SUBSCRIPTION]: 'Subscription',
+  [InvoiceType.RENEWAL]: 'Renewal',
+  [InvoiceType.ONBOARDING]: 'Onboarding Fee',
+  [InvoiceType.ADJUSTMENT]: 'Adjustment',
+};
+
+// ============================================================================
 // UTILITY TYPES & CONSTANTS
 // ============================================================================
 

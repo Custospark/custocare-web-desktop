@@ -51,9 +51,12 @@ import { useToast } from '../../../../../app/store/contexts/toast/useToast';
 
 import type {
   AdminApprovePaymentParams,
+  AdminCancelInvoiceParams,
   AdminDeletePlanParams,
   AdminDeletePlanResponse,
+  AdminInvoiceFilters,
   AdminManageSubscriptionParams,
+  AdminMarkInvoicePaidParams,
   AdminPaymentFilters,
   AdminPaymentResponse,
   AdminPlanFilters,
@@ -67,7 +70,11 @@ import type {
   CancelSubscriptionResponse,
   CreateSubscriptionParams,
   CreateSubscriptionResponse,
+  FacilityInvoiceFilters,
   FacilityPaymentFilters,
+  GetAdminInvoicesResponse,
+  GetFacilityInvoicesResponse,
+  GetInvoiceResponse,
   GetPaymentResponse,
   GetPlanResponse,
   GetSubscriptionResponse,
@@ -118,12 +125,25 @@ export const subscriptionKeys = {
     all: ['payments'] as const,
 
     // Facility-facing payment keys
-    facilityList:   (facilityId: number, filters?: FacilityPaymentFilters) => [...subscriptionKeys.payments.all, 'facility', facilityId, 'list', filters ?? {}] as const,
-    facilityDetail: (facilityId: number, paymentId: number | string)       => [...subscriptionKeys.payments.all, 'facility', facilityId, 'detail', paymentId] as const,
+    facility:    (facilityId: number)                          => [...subscriptionKeys.payments.all, 'facility', facilityId] as const,
+    facilityList: (facilityId: number, filters?: FacilityPaymentFilters) => [...subscriptionKeys.payments.facility(facilityId), 'list', filters ?? {}] as const,
+    facilityDetail: (facilityId: number, paymentId: number)    => [...subscriptionKeys.payments.facility(facilityId), 'detail', paymentId] as const,
 
     // Admin payment keys
     adminList:   (filters?: AdminPaymentFilters)    => [...subscriptionKeys.payments.all, 'admin', 'list', filters ?? {}] as const,
     adminDetail: (paymentId: number | string)       => [...subscriptionKeys.payments.all, 'admin', 'detail', paymentId] as const,
+  },
+
+  // ── Invoices ───────────────────────────────────────────────────────────────
+  invoices: {
+    all: ['invoices'] as const,
+
+    facility:      (facilityId: number)                            => [...subscriptionKeys.invoices.all, 'facility', facilityId] as const,
+    facilityList:  (facilityId: number, filters?: FacilityInvoiceFilters) => [...subscriptionKeys.invoices.facility(facilityId), 'list', filters ?? {}] as const,
+    facilityDetail:(facilityId: number, invoiceId: number)        => [...subscriptionKeys.invoices.facility(facilityId), 'detail', invoiceId] as const,
+
+    adminList:     (filters?: AdminInvoiceFilters)                 => [...subscriptionKeys.invoices.all, 'admin', 'list', filters ?? {}] as const,
+    adminDetail:   (invoiceId: number | string)                    => [...subscriptionKeys.invoices.all, 'admin', 'detail', invoiceId] as const,
   },
 };
 
@@ -1097,6 +1117,169 @@ export const useAdminRejectPayment = (
     onError: (error: any) => {
       const axiosErr = error as AxiosError<ApiErrorResponse>;
       const base     = extractErrorMessage(axiosErr, 'Failed to reject payment.');
+      const details  = formatValidationErrors(axiosErr.response?.data?.errors);
+      showToast('error', details ? `${base} (${details})` : base, 9000);
+      callbacks.onError?.(axiosErr);
+    },
+  });
+};
+
+/* ========================================================================== */
+/*                         INVOICE QUERIES                                    */
+/* ========================================================================== */
+
+/**
+ * GET /facilities/{facility}/invoices
+ *
+ * Lists all invoices for the currently active facility.
+ *
+ * @example
+ * const { data, isLoading } = useGetFacilityInvoices({ status: 'unpaid' });
+ */
+export const useGetFacilityInvoices = (filters?: FacilityInvoiceFilters) => {
+  const facilityId = useActiveFacilityId();
+
+  return useQuery<GetFacilityInvoicesResponse, AxiosError<ApiErrorResponse>>({
+    queryKey: subscriptionKeys.invoices.facilityList(facilityId!, filters),
+    queryFn: async () => {
+      const res = await axiosInstance.get<GetFacilityInvoicesResponse>(
+        `/facilities/${facilityId}/invoices`,
+        { params: filters },
+      );
+      return res.data;
+    },
+    enabled: !!facilityId,
+  });
+};
+
+/**
+ * GET /facilities/{facility}/invoices/{invoice}
+ *
+ * Fetches a single invoice detail for the facility.
+ */
+export const useGetFacilityInvoice = (invoiceId: number) => {
+  const facilityId = useActiveFacilityId();
+
+  return useQuery<GetInvoiceResponse, AxiosError<ApiErrorResponse>>({
+    queryKey: subscriptionKeys.invoices.facilityDetail(facilityId!, invoiceId),
+    queryFn: async () => {
+      const res = await axiosInstance.get<GetInvoiceResponse>(
+        `/facilities/${facilityId}/invoices/${invoiceId}`,
+      );
+      return res.data;
+    },
+    enabled: !!facilityId && !!invoiceId,
+  });
+};
+
+/**
+ * GET /admin/billing/invoices
+ *
+ * Lists all invoices across all facilities (admin only).
+ */
+export const useGetAdminInvoices = (filters?: AdminInvoiceFilters) => {
+  return useQuery<GetAdminInvoicesResponse, AxiosError<ApiErrorResponse>>({
+    queryKey: subscriptionKeys.invoices.adminList(filters),
+    queryFn: async () => {
+      const res = await axiosInstance.get<GetAdminInvoicesResponse>(
+        '/admin/billing/invoices',
+        { params: filters },
+      );
+      return res.data;
+    },
+  });
+};
+
+/**
+ * GET /admin/billing/invoices/{invoice}
+ *
+ * Fetches a single invoice detail for admin view.
+ */
+export const useGetAdminInvoice = (invoiceId: number) => {
+  return useQuery<GetInvoiceResponse, AxiosError<ApiErrorResponse>>({
+    queryKey: subscriptionKeys.invoices.adminDetail(invoiceId),
+    queryFn: async () => {
+      const res = await axiosInstance.get<GetInvoiceResponse>(
+        `/admin/billing/invoices/${invoiceId}`,
+      );
+      return res.data;
+    },
+    enabled: !!invoiceId,
+  });
+};
+
+/**
+ * POST /admin/billing/invoices/{invoice}/mark-paid
+ *
+ * Admin marks an invoice as paid (full or partial).
+ */
+export const useAdminMarkInvoicePaid = (
+  callbacks: MutationCallbacks<GetInvoiceResponse, AxiosError<ApiErrorResponse>> = {},
+) => {
+  const { showToast } = useToast();
+  const queryClient   = useQueryClient();
+
+  return useMutation<
+    GetInvoiceResponse,
+    AxiosError<ApiErrorResponse>,
+    AdminMarkInvoicePaidParams
+  >({
+    mutationFn: async ({ invoiceId, data }) => {
+      const res = await axiosInstance.post<GetInvoiceResponse>(
+        `/admin/billing/invoices/${invoiceId}/mark-paid`,
+        data,
+      );
+      return res.data;
+    },
+
+    onSuccess: (data) => {
+      showToast('success', data.message || 'Invoice marked as paid.', 6000);
+      queryClient.invalidateQueries({ queryKey: subscriptionKeys.invoices.all });
+      callbacks.onSuccess?.(data);
+    },
+
+    onError: (error: any) => {
+      const axiosErr = error as AxiosError<ApiErrorResponse>;
+      const base     = extractErrorMessage(axiosErr, 'Failed to mark invoice as paid.');
+      const details  = formatValidationErrors(axiosErr.response?.data?.errors);
+      showToast('error', details ? `${base} (${details})` : base, 9000);
+      callbacks.onError?.(axiosErr);
+    },
+  });
+};
+
+/**
+ * POST /admin/billing/invoices/{invoice}/cancel
+ *
+ * Admin cancels an unpaid invoice.
+ */
+export const useAdminCancelInvoice = (
+  callbacks: MutationCallbacks<GetInvoiceResponse, AxiosError<ApiErrorResponse>> = {},
+) => {
+  const { showToast } = useToast();
+  const queryClient   = useQueryClient();
+
+  return useMutation<
+    GetInvoiceResponse,
+    AxiosError<ApiErrorResponse>,
+    AdminCancelInvoiceParams
+  >({
+    mutationFn: async ({ invoiceId }) => {
+      const res = await axiosInstance.post<GetInvoiceResponse>(
+        `/admin/billing/invoices/${invoiceId}/cancel`,
+      );
+      return res.data;
+    },
+
+    onSuccess: (data) => {
+      showToast('success', data.message || 'Invoice cancelled.', 6000);
+      queryClient.invalidateQueries({ queryKey: subscriptionKeys.invoices.all });
+      callbacks.onSuccess?.(data);
+    },
+
+    onError: (error: any) => {
+      const axiosErr = error as AxiosError<ApiErrorResponse>;
+      const base     = extractErrorMessage(axiosErr, 'Failed to cancel invoice.');
       const details  = formatValidationErrors(axiosErr.response?.data?.errors);
       showToast('error', details ? `${base} (${details})` : base, 9000);
       callbacks.onError?.(axiosErr);
