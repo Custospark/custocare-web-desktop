@@ -26,6 +26,7 @@ import { motion } from 'framer-motion';
 import {
   useGetFacilitySubscription,
   useGetFacilityPayments,
+  useGetFacilityUsage,
 } from '../../api/subscriptions/SubscriptionQueries';
 import {
   type Subscription,
@@ -297,9 +298,11 @@ export const FacilitySubscriptions: React.FC<FacilitySubscriptionsProps> = ({
 
   const { data: subResp, isLoading: subLoading, error: subError } = useGetFacilitySubscription();
   const { data: paymentsResp } = useGetFacilityPayments({ per_page: 20 });
+  const { data: usageResp, refetch: refetchUsage } = useGetFacilityUsage();
 
   const subscription = subResp?.data;
   const payments     = paymentsResp?.data || [];
+  const usage        = usageResp?.data;
 
   // ── Loading ──────────────────────────────────────────────────────────────────
   if (subLoading) {
@@ -591,26 +594,46 @@ export const FacilitySubscriptions: React.FC<FacilitySubscriptionsProps> = ({
         <div className="space-y-6">
           {/* Usage Card */}
           <div className={cn('rounded-2xl border p-6', isDark ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200')}>
-            <h3 className="font-semibold mb-4 flex items-center gap-2">
-              <TrendingUp className="w-5 h-5 text-blue-500" />
-              Current Usage
-            </h3>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-semibold flex items-center gap-2">
+                <TrendingUp className="w-5 h-5 text-blue-500" />
+                Current Usage
+              </h3>
+              <button
+                onClick={() => refetchUsage()}
+                className={cn('p-1.5 rounded-lg transition-colors', isDark ? 'hover:bg-gray-800 text-gray-400' : 'hover:bg-gray-100 text-gray-500')}
+                title="Refresh usage stats"
+              >
+                <RefreshCw className="w-4 h-4" />
+              </button>
+            </div>
             <div className="space-y-4">
               {[
-                { label: 'Staff Accounts',        max: subscription.plan?.limits.max_staff },
-                { label: 'Departments',            max: subscription.plan?.limits.max_departments },
-                { label: 'Patients This Month',    max: subscription.plan?.limits.max_patients_per_month },
-              ].map(({ label, max }) => (
-                <div key={label}>
-                  <div className="flex justify-between text-sm mb-1">
-                    <span className={isDark ? 'text-gray-400' : 'text-gray-600'}>{label}</span>
-                    <span className="font-medium">0 / {max === null || max === undefined ? '∞' : max}</span>
+                { label: 'Staff Accounts', count: usage?.staff ?? 0, max: subscription.plan?.limits.max_staff },
+                { label: 'Departments', count: usage?.departments ?? 0, max: subscription.plan?.limits.max_departments },
+                { label: 'Patients This Month', count: usage?.visits ?? 0, max: subscription.plan?.limits.max_patients_per_month },
+              ].map(({ label, count, max }) => {
+                const limit = max === null || max === undefined ? Infinity : max;
+                const pct = limit > 0 ? Math.min(100, Math.round((count / limit) * 100)) : 0;
+                const isOver = count > limit && isFinite(limit);
+
+                return (
+                  <div key={label}>
+                    <div className="flex justify-between text-sm mb-1">
+                      <span className={isDark ? 'text-gray-400' : 'text-gray-600'}>{label}</span>
+                      <span className={cn('font-medium', isOver ? 'text-red-500' : '')}>
+                        {count} / {max === null || max === undefined ? '∞' : max}
+                      </span>
+                    </div>
+                    <div className={cn('h-2 rounded-full overflow-hidden', isDark ? 'bg-gray-800' : 'bg-gray-200')}>
+                      <div
+                        className={cn('h-full rounded-full transition-all duration-500', isOver ? 'bg-red-500' : 'bg-blue-500')}
+                        style={{ width: `${isFinite(limit) ? pct : 0}%` }}
+                      />
+                    </div>
                   </div>
-                  <div className={cn('h-2 rounded-full overflow-hidden', isDark ? 'bg-gray-800' : 'bg-gray-200')}>
-                    <div className="h-full w-0 bg-blue-500 rounded-full" />
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
 

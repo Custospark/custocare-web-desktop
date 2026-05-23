@@ -86,6 +86,7 @@ import type {
   RecordPaymentParams,
   RecordPaymentResponse,
   StorePlanRequest,
+  UsageResponse,
 } from './SubscriptionTypes';
 
 /* -------------------------------------------------------------------------- */
@@ -1301,5 +1302,32 @@ export const useAdminCancelInvoice = (
       showToast('error', details ? `${base} (${details})` : base, 9000);
       callbacks.onError?.(error);
     },
+  });
+};
+
+/* ========================================================================== */
+/*                          USAGE QUERIES                                     */
+/* ========================================================================== */
+
+/**
+ * GET /facilities/{facility}/usage
+ *
+ * Returns current usage counts for the active facility:
+ * - staff (active + on_leave, distinct staff_id from facility_staff_roles)
+ * - departments (active)
+ * - visits (distinct patients in last 30 days)
+ */
+export const useGetFacilityUsage = () => {
+  const facilityId = useActiveFacilityId();
+
+  return useQuery<UsageResponse, AxiosError<ApiErrorResponse>>({
+    queryKey: [...subscriptionKeys.subscriptions.facility(facilityId!), 'usage'],
+    queryFn: async () => {
+      const res = await axiosInstance.get<UsageResponse>(
+        `/facilities/${facilityId}/usage`,
+      );
+      return res.data;
+    },
+    enabled: !!facilityId,
   });
 };

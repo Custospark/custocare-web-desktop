@@ -626,6 +626,22 @@ export interface AdminCancelInvoiceParams {
   invoiceId: number;
 }
 
+// ============================================================================
+// USAGE TYPES
+// ============================================================================
+
+export interface FacilityUsage {
+  staff: number;
+  departments: number;
+  visits: number;
+}
+
+export interface UsageResponse {
+  success: boolean;
+  message: string;
+  data: FacilityUsage;
+}
+
 /** Labels for invoice statuses (mirrors backend InvoiceStatus::label()). */
 export const INVOICE_STATUS_LABELS: Record<InvoiceStatus, string> = {
   [InvoiceStatus.PAID]: 'Paid',
