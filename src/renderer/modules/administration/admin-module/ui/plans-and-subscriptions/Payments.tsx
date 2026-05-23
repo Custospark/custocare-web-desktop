@@ -72,6 +72,7 @@ export const Payments: React.FC<PaymentsProps> = ({ theme }) => {
         receipt_notes: notes,
         paid_at: new Date().toISOString(),
       },
+      receipt: file,
     });
   };
 

@@ -19,6 +19,8 @@ import {
   Briefcase,
   UserCheck,
   Menu,
+  Crown,
+  Building2,
 } from 'lucide-react';
 import { cn } from '../../../types/cn';
 import { useNavigate } from 'react-router-dom';
@@ -43,6 +45,7 @@ import {
   isInStaffMode,
   getPatientUuid,
 } from '../../../../app/store/utils/contextSelectors';
+import { useGetFacilitySubscription } from '../../../../modules/administration/admin-module/api/subscriptions/SubscriptionQueries';
 
 import { UserProfileMenu } from './UserProfileMenu';
 import ContextSwitcher from './ContextSwitcher';
@@ -94,6 +97,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const { showToast } = useToast();
+
+  const { data: subResp } = useGetFacilitySubscription();
 
   const { user, activeCapability, activeFacilityId, availableCapabilities } = useAppSelector(
     (state) => state.activeContext
@@ -311,18 +316,26 @@ export const Navbar: React.FC<NavbarProps> = ({
   <LogoImage/>
     <div className="hidden lg:block">
       <div className="flex items-center gap-2">
-      <BrandName></BrandName>
-        <span
-          className={cn(
-            'px-2 py-0.5 text-xs font-bold rounded-full border',
-            isDark
-              ? 'bg-linear-to-r from-blue-500/20 to-cyan-500/20 text-cyan-300 border-cyan-500/30'
-              : 'bg-linear-to-r from-blue-100 to-cyan-50 text-blue-700 border-blue-300'
-          )}
-        >
-          <Sparkles className="w-3 h-3 inline mr-1" />
-          Pro
-        </span>
+      <BrandName />
+        {(() => {
+          const plan = subResp?.data?.plan;
+          const slug = plan?.slug || '';
+          const name = plan?.name?.slice(0, 3) || '';
+          const icon =
+            slug === 'essential' ? <Crown className="w-3 h-3 inline mr-1" /> :
+            slug === 'professional' ? <Sparkles className="w-3 h-3 inline mr-1" /> :
+            <Building2 className="w-3 h-3 inline mr-1" />;
+          const colors = slug === 'essential'
+            ? { light: 'bg-emerald-100 text-emerald-700 border-emerald-300', dark: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' }
+            : slug === 'professional'
+            ? { light: 'bg-blue-100 text-blue-700 border-blue-300', dark: 'bg-blue-500/20 text-cyan-300 border-cyan-500/30' }
+            : { light: 'bg-purple-100 text-purple-700 border-purple-300', dark: 'bg-purple-500/20 text-purple-300 border-purple-500/30' };
+          return name ? (
+            <span className={cn('px-2 py-0.5 text-xs font-bold rounded-full border whitespace-nowrap', isDark ? colors.dark : colors.light)}>
+              {icon}{name}
+            </span>
+          ) : null;
+        })()}
       </div>
 
       <p className={cn('text-xs mt-0.5 font-semibold', isDark ? 'text-blue-500' : 'text-blue-600')}>

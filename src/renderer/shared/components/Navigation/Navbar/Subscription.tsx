@@ -39,8 +39,6 @@ const getIcon = (slug: string) =>
   slug === 'professional' ? <Sparkles className="w-3.5 h-3.5" /> :
   <Building2 className="w-3.5 h-3.5" />;
 
-const shortName = (name: string) => name.slice(0, 3);
-
 const lims = (l: Plan['limits']) => [
   l.max_staff !== null ? `Up to ${l.max_staff} staff` : 'Unlimited staff',
   l.max_departments !== null ? `Up to ${l.max_departments} departments` : 'Unlimited departments',
@@ -124,7 +122,7 @@ export const Subscription: React.FC<SubscriptionProps> = ({ isDark, isMobile, cl
         </div>
         <div className="hidden lg:block">
           <span className={cn('text-xs font-semibold truncate', isDark ? 'text-gray-100' : 'text-gray-900')}>
-            {shortName(current.name)}{isTrial && <span className="ml-1 text-amber-500">(Trial)</span>}
+            {current.name}{isTrial && <span className="ml-1 text-amber-500">(Trial)</span>}
           </span>
           <span className={cn('block text-xs truncate', isDark ? 'text-gray-400' : 'text-gray-600')}>
             ${current.pricing.usd}/mo

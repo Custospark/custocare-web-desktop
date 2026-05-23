@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, CheckCircle, XCircle, Clock, CreditCard, RefreshCw, Loader2, AlertTriangle, Building2 } from 'lucide-react';
+import { Search, CheckCircle, XCircle, Clock, CreditCard, RefreshCw, Loader2, AlertTriangle, Building2, ExternalLink } from 'lucide-react';
 import { cn } from '../../../shared/types/cn';
 import { useGetAdminSubscriptions, useGetAdminPayments, useAdminApprovePayment, useAdminRejectPayment } from '../../administration/admin-module/api/subscriptions/SubscriptionQueries';
 import { SubscriptionStatus, PaymentStatus, type Subscription, type Payment } from '../../administration/admin-module/api/subscriptions/SubscriptionTypes';
@@ -82,6 +82,12 @@ const FacilitySubscriptions: React.FC<Props> = ({ theme }) => {
                   <span className="text-sm font-medium truncate">Payment #{p.id}</span>
                   <span className={cn('text-xs', isDark ? 'text-gray-400' : 'text-gray-500')}>${p.amount} {p.currency}</span>
                   {p.transaction_reference && <span className={cn('text-xs font-mono', isDark ? 'text-gray-500' : 'text-gray-400')}>Ref: {p.transaction_reference}</span>}
+                  {p.receipt_url && (
+                    <a href={p.receipt_url} target="_blank" rel="noopener noreferrer"
+                      className={cn('text-xs flex items-center gap-1 underline', isDark ? 'text-blue-400' : 'text-blue-600')}>
+                      <ExternalLink className="w-3 h-3" /> Receipt
+                    </a>
+                  )}
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
                   <button onClick={() => approvePay.mutate({ paymentId: p.id })}
