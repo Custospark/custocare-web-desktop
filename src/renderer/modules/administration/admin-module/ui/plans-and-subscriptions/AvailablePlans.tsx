@@ -5,12 +5,11 @@ import {
   Building2, CheckCircle2, Users, Loader2, Info,
   Crown, ArrowUp, ArrowDown, RefreshCw, CreditCard,
 } from 'lucide-react';
-import { useQuery } from '@tanstack/react-query';
-import { axiosInstance } from '../../../../../app/api/axiosConfig';
 import { cn } from '../../../../../shared/types/cn';
 import { TIER_FEATURES } from '../../../../../shared/config/planConfig';
 import { PlanDetailsModal } from '../../../onboarding/ui/role-based-ui/facility-onboarding/PlanDetailsModal';
 import {
+  useGetPlans,
   useGetFacilitySubscription,
   useCreateSubscription,
   useCancelSubscription,
@@ -51,21 +50,12 @@ const PLAN_ICONS: Record<string, React.ReactNode> = {
   enterprise: <Building2 className="w-5 h-5" />,
 };
 
-const fetchPlans = async (): Promise<Plan[]> => {
-  const { data } = await axiosInstance.get('/billing/plans');
-  return data.data || [];
-};
-
 export const AvailablePlans: React.FC<AvailablePlansProps> = ({ theme }) => {
   const navigate = useNavigate();
   const { confirm } = useConfirm();
   const [detailPlan, setDetailPlan] = useState<Plan | null>(null);
 
-  const { data: plansResponse, isLoading: plansLoading } = useQuery({
-    queryKey: ['billing-plans'],
-    queryFn: fetchPlans,
-    staleTime: 5 * 60 * 1000,
-  });
+  const { data: plansResponse, isLoading: plansLoading, refetch: refetchPlans } = useGetPlans();
 
   const {
     data: subscriptionResponse,
@@ -170,9 +160,21 @@ export const AvailablePlans: React.FC<AvailablePlansProps> = ({ theme }) => {
     return (
       <div className="text-center py-16">
         <CreditCard className="w-12 h-12 mx-auto mb-4 text-slate-400" />
-        <p className={cn("text-sm", theme === 'dark' ? "text-slate-400" : "text-slate-600")}>
+        <p className={cn("text-sm mb-4", theme === 'dark' ? "text-slate-400" : "text-slate-600")}>
           No plans available right now.
         </p>
+        <button
+          onClick={() => refetchPlans()}
+          className={cn(
+            "inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all",
+            theme === 'dark'
+              ? "bg-blue-600 text-white hover:bg-blue-700"
+              : "bg-blue-600 text-white hover:bg-blue-700"
+          )}
+        >
+          <RefreshCw className="w-4 h-4" />
+          Refresh
+        </button>
       </div>
     );
   }
