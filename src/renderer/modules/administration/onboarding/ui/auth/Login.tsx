@@ -129,7 +129,7 @@ export const Login: React.FC = () => {
       subtitle="Sign in to securely access your clinical dashboard."
       heroImage="https://images.unsplash.com/photo-1576091160550-2173dba999ef?w=1200&q=80"
       heroHeadline="Secure. Intelligent. Trusted."
-      heroSubtext="Join thousands of healthcare professionals using AI-powered decision support to improve patient care."
+      heroSubtext="Join thousands of healthcare professionals using integrated clinical, pharmacy, lab, and billing workflows to improve patient care and clinical accuracy."
     >
       <form onSubmit={handleSubmit} className="space-y-6" noValidate>
         {(formErrors.general) && (
