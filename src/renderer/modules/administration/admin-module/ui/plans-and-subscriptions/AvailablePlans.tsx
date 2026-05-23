@@ -159,8 +159,8 @@ export const AvailablePlans: React.FC<AvailablePlansProps> = ({ theme }) => {
   if (!plans.length) {
     return (
       <div className="text-center py-16">
-        <CreditCard className="w-12 h-12 mx-auto mb-4 text-slate-400" />
-        <p className={cn("text-sm mb-4", theme === 'dark' ? "text-slate-400" : "text-slate-600")}>
+        <CreditCard className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+        <p className={cn("text-sm mb-4", theme === 'dark' ? "text-gray-400" : "text-gray-600")}>
           No plans available right now.
         </p>
         <button
@@ -198,11 +198,11 @@ export const AvailablePlans: React.FC<AvailablePlansProps> = ({ theme }) => {
             theme === 'dark' ? "text-blue-400" : "text-blue-600"
           )} />
           <div className="flex-1">
-            <p className={cn("font-bold text-sm", theme === 'dark' ? "text-white" : "text-slate-900")}>
+            <p className={cn("font-bold text-sm", theme === 'dark' ? "text-white" : "text-gray-900")}>
               You're on the {currentPlan.name} plan
               {isInTrial && <span className="ml-2 text-amber-500 font-medium">(Trial)</span>}
             </p>
-            <p className={cn("text-xs", theme === 'dark' ? "text-slate-400" : "text-slate-600")}>
+            <p className={cn("text-xs", theme === 'dark' ? "text-gray-400" : "text-gray-600")}>
               {subscription?.next_billing_date
                 ? `Next billing: ${new Date(subscription.next_billing_date).toLocaleDateString()}`
                 : 'Manage your subscription below'}
@@ -224,10 +224,10 @@ export const AvailablePlans: React.FC<AvailablePlansProps> = ({ theme }) => {
 
       {/* Header */}
       <div className="text-center">
-        <h1 className={cn("text-2xl font-bold mb-2", theme === 'dark' ? "text-white" : "text-slate-900")}>
+        <h1 className={cn("text-2xl font-bold mb-2", theme === 'dark' ? "text-white" : "text-gray-900")}>
           {hasActiveSubscription ? 'Change Your Plan' : 'Choose Your Plan'}
         </h1>
-        <p className={cn("text-sm", theme === 'dark' ? "text-slate-400" : "text-slate-600")}>
+        <p className={cn("text-sm", theme === 'dark' ? "text-gray-400" : "text-gray-600")}>
           {hasActiveSubscription
             ? 'Upgrade or downgrade your plan as your facility grows.'
             : 'Pick the plan that fits your facility. Start with a free trial.'}
@@ -254,8 +254,8 @@ export const AvailablePlans: React.FC<AvailablePlansProps> = ({ theme }) => {
                     ? 'border-blue-500 bg-blue-500/10 shadow-lg shadow-blue-500/10'
                     : 'border-blue-500 bg-blue-50 shadow-lg shadow-blue-500/10'
                   : theme === 'dark'
-                    ? 'border-slate-700 bg-slate-800/40 hover:border-slate-600'
-                    : 'border-slate-200 bg-white hover:border-slate-300'
+                    ? 'border-gray-700 bg-gray-800/40 hover:border-gray-600'
+                    : 'border-gray-200 bg-white hover:border-gray-300'
               )}
             >
               {plan.is_popular && !isCurrent && (
@@ -273,7 +273,7 @@ export const AvailablePlans: React.FC<AvailablePlansProps> = ({ theme }) => {
               <div className="flex items-center justify-between mb-3">
                 <div className={cn(
                   "w-9 h-9 rounded-lg flex items-center justify-center",
-                  isCurrent ? "bg-blue-600 text-white" : theme === 'dark' ? "bg-slate-700 text-slate-300" : "bg-slate-100 text-slate-600"
+                  isCurrent ? "bg-blue-600 text-white" : theme === 'dark' ? "bg-gray-700 text-gray-300" : "bg-gray-100 text-gray-600"
                 )}>
                   {PLAN_ICONS[plan.slug]}
                 </div>
@@ -282,26 +282,26 @@ export const AvailablePlans: React.FC<AvailablePlansProps> = ({ theme }) => {
                 )}
               </div>
 
-              <h4 className={cn("font-bold text-base mb-1", theme === 'dark' ? "text-white" : "text-slate-900")}>
+              <h4 className={cn("font-bold text-base mb-1", theme === 'dark' ? "text-white" : "text-gray-900")}>
                 {plan.name}
               </h4>
 
               <div className="mb-3">
-                <span className={cn("text-2xl font-extrabold", theme === 'dark' ? "text-white" : "text-slate-900")}>
+                <span className={cn("text-2xl font-extrabold", theme === 'dark' ? "text-white" : "text-gray-900")}>
                   ${plan.pricing.usd}
                 </span>
-                <span className={cn("text-sm ml-1", theme === 'dark' ? "text-slate-400" : "text-slate-500")}>
+                <span className={cn("text-sm ml-1", theme === 'dark' ? "text-gray-400" : "text-gray-500")}>
                   /month
                 </span>
               </div>
 
-              <p className={cn("text-xs mb-3 leading-relaxed line-clamp-2 flex-1", theme === 'dark' ? "text-slate-400" : "text-slate-600")}>
+              <p className={cn("text-xs mb-3 leading-relaxed line-clamp-2 flex-1", theme === 'dark' ? "text-gray-400" : "text-gray-600")}>
                 {plan.description}
               </p>
 
               <div className={cn(
                 "text-[10px] font-medium px-2.5 py-1.5 rounded-lg mb-3",
-                theme === 'dark' ? "bg-slate-900/60 text-slate-400" : "bg-slate-50 text-slate-500"
+                theme === 'dark' ? "bg-gray-900/60 text-gray-400" : "bg-gray-50 text-gray-500"
               )}>
                 <div className="flex items-center gap-1.5">
                   <Users className="w-3 h-3" />
@@ -311,12 +311,23 @@ export const AvailablePlans: React.FC<AvailablePlansProps> = ({ theme }) => {
 
               {/* Action Buttons */}
               <div className="space-y-2 mt-auto">
-                {isCurrent && (
+                {isCurrent && !isInTrial && (
                   <button
                     disabled
-                    className="w-full py-2.5 rounded-lg text-xs font-bold cursor-not-allowed opacity-60 bg-slate-200 dark:bg-slate-700 text-slate-500"
+                    className="w-full py-2.5 rounded-lg text-xs font-bold cursor-not-allowed opacity-60 bg-gray-200 dark:bg-gray-700 text-gray-500"
                   >
-                    {isInTrial ? 'Trial Active' : 'Current Plan'}
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    Current Plan
+                  </button>
+                )}
+
+                {isCurrent && isInTrial && (
+                  <button
+                    onClick={() => navigate(ADMINISTRATION_PLANS_SUBSCRIPTIONS_ROUTES.SUBSCRIPTIONS)}
+                    className="w-full py-2.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-emerald-600 text-white shadow-lg hover:shadow-xl hover:scale-[1.02] cursor-pointer"
+                  >
+                    <CreditCard className="w-3.5 h-3.5" />
+                    Activate — Make Payment
                   </button>
                 )}
 
@@ -325,50 +336,49 @@ export const AvailablePlans: React.FC<AvailablePlansProps> = ({ theme }) => {
                     onClick={() => handlePlanAction(plan.id)}
                     disabled={createSubscription.isPending}
                     className={cn(
-                      "w-full py-2.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-2",
-                      "bg-gradient-to-r from-blue-600 to-emerald-600 text-white shadow-lg hover:shadow-xl hover:scale-[1.02]",
+                      "w-full py-2.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer bg-gradient-to-r from-blue-600 to-emerald-600 text-white shadow-lg hover:shadow-xl hover:scale-[1.02]",
                       createSubscription.isPending && "opacity-60 cursor-wait"
                     )}
                   >
                     {createSubscription.isPending ? (
                       <><RefreshCw className="w-3.5 h-3.5 animate-spin" /> Processing</>
                     ) : (
-                      'Start Free Trial'
+                      <><Crown className="w-3.5 h-3.5" /> Start Free Trial</>
                     )}
                   </button>
                 )}
 
-                {hasActiveSubscription && isUpgrade(plan.id) && (
+                {hasActiveSubscription && !isInTrial && isUpgrade(plan.id) && (
                   <button
                     onClick={() => handlePlanAction(plan.id)}
                     disabled={createSubscription.isPending}
-                    className="w-full py-2.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-lg hover:shadow-xl hover:scale-[1.02]"
+                    className="w-full py-2.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer bg-gradient-to-r from-blue-600 to-indigo-700 text-white shadow-lg hover:shadow-xl hover:scale-[1.02]"
                   >
                     <ArrowUp className="w-3.5 h-3.5" />
-                    Upgrade
+                    Upgrade to {plan.name}
                   </button>
                 )}
 
-                {hasActiveSubscription && isDowngrade(plan.id) && (
+                {hasActiveSubscription && !isInTrial && isDowngrade(plan.id) && (
                   <button
                     onClick={() => handlePlanAction(plan.id)}
                     disabled={createSubscription.isPending}
-                    className="w-full py-2.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-2 border-2 border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+                    className="w-full py-2.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer bg-gradient-to-r from-amber-500 to-orange-600 text-white shadow-lg hover:shadow-xl hover:scale-[1.02]"
                   >
                     <ArrowDown className="w-3.5 h-3.5" />
-                    Downgrade
+                    Downgrade to {plan.name}
                   </button>
                 )}
 
                 <button
                   onClick={() => setDetailPlan(plan)}
                   className={cn(
-                    "w-full flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-semibold transition-all border-2",
+                    "w-full flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-semibold transition-all border-2 cursor-pointer",
                     isCurrent
                       ? "border-blue-300 dark:border-blue-700 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20"
                       : theme === 'dark'
-                        ? "border-slate-700 text-slate-400 hover:bg-slate-800"
-                        : "border-slate-200 text-slate-500 hover:bg-slate-50"
+                        ? "border-gray-600 text-gray-300 hover:bg-gray-800"
+                        : "border-gray-300 text-gray-600 hover:bg-gray-50"
                   )}
                 >
                   <Info className="w-3.5 h-3.5" />

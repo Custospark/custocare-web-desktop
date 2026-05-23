@@ -48,7 +48,7 @@ export const PlanCompareModal: React.FC<PlanCompareModalProps> = ({ plans, onClo
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           onClick={onClose}
-          className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+          className="absolute inset-0 bg-black/60 "
         />
 
         <motion.div
@@ -57,7 +57,7 @@ export const PlanCompareModal: React.FC<PlanCompareModalProps> = ({ plans, onClo
           exit={{ opacity: 0, scale: 0.95, y: 20 }}
           className={cn(
             "relative w-full max-w-3xl rounded-2xl border-2 shadow-2xl max-h-[85vh] overflow-y-auto",
-            theme === 'dark' ? "bg-slate-900 border-slate-700" : "bg-white border-slate-200"
+            theme === 'dark' ? "bg-gray-900 border-gray-700" : "bg-white border-gray-200"
           )}
         >
           <button
@@ -65,23 +65,23 @@ export const PlanCompareModal: React.FC<PlanCompareModalProps> = ({ plans, onClo
             onClick={onClose}
             className={cn(
               "absolute top-4 right-4 p-1.5 rounded-lg transition-colors z-10",
-              theme === 'dark' ? "hover:bg-slate-800 text-slate-400" : "hover:bg-slate-100 text-slate-500"
+              theme === 'dark' ? "hover:bg-gray-800 text-gray-400" : "hover:bg-gray-100 text-gray-500"
             )}
           >
             <X className="w-5 h-5" />
           </button>
 
           <div className="p-6 sm:p-8">
-            <h3 className={cn("text-lg font-bold mb-1", theme === 'dark' ? "text-white" : "text-slate-900")}>
+            <h3 className={cn("text-lg font-bold mb-1", theme === 'dark' ? "text-white" : "text-gray-900")}>
               Compare Plans
             </h3>
-            <p className={cn("text-sm mb-4", theme === 'dark' ? "text-slate-400" : "text-slate-600")}>
+            <p className={cn("text-sm mb-4", theme === 'dark' ? "text-gray-400" : "text-gray-600")}>
               Side-by-side comparison of features, limits, and pricing.
             </p>
 
             {/* Billing toggle */}
             <div className="flex items-center justify-center gap-3 mb-6">
-              <span className={cn("text-xs font-semibold", !annual ? "text-blue-600" : theme === 'dark' ? "text-slate-500" : "text-slate-400")}>
+              <span className={cn("text-xs font-semibold", !annual ? "text-blue-600" : theme === 'dark' ? "text-gray-500" : "text-gray-400")}>
                 Monthly
               </span>
               <button
@@ -89,16 +89,16 @@ export const PlanCompareModal: React.FC<PlanCompareModalProps> = ({ plans, onClo
                 onClick={() => setAnnual(!annual)}
                 className={cn(
                   "relative w-12 h-6 rounded-full transition-colors duration-300",
-                  annual ? "bg-blue-600" : theme === 'dark' ? "bg-slate-700" : "bg-slate-300"
+                  annual ? "bg-blue-600" : theme === 'dark' ? "bg-gray-700" : "bg-gray-300"
                 )}
               >
                 <motion.div
                   layout
                   transition={{ type: "spring", stiffness: 500, damping: 30 }}
-                  className={cn("absolute top-1 left-1 w-4 h-4 rounded-full bg-white shadow-sm", annual && "translate-x-6")}
+                  className={cn("absolute top-1 left-1 w-4 h-4 rounded-full bg-white shadow-sm", annual && "trangray-x-6")}
                 />
               </button>
-              <span className={cn("text-xs font-semibold", annual ? "text-blue-600" : theme === 'dark' ? "text-slate-500" : "text-slate-400")}>
+              <span className={cn("text-xs font-semibold", annual ? "text-blue-600" : theme === 'dark' ? "text-gray-500" : "text-gray-400")}>
                 Annual
               </span>
               <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
@@ -112,26 +112,26 @@ export const PlanCompareModal: React.FC<PlanCompareModalProps> = ({ plans, onClo
               style={{ gridTemplateColumns: `1.5fr repeat(${sorted.length}, 1fr)` }}
             >
               <div className={cn("p-4 font-bold text-sm border-r-2 flex items-center",
-                theme === 'dark' ? "bg-slate-800 border-slate-700 text-slate-300" : "bg-slate-50 border-slate-200 text-slate-700"
+                theme === 'dark' ? "bg-gray-800 border-gray-700 text-gray-300" : "bg-gray-50 border-gray-200 text-gray-700"
               )}>
                 Plan
               </div>
               {sorted.map((plan) => {
                 const price = annual ? calcAnnualPrice(plan.pricing.usd) : plan.pricing.usd;
                 return (
-                  <div key={plan.id} className={cn("p-4 text-center relative", theme === 'dark' ? "bg-slate-800" : "bg-slate-50")}>
+                  <div key={plan.id} className={cn("p-4 text-center relative", theme === 'dark' ? "bg-gray-800" : "bg-gray-50")}>
                     {plan.is_popular && (
                       <span className="block text-[9px] font-bold text-emerald-600 dark:text-emerald-400 mb-1 uppercase tracking-wide">
                         Most Popular
                       </span>
                     )}
-                    <div className={cn("font-bold text-sm", theme === 'dark' ? "text-white" : "text-slate-900")}>
+                    <div className={cn("font-bold text-sm", theme === 'dark' ? "text-white" : "text-gray-900")}>
                       {plan.name}
                     </div>
-                    <div className={cn("text-lg font-extrabold mt-1", theme === 'dark' ? "text-white" : "text-slate-900")}>
+                    <div className={cn("text-lg font-extrabold mt-1", theme === 'dark' ? "text-white" : "text-gray-900")}>
                       ${price}
                     </div>
-                    <div className={cn("text-[10px]", theme === 'dark' ? "text-slate-400" : "text-slate-500")}>
+                    <div className={cn("text-[10px]", theme === 'dark' ? "text-gray-400" : "text-gray-500")}>
                       /mo {annual ? '(billed annually)' : ''}
                     </div>
                   </div>
@@ -149,20 +149,20 @@ export const PlanCompareModal: React.FC<PlanCompareModalProps> = ({ plans, onClo
                 >
                   <div className={cn(
                     "p-2.5 text-xs font-medium border-r-2 flex items-center",
-                    i % 2 === 0 ? (theme === 'dark' ? "bg-slate-800/40" : "bg-slate-50/50") : "",
-                    theme === 'dark' ? "border-slate-700 text-slate-300" : "border-slate-200 text-slate-700"
+                    i % 2 === 0 ? (theme === 'dark' ? "bg-gray-800/40" : "bg-gray-50/50") : "",
+                    theme === 'dark' ? "border-gray-700 text-gray-300" : "border-gray-200 text-gray-700"
                   )}>
                     {row.label}
                   </div>
                   {sorted.map((plan) => (
                     <div key={plan.id} className={cn(
                       "p-2.5 flex items-center justify-center",
-                      i % 2 === 0 ? (theme === 'dark' ? "bg-slate-800/40" : "bg-slate-50/50") : ""
+                      i % 2 === 0 ? (theme === 'dark' ? "bg-gray-800/40" : "bg-gray-50/50") : ""
                     )}>
                       {row.check(plan.features) ? (
                         <CheckCircle2 className="w-4 h-4 text-emerald-500" />
                       ) : (
-                        <span className={cn("text-sm", theme === 'dark' ? "text-slate-600" : "text-slate-300")}>—</span>
+                        <span className={cn("text-sm", theme === 'dark' ? "text-gray-600" : "text-gray-300")}>—</span>
                       )}
                     </div>
                   ))}
@@ -171,7 +171,7 @@ export const PlanCompareModal: React.FC<PlanCompareModalProps> = ({ plans, onClo
             </div>
 
             {/* Limits */}
-            <h4 className={cn("text-xs font-bold uppercase tracking-wide mb-3", theme === 'dark' ? "text-slate-400" : "text-slate-500")}>
+            <h4 className={cn("text-xs font-bold uppercase tracking-wide mb-3", theme === 'dark' ? "text-gray-400" : "text-gray-500")}>
               Limits
             </h4>
             <div
@@ -187,7 +187,7 @@ export const PlanCompareModal: React.FC<PlanCompareModalProps> = ({ plans, onClo
                   <div className={cn(
                     "p-3 text-xs font-medium border-r-2 flex items-center",
                     ri > 0 && "border-t-2",
-                    theme === 'dark' ? "border-slate-700 text-slate-300 bg-slate-800/40" : "border-slate-200 text-slate-700 bg-slate-50/50"
+                    theme === 'dark' ? "border-gray-700 text-gray-300 bg-gray-800/40" : "border-gray-200 text-gray-700 bg-gray-50/50"
                   )}>
                     {row.label}
                   </div>
@@ -195,7 +195,7 @@ export const PlanCompareModal: React.FC<PlanCompareModalProps> = ({ plans, onClo
                     <div key={plan.id} className={cn(
                       "p-3 text-xs font-bold text-center flex items-center justify-center",
                       ri > 0 && "border-t-2",
-                      theme === 'dark' ? "text-white border-slate-700 bg-slate-800/40" : "text-slate-900 border-slate-200 bg-slate-50/50"
+                      theme === 'dark' ? "text-white border-gray-700 bg-gray-800/40" : "text-gray-900 border-gray-200 bg-gray-50/50"
                     )}>
                       {plan.limits[row.key] ?? 'Unlimited'}
                     </div>

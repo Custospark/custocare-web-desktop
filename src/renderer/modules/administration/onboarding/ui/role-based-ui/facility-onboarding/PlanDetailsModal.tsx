@@ -56,7 +56,7 @@ export const PlanDetailsModal: React.FC<PlanDetailsModalProps> = ({ plan, allPla
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            className="absolute inset-0 bg-black/60 "
           />
 
           <motion.div
@@ -65,7 +65,7 @@ export const PlanDetailsModal: React.FC<PlanDetailsModalProps> = ({ plan, allPla
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
             className={cn(
               "relative w-full max-w-lg rounded-2xl border-2 shadow-2xl max-h-[85vh] overflow-y-auto",
-              theme === 'dark' ? "bg-slate-900 border-slate-700" : "bg-white border-slate-200"
+              theme === 'dark' ? "bg-gray-900 border-gray-700" : "bg-white border-gray-200"
             )}
           >
             <button
@@ -73,7 +73,7 @@ export const PlanDetailsModal: React.FC<PlanDetailsModalProps> = ({ plan, allPla
               onClick={onClose}
               className={cn(
                 "absolute top-4 right-4 p-1.5 rounded-lg transition-colors",
-                theme === 'dark' ? "hover:bg-slate-800 text-slate-400" : "hover:bg-slate-100 text-slate-500"
+                theme === 'dark' ? "hover:bg-gray-800 text-gray-400" : "hover:bg-gray-100 text-gray-500"
               )}
             >
               <X className="w-5 h-5" />
@@ -91,7 +91,7 @@ export const PlanDetailsModal: React.FC<PlanDetailsModalProps> = ({ plan, allPla
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <h3 className={cn("text-xl font-bold", theme === 'dark' ? "text-white" : "text-slate-900")}>
+                    <h3 className={cn("text-xl font-bold", theme === 'dark' ? "text-white" : "text-gray-900")}>
                       {plan.name}
                     </h3>
                     {plan.is_popular && (
@@ -100,23 +100,23 @@ export const PlanDetailsModal: React.FC<PlanDetailsModalProps> = ({ plan, allPla
                       </span>
                     )}
                   </div>
-                  <p className={cn("text-sm", theme === 'dark' ? "text-slate-300" : "text-slate-600")}>
+                  <p className={cn("text-sm", theme === 'dark' ? "text-gray-300" : "text-gray-600")}>
                     ${plan.pricing.usd}/month · {plan.trial_days}-day free trial
                   </p>
                 </div>
               </div>
 
               {/* Description */}
-              <p className={cn("text-sm mb-6 leading-relaxed", theme === 'dark' ? "text-slate-400" : "text-slate-600")}>
+              <p className={cn("text-sm mb-6 leading-relaxed", theme === 'dark' ? "text-gray-400" : "text-gray-600")}>
                 {plan.description}
               </p>
 
               {/* Limits */}
               <div className={cn(
                 "rounded-xl border p-4 mb-6",
-                theme === 'dark' ? "bg-slate-800/40 border-slate-700/60" : "bg-slate-50 border-slate-200"
+                theme === 'dark' ? "bg-gray-800/40 border-gray-700/60" : "bg-gray-50 border-gray-200"
               )}>
-                <h4 className={cn("text-xs font-bold uppercase tracking-wide mb-3", theme === 'dark' ? "text-slate-400" : "text-slate-500")}>
+                <h4 className={cn("text-xs font-bold uppercase tracking-wide mb-3", theme === 'dark' ? "text-gray-400" : "text-gray-500")}>
                   Plan Limits
                 </h4>
                 <div className="grid grid-cols-3 gap-3">
@@ -127,10 +127,10 @@ export const PlanDetailsModal: React.FC<PlanDetailsModalProps> = ({ plan, allPla
                   ].map((item) => (
                     <div key={item.label} className="text-center">
                       <item.icon className={cn("w-4 h-4 mx-auto mb-1", theme === 'dark' ? "text-blue-400" : "text-blue-600")} />
-                      <div className={cn("text-xs font-bold", theme === 'dark' ? "text-white" : "text-slate-900")}>
+                      <div className={cn("text-xs font-bold", theme === 'dark' ? "text-white" : "text-gray-900")}>
                         {item.value.split(' ')[0]}
                       </div>
-                      <div className={cn("text-[10px]", theme === 'dark' ? "text-slate-500" : "text-slate-500")}>
+                      <div className={cn("text-[10px]", theme === 'dark' ? "text-gray-500" : "text-gray-500")}>
                         {item.label}
                       </div>
                     </div>
@@ -139,14 +139,14 @@ export const PlanDetailsModal: React.FC<PlanDetailsModalProps> = ({ plan, allPla
               </div>
 
               {/* Features */}
-              <h4 className={cn("text-xs font-bold uppercase tracking-wide mb-3", theme === 'dark' ? "text-slate-400" : "text-slate-500")}>
+              <h4 className={cn("text-xs font-bold uppercase tracking-wide mb-3", theme === 'dark' ? "text-gray-400" : "text-gray-500")}>
                 What's Included
               </h4>
               <ul className="space-y-2.5 mb-6">
                 {plan.features.map((feature) => (
                   <li key={feature} className="flex items-start gap-2.5">
                     <CheckCircle2 className="w-4 h-4 text-emerald-500 mt-0.5 shrink-0" />
-                    <span className={cn("text-sm", theme === 'dark' ? "text-slate-300" : "text-slate-700")}>
+                    <span className={cn("text-sm", theme === 'dark' ? "text-gray-300" : "text-gray-700")}>
                       {feature}
                     </span>
                   </li>
@@ -173,7 +173,7 @@ export const PlanDetailsModal: React.FC<PlanDetailsModalProps> = ({ plan, allPla
               {/* Security */}
               <div className={cn(
                 "flex items-center gap-3 px-4 py-3 rounded-xl border text-xs",
-                theme === 'dark' ? "bg-slate-800/40 border-slate-700/60 text-slate-400" : "bg-slate-50 border-slate-200 text-slate-500"
+                theme === 'dark' ? "bg-gray-800/40 border-gray-700/60 text-gray-400" : "bg-gray-50 border-gray-200 text-gray-500"
               )}>
                 <Lock className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
                 <span>Protected with HIPAA-compliant encryption, audit trails, and role-based access control.</span>
