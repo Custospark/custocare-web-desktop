@@ -298,7 +298,6 @@ export const useCreateSubscription = (
   >({
     mutationFn: async ({ data }) => {
       if (!facilityId) throw new Error('No active facility selected.');
-
       const res = await axiosInstance.post<CreateSubscriptionResponse>(
         `/facilities/${facilityId}/subscription`,
         data,
@@ -306,24 +305,35 @@ export const useCreateSubscription = (
       return res.data;
     },
 
+    onMutate: async () => {
+      if (!facilityId) return;
+      await queryClient.cancelQueries({ queryKey: subscriptionKeys.subscriptions.facility(facilityId) });
+      const snapshot = queryClient.getQueryData(subscriptionKeys.subscriptions.facility(facilityId));
+      return { snapshot };
+    },
+
     onSuccess: (data) => {
-      showToast('success', data.message || 'Subscription created successfully! Status: trial.', 6000);
-
+      showToast('success', data.message || 'Subscription created successfully!', 6000);
       if (facilityId) {
-        // Optimistic cache update + background refetch
         queryClient.setQueryData(subscriptionKeys.subscriptions.facility(facilityId), data);
-        queryClient.invalidateQueries({ queryKey: subscriptionKeys.subscriptions.facility(facilityId) });
       }
-
       callbacks.onSuccess?.(data);
     },
 
-    onError: (error: any) => {
-      const axiosErr = error as AxiosError<ApiErrorResponse>;
-      const base     = extractErrorMessage(axiosErr, 'Failed to create subscription.');
-      const details  = formatValidationErrors(axiosErr.response?.data?.errors);
+    onError: (error: AxiosError<ApiErrorResponse>, _vars, context) => {
+      if (facilityId && context?.snapshot) {
+        queryClient.setQueryData(subscriptionKeys.subscriptions.facility(facilityId), context.snapshot);
+      }
+      const base     = extractErrorMessage(error, 'Failed to create subscription.');
+      const details  = formatValidationErrors(error.response?.data?.errors);
       showToast('error', details ? `${base} (${details})` : base, 9000);
-      callbacks.onError?.(axiosErr);
+      callbacks.onError?.(error);
+    },
+
+    onSettled: () => {
+      if (facilityId) {
+        queryClient.invalidateQueries({ queryKey: subscriptionKeys.subscriptions.facility(facilityId) });
+      }
     },
   });
 };
@@ -357,8 +367,6 @@ export const useCancelSubscription = (
   >({
     mutationFn: async ({ data = {} }) => {
       if (!facilityId) throw new Error('No active facility selected.');
-
-      // axios DELETE with body requires passing the payload inside { data: ... }
       const res = await axiosInstance.delete<CancelSubscriptionResponse>(
         `/facilities/${facilityId}/subscription`,
         { data },
@@ -366,23 +374,35 @@ export const useCancelSubscription = (
       return res.data;
     },
 
+    onMutate: async () => {
+      if (!facilityId) return;
+      await queryClient.cancelQueries({ queryKey: subscriptionKeys.subscriptions.facility(facilityId) });
+      const snapshot = queryClient.getQueryData(subscriptionKeys.subscriptions.facility(facilityId));
+      return { snapshot };
+    },
+
     onSuccess: (data) => {
       showToast('success', data.message || 'Subscription cancelled successfully.', 6000);
-
       if (facilityId) {
         queryClient.setQueryData(subscriptionKeys.subscriptions.facility(facilityId), data);
-        queryClient.invalidateQueries({ queryKey: subscriptionKeys.subscriptions.facility(facilityId) });
       }
-
       callbacks.onSuccess?.(data);
     },
 
-    onError: (error: any) => {
-      const axiosErr = error as AxiosError<ApiErrorResponse>;
-      const base     = extractErrorMessage(axiosErr, 'Failed to cancel subscription.');
-      const details  = formatValidationErrors(axiosErr.response?.data?.errors);
+    onError: (error: AxiosError<ApiErrorResponse>, _vars, context) => {
+      if (facilityId && context?.snapshot) {
+        queryClient.setQueryData(subscriptionKeys.subscriptions.facility(facilityId), context.snapshot);
+      }
+      const base     = extractErrorMessage(error, 'Failed to cancel subscription.');
+      const details  = formatValidationErrors(error.response?.data?.errors);
       showToast('error', details ? `${base} (${details})` : base, 9000);
-      callbacks.onError?.(axiosErr);
+      callbacks.onError?.(error);
+    },
+
+    onSettled: () => {
+      if (facilityId) {
+        queryClient.invalidateQueries({ queryKey: subscriptionKeys.subscriptions.facility(facilityId) });
+      }
     },
   });
 };
