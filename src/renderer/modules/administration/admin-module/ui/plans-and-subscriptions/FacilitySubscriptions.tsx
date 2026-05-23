@@ -20,7 +20,6 @@ import {
   TrendingUp,
   Eye,
   EyeOff,
-  ArrowLeft,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 
@@ -334,16 +333,6 @@ export const FacilitySubscriptions: React.FC<FacilitySubscriptionsProps> = ({
   if (!subscription) {
     return (
       <div className="space-y-6">
-        <div className="flex items-center gap-4">
-          <button onClick={() => navigate(ADMINISTRATION_PLANS_SUBSCRIPTIONS_ROUTES.AVAILABLE_PLANS)}
-            className={cn('p-2 rounded-lg transition-colors', isDark ? 'hover:bg-gray-800 text-gray-400' : 'hover:bg-gray-100 text-gray-600')}>
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-          <div>
-            <h1 className="text-2xl font-bold mb-1">Subscription</h1>
-          </div>
-        </div>
-
         <div className={cn('rounded-2xl p-10 text-center border', isDark ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200')}>
           <div className={cn('w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center', isDark ? 'bg-gray-800' : 'bg-gray-100')}>
             <Package className={cn('w-8 h-8', isDark ? 'text-gray-600' : 'text-gray-400')} />
@@ -369,16 +358,7 @@ export const FacilitySubscriptions: React.FC<FacilitySubscriptionsProps> = ({
   if (!showCurrentSubscription) {
     return (
       <div className="space-y-6">
-        <div className="flex items-center gap-4">
-          <button onClick={() => navigate(ADMINISTRATION_PLANS_SUBSCRIPTIONS_ROUTES.AVAILABLE_PLANS)}
-            className={cn('p-2 rounded-lg transition-colors', isDark ? 'hover:bg-gray-800 text-gray-400' : 'hover:bg-gray-100 text-gray-600')}>
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-          <div>
-            <h1 className="text-2xl font-bold mb-1">Subscription</h1>
-          </div>
-        </div>
-
+        
         <InactiveSubscriptionBanner
           theme={theme}
           subscription={subscription}
@@ -394,17 +374,6 @@ export const FacilitySubscriptions: React.FC<FacilitySubscriptionsProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center gap-4">
-        <button onClick={() => navigate(ADMINISTRATION_PLANS_SUBSCRIPTIONS_ROUTES.AVAILABLE_PLANS)}
-          className={cn('p-2 rounded-lg transition-colors', isDark ? 'hover:bg-gray-800 text-gray-400' : 'hover:bg-gray-100 text-gray-600')}>
-          <ArrowLeft className="w-5 h-5" />
-        </button>
-        <div>
-          <h1 className="text-2xl font-bold mb-1">Subscription</h1>
-        </div>
-      </div>
-
       {/* Main Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left — details */}
@@ -445,7 +414,7 @@ export const FacilitySubscriptions: React.FC<FacilitySubscriptionsProps> = ({
                         <div>
                           <p className={cn('text-sm', isDark ? 'text-gray-400' : 'text-gray-600')}>Price</p>
                           <p className="font-medium">
-                            {subscription.plan?.pricing.ugx.toLocaleString()} UGX /{' '}
+                            ${subscription.plan?.pricing.usd} USD /{' '}
                             {subscription.plan?.pricing.billing_cycle}
                           </p>
                         </div>
@@ -516,7 +485,7 @@ export const FacilitySubscriptions: React.FC<FacilitySubscriptionsProps> = ({
                       <div className="flex items-center justify-between py-2">
                         <span className={isDark ? 'text-gray-400' : 'text-gray-600'}>Onboarding Fee</span>
                         <span className="font-medium">
-                          {subscription.plan.onboarding_fee.ugx.toLocaleString()} UGX
+                          ${subscription.plan.onboarding_fee.usd} USD
                         </span>
                       </div>
                     )}
