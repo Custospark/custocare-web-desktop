@@ -52,6 +52,8 @@ export const TIER_LIMIT_LABELS: Record<string, { staff: string; depts: string; p
 
 export type CompareCheck = (features: string[]) => boolean;
 
+const inherits = (f: string[]) => f.some(x => /^Everything in /i.test(x));
+
 export interface CompareRow {
   label: string;
   check: CompareCheck;
@@ -67,12 +69,12 @@ export const COMPARISON_ROWS: CompareRow[] = [
   { label: 'Patient Portal', check: () => true },
   { label: 'Messaging', check: () => true },
   { label: 'Custocare Hub', check: () => true },
-  { label: 'Lab Workspace', check: (f) => f.some(x => /lab/i.test(x)) },
-  { label: 'Pharmacy Workspace', check: (f) => f.some(x => /pharmacy/i.test(x)) },
-  { label: 'Nursing Workspace', check: (f) => f.some(x => /nursing/i.test(x)) },
-  { label: 'Clinical Workspace', check: (f) => f.some(x => /clinical/i.test(x)) },
-  { label: 'Referral Workspace', check: (f) => f.some(x => /referral/i.test(x)) },
-  { label: 'Ambulance Workspace', check: (f) => f.some(x => /ambulance/i.test(x)) },
+  { label: 'Lab Workspace', check: (f) => inherits(f) || f.some(x => /Dedicated laboratory/i.test(x)) },
+  { label: 'Pharmacy Workspace', check: (f) => inherits(f) || f.some(x => /Dedicated pharmacy/i.test(x)) },
+  { label: 'Nursing Workspace', check: (f) => inherits(f) || f.some(x => /Dedicated nursing/i.test(x)) },
+  { label: 'Clinical Workspace', check: (f) => inherits(f) || f.some(x => /Dedicated clinical/i.test(x)) },
+  { label: 'Referral Workspace', check: (f) => f.some(x => /Referral/i.test(x)) },
+  { label: 'Ambulance Workspace', check: (f) => f.some(x => /Ambulance/i.test(x)) },
 ];
 
 export const calcAnnualPrice = (monthly: number) => Math.round(monthly * 10 / 12);
