@@ -41,6 +41,7 @@ import {
   Bell,
   FlaskConical,
   CreditCard,
+  Crown,
 } from 'lucide-react';
 import { FaBuilding } from 'react-icons/fa';
 
@@ -535,6 +536,12 @@ export const ADMINISTRATION_MODULE_OPERATIONS: ModuleOperation[] = [
     subtext: 'Validate and reconcile clinical charges',
   },
   {
+    id: 'plans-subscriptions',
+    label: 'Plans & Subscriptions',
+    icon: <Crown className="w-4 h-4" />,
+    description: 'View your plan, manage billing, and upgrade or change your subscription',
+  },
+  {
     id: 'settings',
     label: 'Enterprise Facility Settings',
     icon: <FaBuilding className="w-4 h-4" />,
@@ -551,6 +558,7 @@ const ADMINISTRATION_NESTED_ROUTES: Record<string, string> = {
   inventory: ADMIN_ROUTES.INVENTORY,
   team: ADMIN_ROUTES.TEAM,
   'billing-cycle-management': ADMIN_ROUTES.BILLING_CYCLE,
+  'plans-subscriptions': ADMIN_ROUTES.PLANS_SUBSCRIPTIONS,
   settings: ADMIN_ROUTES.FACILITY_SETTINGS,
 };
 

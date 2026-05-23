@@ -27,7 +27,7 @@ import { ROUTES as ONBOARDING_ROUTES } from '../../../../modules/administration/
 import { logoutClientSession } from '../../../../app/store/utils/logoutClientSession';
 import { useAppDispatch, useAppSelector } from '../../../../app/store/hooks/useApp';
 import { useToast } from '../../../../app/store/contexts/toast/useToast';
-// import { ADMINISTRATION_PLANS_SUBSCRIPTIONS_ROUTES } from '../../../../app/routes/constants/administration.paths';
+import { ADMINISTRATION_PLANS_SUBSCRIPTIONS_ROUTES } from '../../../../app/routes/constants/administration.paths';
 import {
   switchCapability,
   switchFacility,
