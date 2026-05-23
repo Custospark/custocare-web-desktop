@@ -2,6 +2,32 @@
 
 ---
 
+## 2026-05-24: Subscription Invoices & Receipts Feature
+
+**Context:** The subscription billing system had Plans, Subscriptions, and Payments but no structured invoices or receipts for facilities. Facilities needed formal invoicing for their subscription fees (monthly renewals, onboarding fees) with printable receipt documents.
+
+**Decisions:**
+
+**Backend (Laravel):**
+- Created `InvoiceStatus` enum (`paid`, `unpaid`, `overdue`, `partially_paid`, `cancelled`, `refunded`) and `InvoiceType` enum (`subscription`, `renewal`, `onboarding`, `adjustment`) in `app/Enums/Billing/`
+- Created `invoices` migration with columns: `subscription_id`, `facility_id`, `invoice_number` (unique), `invoice_type`, `status`, `amount`, `currency`, `paid_amount`, `description`, `line_items` (JSON), `issued_at`, `due_at`, `paid_at`, `cancelled_at`
+- Created `Invoice` model with relationships to `Subscription` and `Facility`, scopes (`forFacility`, `paid`, `unpaid`), and helper methods (`isPaid`, `isOverdue`, `balanceDue`)
+- Created `InvoiceRepositoryInterface` / `InvoiceRepository` following existing billing repository pattern with filtering by status, type, date range
+- Created `InvoiceServiceInterface` / `InvoiceService` with `createInvoice`, `markAsPaid`, `cancelInvoice`, plus `generateInvoiceNumber` (auto-incrementing INV-YYYY-NNNN)
+- Created `InvoiceResource` (returns camelCase frontend-friendly shape with computed `balance_due`, nested subscription/facility when loaded)
+- Created `InvoiceController` (facility-facing: `GET /invoices`, `GET /invoices/{invoice}`) and `Admin\InvoiceController` (admin: `GET /invoices`, `GET /invoices/{invoice}`, `POST /invoices/{invoice}/mark-paid`, `POST /invoices/{invoice}/cancel`)
+- Registered routes in `facilitySubscriptions/_index.php` under both facility and admin groups
+- Added `InvoiceRepository` and `InvoiceService` bindings to `BillingServiceProvider`
+
+**Frontend (React/TypeScript):**
+- Added `InvoiceStatus`, `InvoiceType`, `Invoice`, `InvoiceLineItem` types plus request/response types, filter types, and label maps to `SubscriptionTypes.ts`
+- Added invoice query keys + hooks to `SubscriptionQueries.ts`: `useGetFacilityInvoices`, `useGetFacilityInvoice`, `useGetAdminInvoices`, `useGetAdminInvoice`, `useAdminMarkInvoicePaid`, `useAdminCancelInvoice`
+- Built `Invoices.tsx` — full component with search, filter controls, paginated table, status badges (color-coded by status), invoice detail modal with line items breakdown, and receipt download
+- Built `PrintableInvoiceReceipt.tsx` — modal receipt view with print/download support, line items table, facility info, status watermark, and print-optimized HTML output
+- Registered the Invoices route in `plans-and-subscriptions.tsx` with lazy loading
+
+---
+
 ## 2026-05-23: Error Boundary — Friendlier Icon & Visual Tone
 
 **Context:** Users found the `AlertTriangle` icon with `animate-pulse` on the error boundary page alarming and unsettling. The red-tinted background gradient also contributed to a stressful experience during errors.

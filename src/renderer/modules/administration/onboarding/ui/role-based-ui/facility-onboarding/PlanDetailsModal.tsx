@@ -123,7 +123,7 @@ export const PlanDetailsModal: React.FC<PlanDetailsModalProps> = ({ plan, allPla
                   {[
                     { icon: Users, label: 'Staff', value: labels.staff },
                     { icon: BadgeCheck, label: 'Departments', value: labels.depts },
-                    { icon: Shield, label: 'Capacity', value: labels.patients },
+                    { icon: Shield, label: 'Patients/Month', value: labels.patients },
                   ].map((item) => (
                     <div key={item.label} className="text-center">
                       <item.icon className={cn("w-4 h-4 mx-auto mb-1", theme === 'dark' ? "text-blue-400" : "text-blue-600")} />

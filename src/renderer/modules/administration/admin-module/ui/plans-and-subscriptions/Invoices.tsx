@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   FileText,
   Search,
@@ -15,7 +15,6 @@ import {
   Ban,
   RotateCcw,
   DollarSign,
-  Calendar,
   Building2,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -44,12 +43,19 @@ interface InvoiceFilters {
   search: string;
 }
 
+interface BadgeConfig {
+  icon: React.FC<{ className?: string }>;
+  bg: string;
+  text: string;
+  border: string;
+}
+
 const InvoiceStatusBadge: React.FC<{ status: InvoiceStatus | string; theme: 'light' | 'dark'; size?: 'sm' | 'md' }> = ({
   status, theme, size = 'md',
 }) => {
   const isDark = theme === 'dark';
 
-  const config = () => {
+  const getConfig = (): BadgeConfig => {
     switch (status) {
       case InvoiceStatus.PAID:
         return { icon: CheckCircle, bg: isDark ? 'bg-green-900/30' : 'bg-green-100', text: isDark ? 'text-green-300' : 'text-green-700', border: isDark ? 'border-green-800' : 'border-green-200' };
@@ -68,7 +74,7 @@ const InvoiceStatusBadge: React.FC<{ status: InvoiceStatus | string; theme: 'lig
     }
   };
 
-  const c = config();
+  const c = getConfig();
   const Icon = c.icon;
   const sizeClass = size === 'sm' ? 'px-2 py-0.5 text-xs' : 'px-3 py-1.5 text-sm';
 
@@ -136,18 +142,18 @@ const InvoiceDetailModal: React.FC<InvoiceDetailModalProps> = ({ theme, invoice,
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {[
-              { label: 'Amount', value: `${invoice.amount.toLocaleString()} ${invoice.currency}`, large: true },
-              { label: 'Paid Amount', value: `${invoice.paid_amount.toLocaleString()} ${invoice.currency}` },
-              ...(isUnpaid ? [{ label: 'Balance Due', value: `${invoice.balance_due.toLocaleString()} ${invoice.currency}`, highlight: true }] : []),
-              { label: 'Status', value: <InvoiceStatusBadge status={invoice.status} theme={theme} size="sm" /> },
-              { label: 'Invoice Type', value: INVOICE_TYPE_LABELS[invoice.invoice_type as InvoiceType] || invoice.invoice_type_label },
-              { label: 'Issued', value: invoice.issued_at ? new Date(invoice.issued_at).toLocaleDateString() : 'N/A' },
-              { label: 'Due Date', value: invoice.due_at ? new Date(invoice.due_at).toLocaleDateString() : 'N/A' },
-              ...(invoice.paid_at ? [{ label: 'Paid On', value: new Date(invoice.paid_at).toLocaleDateString() }] : []),
+              { label: 'Amount', value: `${invoice.amount.toLocaleString()} ${invoice.currency}`, large: true, highlight: false },
+              { label: 'Paid Amount', value: `${invoice.paid_amount.toLocaleString()} ${invoice.currency}`, large: false, highlight: false },
+              ...(isUnpaid ? [{ label: 'Balance Due', value: `${invoice.balance_due.toLocaleString()} ${invoice.currency}`, large: false, highlight: true }] : []),
+              { label: 'Status', value: <InvoiceStatusBadge status={invoice.status} theme={theme} size="sm" />, large: false, highlight: false },
+              { label: 'Invoice Type', value: INVOICE_TYPE_LABELS[invoice.invoice_type as InvoiceType] || invoice.invoice_type_label, large: false, highlight: false },
+              { label: 'Issued', value: invoice.issued_at ? new Date(invoice.issued_at).toLocaleDateString() : 'N/A', large: false, highlight: false },
+              { label: 'Due Date', value: invoice.due_at ? new Date(invoice.due_at).toLocaleDateString() : 'N/A', large: false, highlight: false },
+              ...(invoice.paid_at ? [{ label: 'Paid On', value: new Date(invoice.paid_at).toLocaleDateString(), large: false, highlight: false }] : []),
             ].map((item, i) => (
-              <div key={i} className={cn('p-4 rounded-xl', (item as any).highlight ? (isDark ? 'bg-amber-900/20 border border-amber-700/30' : 'bg-amber-50 border border-amber-200') : isDark ? 'bg-gray-800' : 'bg-gray-50')}>
+              <div key={i} className={cn('p-4 rounded-xl', item.highlight ? (isDark ? 'bg-amber-900/20 border border-amber-700/30' : 'bg-amber-50 border border-amber-200') : isDark ? 'bg-gray-800' : 'bg-gray-50')}>
                 <p className={cn('text-xs mb-1', isDark ? 'text-gray-400' : 'text-gray-500')}>{item.label}</p>
-                <p className={cn('font-medium', (item as any).large ? 'text-2xl font-bold' : '', (item as any).highlight ? 'text-amber-600 dark:text-amber-400' : '')}>
+                <p className={cn('font-medium', item.large ? 'text-2xl font-bold' : '', item.highlight ? 'text-amber-600 dark:text-amber-400' : '')}>
                   {item.value as React.ReactNode}
                 </p>
               </div>
@@ -242,10 +248,10 @@ const Invoices: React.FC<InvoicesProps> = ({ theme }) => {
     data: invoicesResponse, isLoading, error, refetch,
   } = useGetFacilityInvoices({ per_page: 100 });
 
-  const invoices = invoicesResponse?.data || [];
+  const invoices = useMemo(() => invoicesResponse?.data || [], [invoicesResponse]);
 
   const filteredInvoices = useMemo(() => {
-    return invoices.filter((inv) => {
+    return invoices.filter((inv: Invoice) => {
       if (filters.status !== 'all' && inv.status !== filters.status) return false;
       if (filters.invoice_type !== 'all' && inv.invoice_type !== filters.invoice_type) return false;
       if (filters.dateFrom && inv.issued_at && new Date(inv.issued_at) < new Date(filters.dateFrom)) return false;

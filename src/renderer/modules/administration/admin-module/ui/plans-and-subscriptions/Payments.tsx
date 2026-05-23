@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   Landmark, Smartphone, CheckCircle, Copy,
-  CheckCheck, Upload, Loader2, ArrowLeft, FileText,
+  CheckCheck, Upload, Loader2, FileText,
   Building2,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -11,7 +11,6 @@ import { useAppSelector } from '../../../../../app/store/hooks/useApp';
 import { useGetFacilitySubscription, useRecordPayment } from '../../api/subscriptions/SubscriptionQueries';
 import { useGetFacilityPayments } from '../../api/subscriptions/SubscriptionQueries';
 import { PaymentStatus, PaymentMethod, PaymentType, type Payment } from '../../api/subscriptions/SubscriptionTypes';
-import { ADMINISTRATION_PLANS_SUBSCRIPTIONS_ROUTES } from '../../../../../app/routes/constants/administration.paths';
 import { cn } from '../../../../../shared/types/cn';
 
 interface PaymentsProps {
@@ -26,7 +25,6 @@ const BANK_DETAILS = {
 
 export const Payments: React.FC<PaymentsProps> = ({ theme }) => {
   const isDark = theme === 'dark';
-  const navigate = useNavigate();
   const planSelection = useAppSelector((s) => s.plan.selected);
   const [method, setMethod] = useState<'bank' | null>(null);
   const [file, setFile] = useState<File | null>(null);
@@ -34,6 +32,7 @@ export const Payments: React.FC<PaymentsProps> = ({ theme }) => {
   const [notes, setNotes] = useState('');
   const [copied, setCopied] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
+  const navigate = useNavigate();
 
   const { data: subResp } = useGetFacilitySubscription();
   const { data: paymentsResp, refetch } = useGetFacilityPayments({ per_page: 100 });
@@ -45,9 +44,10 @@ export const Payments: React.FC<PaymentsProps> = ({ theme }) => {
   const payments = paymentsResp?.data || [];
   const plan = subscription?.plan;
   const price = plan?.pricing.usd || planSelection?.planPrice || 0;
-  const planName = plan?.name || planSelection?.planName || 'Selected Plan';
+  const planName = plan?.name || planSelection?.planName || '';
   const onboardingFee = plan?.onboarding_fee?.applicable ? (plan.onboarding_fee.usd || planSelection?.onboardingFee || 0) : 0;
   const total = price + onboardingFee;
+  const noPlan = !planName && !planSelection && !subscription;
 
   const copy = (val: string, key: string) => {
     navigator.clipboard.writeText(val).then(() => {
@@ -77,17 +77,36 @@ export const Payments: React.FC<PaymentsProps> = ({ theme }) => {
 
   const recentPayments = payments.slice(0, 5);
 
+  if (noPlan) {
+    return (
+      <div className="space-y-6 max-w-3xl mx-auto">
+        <div className="flex items-center gap-4">
+          <button onClick={() => navigate(ADMINISTRATION_PLANS_SUBSCRIPTIONS_ROUTES.AVAILABLE_PLANS)}
+            className={cn('p-2 rounded-lg transition-colors', isDark ? 'hover:bg-gray-800 text-gray-400' : 'hover:bg-gray-100 text-gray-600')}>
+            <ArrowLeft className="w-5 h-5" />
+          </button>
+          <h1 className="text-2xl font-bold">Payment</h1>
+        </div>
+        <div className={cn('rounded-2xl border-2 p-10 text-center', isDark ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200')}>
+          <FileText className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+          <h2 className="text-lg font-bold mb-2">No Plan Selected</h2>
+          <p className={cn('text-sm mb-6', isDark ? 'text-gray-400' : 'text-gray-600')}>
+            Please select a plan first before proceeding to payment.
+          </p>
+          <button
+            onClick={() => navigate(ADMINISTRATION_PLANS_SUBSCRIPTIONS_ROUTES.AVAILABLE_PLANS)}
+            className="inline-flex items-center gap-2 px-6 py-2.5 rounded-lg font-bold text-sm bg-blue-600 hover:bg-blue-700 text-white shadow-lg transition-all"
+          >
+            Browse Plans
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6 max-w-3xl mx-auto">
-      {/* Header */}
-      <div className="flex items-center gap-4">
-        <button onClick={() => navigate(ADMINISTRATION_PLANS_SUBSCRIPTIONS_ROUTES.AVAILABLE_PLANS)}
-          className={cn('p-2 rounded-lg transition-colors', isDark ? 'hover:bg-gray-800 text-gray-400' : 'hover:bg-gray-100 text-gray-600')}>
-          <ArrowLeft className="w-5 h-5" />
-        </button>
-        <h1 className="text-2xl font-bold">Payment</h1>
-      </div>
-
+      
       {/* Transaction Summary */}
       <div className={cn('rounded-2xl border-2 p-6', isDark ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200')}>
         <h2 className={cn('font-bold text-sm mb-4 flex items-center gap-2', isDark ? 'text-gray-300' : 'text-gray-700')}>

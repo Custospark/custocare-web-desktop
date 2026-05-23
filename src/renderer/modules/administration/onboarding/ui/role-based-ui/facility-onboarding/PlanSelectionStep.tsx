@@ -97,7 +97,7 @@ export const PlanSelectionStep: React.FC<PlanSelectionStepProps> = ({
         {sorted.map((plan) => {
           const isSelected = selectedPlanId === plan.id;
           const limitDisplay = plan.limits.max_staff
-            ? `${plan.limits.max_staff} staff · ${plan.limits.max_departments} depts · ${plan.limits.max_patients_per_month} pts/mo`
+            ? `${plan.limits.max_staff} staff · ${plan.limits.max_departments} depts · ${plan.limits.max_patients_per_month} patients per month`
             : 'Unlimited staff, departments & patients';
 
           return (

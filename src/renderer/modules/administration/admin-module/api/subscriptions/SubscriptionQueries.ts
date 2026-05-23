@@ -1114,12 +1114,11 @@ export const useAdminRejectPayment = (
       callbacks.onSuccess?.(data);
     },
 
-    onError: (error: any) => {
-      const axiosErr = error as AxiosError<ApiErrorResponse>;
-      const base     = extractErrorMessage(axiosErr, 'Failed to reject payment.');
-      const details  = formatValidationErrors(axiosErr.response?.data?.errors);
+    onError: (error: AxiosError<ApiErrorResponse>) => {
+      const base     = extractErrorMessage(error, 'Failed to reject payment.');
+      const details  = formatValidationErrors(error.response?.data?.errors);
       showToast('error', details ? `${base} (${details})` : base, 9000);
-      callbacks.onError?.(axiosErr);
+      callbacks.onError?.(error);
     },
   });
 };
@@ -1238,12 +1237,11 @@ export const useAdminMarkInvoicePaid = (
       callbacks.onSuccess?.(data);
     },
 
-    onError: (error: any) => {
-      const axiosErr = error as AxiosError<ApiErrorResponse>;
-      const base     = extractErrorMessage(axiosErr, 'Failed to mark invoice as paid.');
-      const details  = formatValidationErrors(axiosErr.response?.data?.errors);
+    onError: (error: AxiosError<ApiErrorResponse>) => {
+      const base     = extractErrorMessage(error, 'Failed to mark invoice as paid.');
+      const details  = formatValidationErrors(error.response?.data?.errors);
       showToast('error', details ? `${base} (${details})` : base, 9000);
-      callbacks.onError?.(axiosErr);
+      callbacks.onError?.(error);
     },
   });
 };
@@ -1277,12 +1275,11 @@ export const useAdminCancelInvoice = (
       callbacks.onSuccess?.(data);
     },
 
-    onError: (error: any) => {
-      const axiosErr = error as AxiosError<ApiErrorResponse>;
-      const base     = extractErrorMessage(axiosErr, 'Failed to cancel invoice.');
-      const details  = formatValidationErrors(axiosErr.response?.data?.errors);
+    onError: (error: AxiosError<ApiErrorResponse>) => {
+      const base     = extractErrorMessage(error, 'Failed to cancel invoice.');
+      const details  = formatValidationErrors(error.response?.data?.errors);
       showToast('error', details ? `${base} (${details})` : base, 9000);
-      callbacks.onError?.(axiosErr);
+      callbacks.onError?.(error);
     },
   });
 };

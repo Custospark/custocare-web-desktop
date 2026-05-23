@@ -275,7 +275,7 @@ export const AvailablePlans: React.FC<AvailablePlansProps> = ({ theme }) => {
         {sorted.map((plan) => {
           const isCurrent = currentPlan?.id === plan.id;
           const limitDisplay = plan.limits.max_staff
-            ? `${plan.limits.max_staff} staff · ${plan.limits.max_departments} depts · ${plan.limits.max_patients_per_month} pts/mo`
+            ? `${plan.limits.max_staff} staff · ${plan.limits.max_departments} depts · ${plan.limits.max_patients_per_month} patients per month`
             : 'Unlimited staff, departments & patients';
 
           return (
@@ -359,7 +359,15 @@ export const AvailablePlans: React.FC<AvailablePlansProps> = ({ theme }) => {
 
                 {isCurrent && isInTrial && (
                   <button
-                    onClick={() => navigate(ADMINISTRATION_PLANS_SUBSCRIPTIONS_ROUTES.PAYMENTS)}
+                    onClick={() => {
+                      dispatch(selectPlan({
+                        planId: plan.id,
+                        planName: plan.name,
+                        planPrice: plan.pricing.usd,
+                        onboardingFee: plan.onboarding_fee?.usd || 0,
+                      }));
+                      navigate(ADMINISTRATION_PLANS_SUBSCRIPTIONS_ROUTES.PAYMENTS);
+                    }}
                     className="w-full py-2.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-emerald-600 text-white shadow-lg hover:shadow-xl hover:scale-[1.02] cursor-pointer"
                   >
                     <CreditCard className="w-3.5 h-3.5" />
