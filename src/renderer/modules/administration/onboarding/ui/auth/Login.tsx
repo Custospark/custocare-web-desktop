@@ -10,6 +10,8 @@ import { useLogin } from '../../../../account/api/AccountQueries';
 
 import { ROUTES } from '../../routes/onboardingRouteConstants';
 
+// original heroImage: https://images.unsplash.com/photo-1576091160550-2173dba999ef?w=1200&q=80
+
 interface FormState {
   email: string;
   password: string;
@@ -124,13 +126,13 @@ export const Login: React.FC = () => {
   const isFormValid = formState.email && formState.password && !formErrors.email && !formErrors.password;
 
   return (
-    <AuthLayout
-      title="Let’s confirm it’s you.."
-      subtitle="Sign in to securely access your clinical dashboard."
-      heroImage="https://images.unsplash.com/photo-1576091160550-2173dba999ef?w=1200&q=80"
-      heroHeadline="Secure. Intelligent. Trusted."
-      heroSubtext="Join thousands of healthcare professionals using integrated clinical, pharmacy, lab, and billing workflows to improve patient care and clinical accuracy."
-    >
+        <AuthLayout
+        title="Welcome back"
+        subtitle="Sign in to continue"
+        heroImage="/assets/smiling_nurse_3.jpg"
+        heroHeadline="Continuous care. Clinical Excellence."
+        heroSubtext="Clinical, Nursing, Lab, Pharmacy, Billing, Ambulance — all working as one. Faster. Safer. Smarter."
+      >
       <form onSubmit={handleSubmit} className="space-y-6" noValidate>
         {(formErrors.general) && (
           <div

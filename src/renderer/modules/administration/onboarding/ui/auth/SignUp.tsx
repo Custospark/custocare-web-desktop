@@ -247,11 +247,12 @@ export const SignUp: React.FC = () => {
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
-    <AuthLayout
-      title="Let's get you started…"
-      subtitle="Sign up to access your clinical dashboard."
-      heroHeadline="Welcome aboard!"
-      heroSubtext="Quick signup, lifetime access. Your journey starts now."
+   <AuthLayout
+      title="Create your account"
+      subtitle="Join Custocare, built for continuous care."
+      heroImage="/assets/smiling_nurse.jpg"
+      heroHeadline="Continuous care. Clinical Excellence."
+      heroSubtext="Lab knows. Clinical sees. Pharmacy acts. Nursing documents. Billing captures. Ambulance alerts. No dropped balls. Just care. Start your journey here."
       showBackToLogin
     >
       <form onSubmit={handleSubmit} className="space-y-4" noValidate>

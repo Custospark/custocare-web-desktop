@@ -48,7 +48,7 @@ export const AccessPanel: React.FC<AccessPanelProps> = ({
         <img
           src={IMAGES.doctorPatient}
           alt="Healthcare professional consulting with patient"
-          className="w-full h-full object-cover"
+          className="w-full h-full object-cover object-top"
           loading="lazy"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />

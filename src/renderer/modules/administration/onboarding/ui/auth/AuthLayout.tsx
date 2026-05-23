@@ -20,8 +20,8 @@ interface AuthLayoutProps {
 
 const DEFAULT_HERO = {
   image: 'https://images.unsplash.com/photo-1582750433449-648ed127bb54?w=1200&q=80',
-  headline: 'Continuous Care. Clinical Excellence.',
-  subtext: 'Unifying clinical workflows, financial operations, and patient engagement into one scalable healthcare platform.',
+  headline: 'Continuous care. Clinical Excellence.',
+  subtext: 'Lab, Pharmacy, Clinical, Nursing, Billing, Ambulance — all working as one. Faster. Safer. Smarter.',
 };
 
 export const AuthLayout: React.FC<AuthLayoutProps> = ({
@@ -98,8 +98,8 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({
         <div className={cn(
           'absolute inset-0 z-10',
           theme === 'dark'
-            ? 'bg-linear-to-br from-cyan-900/50 via-blue-900/40 to-purple-900/50'
-            : 'bg-linear-to-br from-blue-600/30 via-cyan-600/20 to-purple-600/25'
+            ? 'bg-linear-to-br from-blue-900/50 via-indigo-900/40 to-purple-900/50'
+            : 'bg-linear-to-br from-blue-600/40 via-indigo-600/30 to-purple-600/35'
         )} />
         
         {/* Hero Image */}
@@ -109,7 +109,7 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({
           transition={{ duration: 1.2, ease: "easeOut" }}
           src={heroImage}
           alt="Healthcare professionals"
-          className="absolute inset-0 w-full h-full object-cover"
+          className="absolute inset-0 w-full h-full object-cover object-top"
         />
         
         {/* Hero Content */}
@@ -133,14 +133,20 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({
               <motion.div 
                 animate={{ scaleX: [0, 1] }}
                 transition={{ duration: 0.8, delay: 0.6 }}
-                className="w-12 h-0.5 bg-gradient-to-r from-cyan-400 to-transparent rounded-full origin-left" 
+                className={cn(
+                  "w-12 h-0.5 bg-gradient-to-r rounded-full origin-left",
+                  theme === 'dark' ? "from-blue-400 to-transparent" : "from-blue-400 to-transparent"
+                )} 
               />
-              <Shield className="w-5 h-5 text-cyan-300" />
+              <Shield className={cn("w-5 h-5", theme === 'dark' ? "text-blue-300" : "text-white")} />
             </div>
             <h2 className="text-3xl xl:text-4xl font-bold leading-tight">
               {heroHeadline}
             </h2>
-            <p className="text-base text-cyan-50/95 leading-relaxed font-medium">
+            <p className={cn(
+              "text-base leading-relaxed font-medium",
+              theme === 'dark' ? "text-blue-50/90" : "text-white/90"
+            )}>
               {heroSubtext}
             </p>
             
@@ -159,7 +165,10 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({
                   className="flex items-center gap-2 text-xs bg-white/15 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/20 shadow-lg"
                 >
                   <badge.icon className="w-3.5 h-3.5 text-emerald-300" />
-                  <span className="text-cyan-50 font-semibold">{badge.label}</span>
+                  <span className={cn(
+                    "font-semibold",
+                    theme === 'dark' ? "text-blue-50" : "text-white"
+                  )}>{badge.label}</span>
                 </motion.div>
               ))}
             </div>
