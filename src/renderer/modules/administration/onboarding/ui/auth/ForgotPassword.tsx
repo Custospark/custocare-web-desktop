@@ -496,7 +496,7 @@ const ForgotPassword: React.FC = () => {
               onChange={handleEmailChange}
               onBlur={handleBlur}
               disabled={isLoading}
-              placeholder="doctor@hospital.com"
+              placeholder="Enter your email."
               className={cn(
                 'w-full pl-12 pr-4 py-3.5 rounded-xl text-base border-2 transition-all duration-200 focus:outline-none focus:ring-4 disabled:opacity-50 disabled:cursor-not-allowed',
                 theme === 'dark'

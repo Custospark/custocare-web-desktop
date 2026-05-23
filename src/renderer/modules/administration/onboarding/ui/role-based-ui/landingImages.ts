@@ -19,7 +19,7 @@
    ----------------------------------------------------------------------- */
 export const IMAGES = {
   heroMedical: 'https://images.unsplash.com/photo-1576765608535-5f04d1e3f289?w=800&h=800&fit=crop&q=80',
-  doctorPatient: '/assets/smiling_nurse_5.jpg',
+  doctorPatient: '/assets/smiling_hero_nurse.jpg',
   hospitalFacility: 'https://images.unsplash.com/photo-1582750433449-648ed127bb54?w=400&h=400&fit=crop&q=80',
   medicalDashboard: 'https://images.unsplash.com/photo-1551076805-e1869033e561?w=400&h=400&fit=crop&q=80'
 };

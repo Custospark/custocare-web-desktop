@@ -174,7 +174,7 @@ export const Login: React.FC = () => {
               onChange={handleInputChange('email')}
               onBlur={handleBlur('email')}
               disabled={isLoading}
-              placeholder="doctor@hospital.com"
+              placeholder="Enter your email"
               className={cn(
                 'w-full pl-12 pr-4 py-3.5 rounded-xl text-base',
                 'border-2 transition-all duration-200',
