@@ -18,70 +18,67 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  // Heart,
   Stethoscope,
   Building2,
   ArrowRight,
   CheckCircle2,
   Sun,
   Moon,
-  ChevronLeft,Heart,
+  ChevronLeft,
+  Heart,
 } from 'lucide-react';
 import { cn } from '../../../../../shared/types/cn';
-import { useAppDispatch, useAppSelector } from  '../../../../../app/store/hooks/useApp';
+import { useAppDispatch, useAppSelector } from '../../../../../app/store/hooks/useApp';
 import { toggleTheme } from '../../../../../app/store/slices/uiSlice';
 import { ROUTES } from '../../routes/onboardingRouteConstants';
-import { itemVariants, containerVariants } from  '../../../../../shared/components/animations/motionVariants';
+import { itemVariants, containerVariants } from '../../../../../shared/components/animations/motionVariants';
 import LogoImage from '../../../../../shared/assets/LogoImage';
 import { BrandName } from '../../../../../shared/utils/BrandName';
 
 /* ==========================================================================
-   ROLE DATA - SIMPLIFIED
+   ROLE DATA - EMOTIONALLY HOOKING, BMC-ALIGNED
    ========================================================================== */
 const ROLES = [
   {
     id: 'medical-professional',
     title: 'Care Team Member',
-    subtitle: 'Pharmacists, Doctors, Nurses & Allied Health Professionals',
-    description:
-      'Deliver continuous, coordinated care with real-time patient context and streamlined clinical workflows.',
+    subtitle: 'Doctors, Nurses, Pharmacists & Lab Professionals',
+    description: 'Lab results find you. Pharmacy sees the order. You focus on the patient. We handle the rest.',
     icon: Stethoscope,
     gradient: 'from-blue-600 to-cyan-600',
     route: ROUTES.STAFF_ONBOARDING,
     benefits: [
-      'Unified patient visit history',
-      'Clear task and workflow visibility',
-      'Reduced administrative burden'
+      'Lab, pharmacy, clinical — all in one view',
+      'No more chasing results or orders',
+      'More patient time. Less paper chase.'
     ]
   },
   {
     id: 'patient',
     title: 'Patient',
     subtitle: 'Individuals Receiving Care',
-    description:
-      'Experience seamless, coordinated care across visits, departments, and healthcare facilities.',
+    description: 'Your record follows you. Every visit. Every facility. Finally, no more repeating yourself.',
     icon: Heart,
     gradient: 'from-emerald-600 to-teal-600',
     route: ROUTES.PATIENT_ONBOARDING,
     benefits: [
-      'Continuity of care across facilities',
-      'Accurate, centralized health records',
-      'Safer, more coordinated care'
+      'One record. Every provider.',
+      'Faster visits, less waiting',
+      'Safer care. Better coordination.'
     ]
   },
   {
     id: 'facility-owner',
     title: 'Healthcare Facility',
-    subtitle: 'Clinics, Pharmacies, Hospitals & Health Organizations',
-    description:
-      'Run efficient, connected healthcare operations with full visibility across care delivery and facility workflows.',
+    subtitle: 'Hospitals, Clinics, Pharmacies & Labs',
+    description: 'Ambulance to billing. Nursing to pharmacy. Every department, one flow. Finally.',
     icon: Building2,
     gradient: 'from-purple-600 to-pink-600',
     route: ROUTES.HEALTHCARE_ONBOARDING,
     benefits: [
-      'Clinical Excellence across departments',
-      'Real-time facility performance insights',
-      'Scalable, audit-ready healthcare operations'
+      'Lab, pharmacy, clinical, billing — all connected',
+      'See everything. Across every department.',
+      'Audit-ready. Scalable. Profitable.'
     ]
   }
 ];
@@ -165,13 +162,13 @@ export const RoleSelection: React.FC = () => {
               <LogoImage />
               <div>
                 <div className="text-xl font-bold tracking-tight bg-linear-to-r from-blue-600 to-emerald-600 bg-clip-text text-transparent">
-                  <BrandName></BrandName>
+                  <BrandName />
                 </div>
                 <div className={cn(
-                  "text-[11px] font-semibold tracking-wide uppercase",
-                  theme === 'dark' ? "text-slate-500" : "text-slate-500"
+                  "text-[11px] font-semibold tracking-wide",
+                  theme === 'dark' ? "text-slate-400" : "text-slate-500"
                 )}>
-                 Complete Your Profile
+                  Continuous care. Clinical Excellence.
                 </div>
               </div>
             </div>
@@ -223,14 +220,11 @@ export const RoleSelection: React.FC = () => {
                 >
                   {loggedInUserName}
                 </span>
-                , select your role to continue...
+                ! What brings you to Custocare today?
               </h1>
             </motion.div>
 
-            {/* ✅ Role Cards — column count driven by ROLES.length:
-                  1 role  → single centered column
-                  2 roles → 2-col centered (max-w-3xl mx-auto)
-                  3 roles → full 3-col grid (uncomment Patient to restore) */}
+            {/* Role Cards */}
             <motion.div
               variants={containerVariants}
               className={cn(
@@ -388,7 +382,7 @@ export const RoleSelection: React.FC = () => {
                         : "bg-slate-400 text-white cursor-not-allowed"
                     )}
                   >
-                    Proceed as {selectedRoleData?.title}
+                    Continue as {selectedRoleData?.title}
                     <ArrowRight className="w-6 h-6" />
                   </motion.button>
                 </motion.div>
