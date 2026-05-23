@@ -22,11 +22,6 @@ interface Badge {
   animated?: boolean;
 }
 
-interface MetadataItem {
-  label: string;
-  value: string;
-}
-
 interface WorkspaceCardProps {
   id: string;
   title: string;
@@ -38,13 +33,13 @@ interface WorkspaceCardProps {
   buttonGradient: string;
   features?: Feature[];
   badges?: Badge[];
-  metadata?: MetadataItem[];
   imageUrl?: string;
+  metadata?: Array<{ label: string; value: string }>;
   theme: 'light' | 'dark';
   onClick: () => void;
 }
 
-const DEFAULT_WORKSPACE_IMAGE = 'https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?w=400&h=300&fit=crop&q=80';
+const FALLBACK_IMAGE = '/assets/hospital.jpg';
 
 export const WorkspaceCard: React.FC<WorkspaceCardProps> = ({
   title,
@@ -56,12 +51,13 @@ export const WorkspaceCard: React.FC<WorkspaceCardProps> = ({
   buttonGradient,
   features = [],
   badges = [],
-  metadata = [],
   imageUrl,
+  metadata = [],
   theme,
   onClick,
 }) => {
   const [isHovered, setIsHovered] = useState(false);
+  const [imgError, setImgError] = useState(false);
 
   const getBadgeStyles = (variant: Badge['variant']) => {
     const styles = {
@@ -97,13 +93,14 @@ export const WorkspaceCard: React.FC<WorkspaceCardProps> = ({
           : 'bg-white border-gray-200 hover:bg-gray-50 hover:border-gray-300'
       )}
     >
-      <div className="flex flex-col">
+      <div className="flex flex-col lg:flex-row">
         {/* Image Section - Only if imageUrl provided */}
         {imageUrl && (
-          <div className="relative w-full h-32 shrink-0 overflow-hidden">
+          <div className="relative w-full lg:w-64 h-48 lg:h-full min-h-0 overflow-hidden shrink-0">
             <img
-              src={imageUrl || DEFAULT_WORKSPACE_IMAGE}
+              src={imgError ? FALLBACK_IMAGE : imageUrl}
               alt={title}
+              onError={() => setImgError(true)}
               className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
             />
             <div
@@ -118,25 +115,25 @@ export const WorkspaceCard: React.FC<WorkspaceCardProps> = ({
         )}
 
         {/* Content Section */}
-        <div className="flex-1 p-3 sm:p-4">
-          <div className="flex flex-col items-start justify-between gap-3">
+        <div className="flex-1 p-4 sm:p-6">
+          <div className="flex flex-col lg:flex-row items-start justify-between gap-6">
             {/* Left Content - Takes available space */}
-            <div className="flex-1 min-w-0 space-y-2">
+            <div className="flex-1 min-w-0 space-y-4">
               {/* Header with Icon */}
-              <div className="flex items-start gap-2">
+              <div className="flex items-start gap-3">
                 <div
                   className={cn(
-                    'w-8 h-8 rounded-lg flex items-center justify-center shrink-0',
+                    'w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center shrink-0',
                     iconGradient
                   )}
                 >
-                  <Icon className="w-4 h-4 text-white" />
+                  <Icon className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="flex flex-wrap items-center gap-1.5">
+                  <div className="flex flex-wrap items-center gap-2 mb-1">
                     <h3
                       className={cn(
-                        'text-sm font-bold truncate',
+                        'text-base sm:text-lg font-bold truncate',
                         theme === 'dark' ? 'text-white' : 'text-gray-900'
                       )}
                     >
@@ -146,12 +143,12 @@ export const WorkspaceCard: React.FC<WorkspaceCardProps> = ({
                       <div
                         key={index}
                         className={cn(
-                          'px-1.5 py-0.5 rounded-full text-[10px] font-medium flex items-center gap-1 border',
+                          'px-2 py-0.5 rounded-full text-xs font-medium flex items-center gap-1 border',
                           getBadgeStyles(badge.variant)
                         )}
                       >
                         {badge.animated && (
-                          <div className="w-1 h-1 rounded-full bg-emerald-500 animate-pulse" />
+                          <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                         )}
                         {badge.label}
                       </div>
@@ -159,7 +156,7 @@ export const WorkspaceCard: React.FC<WorkspaceCardProps> = ({
                   </div>
                   <p
                     className={cn(
-                      'text-xs font-semibold mt-0.5',
+                      'text-xs sm:text-sm font-bold',
                       theme === 'dark' ? 'text-blue-400' : 'text-blue-600'
                     )}
                   >
@@ -168,63 +165,72 @@ export const WorkspaceCard: React.FC<WorkspaceCardProps> = ({
                 </div>
               </div>
 
-              {/* Description - shorter for grid */}
-              {description && (
-                <p
-                  className={cn(
-                    'text-xs leading-relaxed line-clamp-2',
-                    theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
-                  )}
-                >
-                  {description}
-                </p>
+              {/* Description */}
+              <p
+                className={cn(
+                  'text-xs sm:text-sm',
+                  theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+                )}
+              >
+                {description}
+              </p>
+
+              {/* Metadata */}
+              {metadata.length > 0 && (
+                <div className="space-y-1">
+                  {metadata.map((item, index) => (
+                    <div key={index} className="flex items-center gap-2 flex-wrap">
+                      <span
+                        className={cn(
+                          'text-xs font-medium',
+                          theme === 'dark' ? 'text-gray-500' : 'text-gray-500'
+                        )}
+                      >
+                        {item.label}:
+                      </span>
+                      <span
+                        className={cn(
+                          'text-xs font-mono break-all',
+                          theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+                        )}
+                      >
+                        {item.value}
+                      </span>
+                    </div>
+                  ))}
+                </div>
               )}
 
-              {/* Features - compact pill layout */}
+              {/* Features */}
               {features.length > 0 && (
-                <div className="flex flex-wrap gap-1.5">
+                <div className="flex flex-wrap gap-2">
                   {features.map((feature, index) => (
                     <div
                       key={index}
                       className={cn(
-                        'flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-medium',
+                        'flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium',
                         theme === 'dark' ? 'bg-gray-800 text-gray-300' : 'bg-gray-100 text-gray-700'
                       )}
                     >
                       <feature.icon className="w-3 h-3 shrink-0" />
-                      <span className="truncate max-w-24">{feature.label}</span>
+                      <span className="truncate max-w-30">{feature.label}</span>
                     </div>
                   ))}
                 </div>
               )}
+            </div>
 
-              {/* Metadata - details section */}
-              {metadata.length > 0 && (
-                <div className="space-y-1 pt-1">
-                  {metadata.map((item, index) => (
-                    <div
-                      key={index}
-                      className={cn(
-                        'flex items-center justify-between text-[11px] px-2 py-1 rounded-md',
-                        theme === 'dark' ? 'bg-gray-800/50 text-gray-300' : 'bg-gray-50 text-gray-700'
-                      )}
-                    >
-                      <span className="font-medium">{item.label}</span>
-                      <span className={theme === 'dark' ? 'text-gray-100' : 'text-gray-900'}>{item.value}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* Action Button - full width */}
+            {/* Action Button - Right aligned */}
+            <div className="flex lg:flex-col items-center justify-end">
               <button
                 type="button"
                 className={cn(
-                  'w-full px-3 py-2 rounded-lg font-medium text-xs cursor-pointer',
-                  'flex items-center justify-center gap-1.5',
+                  'px-5 py-2.5 rounded-lg font-medium text-sm cursor-pointer',
+                  'flex items-center justify-center gap-2',
                   'transition-all duration-300',
                   'text-white shadow-sm hover:shadow-md',
-                  'transform hover:scale-[1.02] active:scale-[0.98]',
+                  'transform hover:scale-105 active:scale-95',
+                  'whitespace-nowrap min-w-30',
                   buttonGradient
                 )}
                 onClick={(e) => {
@@ -235,8 +241,8 @@ export const WorkspaceCard: React.FC<WorkspaceCardProps> = ({
                 <span>{buttonText}</span>
                 <ArrowRight
                   className={cn(
-                    'w-3.5 h-3.5 transition-transform duration-300 shrink-0',
-                    isHovered && 'translate-x-0.5'
+                    'w-4 h-4 transition-transform duration-300 shrink-0',
+                    isHovered && 'translate-x-1'
                   )}
                 />
               </button>

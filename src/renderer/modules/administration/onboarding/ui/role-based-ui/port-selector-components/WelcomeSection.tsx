@@ -6,7 +6,7 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Sparkles, Globe, Sun, Sunrise, Sunset } from 'lucide-react';
+import { Sparkles, Globe, Sun, Sunrise, Sunset, Heart, Briefcase } from 'lucide-react';
 import { cn } from '../../../../../../shared/types/cn';
 
 interface WelcomeSectionProps {
@@ -42,20 +42,19 @@ export const WelcomeSection: React.FC<WelcomeSectionProps> = ({
 
   const getWelcomeMessage = () => {
     if (isStaffWithFacility) {
-      return 'You have access to professional workspaces. Select a facility to continue.';
+      return 'Your facilities are ready. Pick one to start your day.';
     }
     if (isStaffWithoutFacility) {
-      return 'You are registered as medical staff. Access your dashboard to manage invitations.';
+      return 'You\'re on the team. Check your invitations and join a facility.';
     }
     if (isPatient) {
-      return 'Your patient portal is active. View your health records and appointments.';
+      return 'Your health records are waiting. See results, track appointments, stay informed.';
     }
     if (hasGlobalCapabilities) {
-      return 'You have platform capabilities. Select a workspace to continue.';
+      return 'Platform leadership access. Choose where you want to go.';
     }
-    return 'Complete your profile to access healthcare services.';
+    return 'Complete your profile to unlock healthcare services.';
   };
-
 
   return (
     <motion.div
@@ -73,7 +72,11 @@ export const WelcomeSection: React.FC<WelcomeSectionProps> = ({
           )}
         >
           {hasGlobalCapabilities ? (
-            <Globe className="w-5 h-5 sm:w-6 sm:h-6 text-purple-600 dark:text-purple-400" />
+            <Globe className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600 dark:text-blue-400" />
+          ) : isStaffWithFacility || isStaffWithoutFacility ? (
+            <Briefcase className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600 dark:text-blue-400" />
+          ) : isPatient ? (
+            <Heart className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600 dark:text-blue-400" />
           ) : (
             <Sparkles className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600 dark:text-blue-400" />
           )}
@@ -81,17 +84,16 @@ export const WelcomeSection: React.FC<WelcomeSectionProps> = ({
         <div className="flex-1 min-w-0">
           <h1
             className={cn(
-              'text-xl sm:text-2xl font-bold mb-1 flex items-center gap-2',
+              'text-xl sm:text-2xl font-bold mb-1 flex items-center gap-2 flex-wrap',
               theme === 'dark' ? 'text-white' : 'text-gray-900'
             )}
           >
-            <span>{timeGreeting.text}, {userName || 'User'}</span>
-            <span className="text-2xl">{timeGreeting.emoji}</span>
+            <span>{timeGreeting.text}, {userName || 'there'} 👋</span>
           </h1>
           <p
             className={cn(
-              'text-xs sm:text-sm',
-              theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+              'text-sm sm:text-base leading-relaxed',
+              theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
             )}
           >
             {getWelcomeMessage()}

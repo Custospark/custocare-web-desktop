@@ -35,7 +35,7 @@ interface ProfessionalWorkspacesProps {
   onStaffDashboard: () => void;
 }
 
-const DEFAULT_WORKSPACE_IMAGE = 'https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?w=400&h=300&fit=crop&q=80';
+const FALLBACK_IMAGE = '/assets/hospital.jpg';
 
 export const ProfessionalWorkspaces: React.FC<ProfessionalWorkspacesProps> = ({
   isStaff,
@@ -46,13 +46,11 @@ export const ProfessionalWorkspaces: React.FC<ProfessionalWorkspacesProps> = ({
   onWorkspaceSelect,
   onStaffDashboard,
 }) => {
-  // Get staff facilities with full details including logo path
   const staffFacilities = useAppSelector(selectStaffFacilities);
   
-  // Helper function to get facility logo URL by facility ID
   const getFacilityLogoUrl = (facilityId: number): string => {
     const facility = staffFacilities.find(f => f.facility_id === facilityId);
-    return facility?.facility_logo_path || DEFAULT_WORKSPACE_IMAGE;
+    return facility?.facility_logo_path || FALLBACK_IMAGE;
   };
 
   if (!isStaff) return null;
@@ -80,7 +78,7 @@ export const ProfessionalWorkspaces: React.FC<ProfessionalWorkspacesProps> = ({
             theme === 'dark' ? 'text-white' : 'text-gray-900'
           )}
         >
-          Professional Workspace{isStaffWithFacility ? 's' : ''}
+          Your Workspaces
         </h2>
       </div>
 
@@ -88,12 +86,12 @@ export const ProfessionalWorkspaces: React.FC<ProfessionalWorkspacesProps> = ({
       {isStaffWithoutFacility && (
         <WorkspaceCard
           id="staff-dashboard"
-          title="Staff Dashboard"
-          subtitle="Manage invitations & profile"
-          description="Access your facility invitations, update your professional profile, and manage your healthcare credentials."
+          title="Your Hub"
+          subtitle="Invitations & Profile"
+          description="See where you're needed. Accept facility invitations, keep your profile current, and get ready to deliver care."
           icon={UserCog}
           iconGradient="bg-gradient-to-br from-blue-500 to-cyan-500"
-          buttonText="Open Dashboard"
+          buttonText="Go to Hub"
           buttonGradient="bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700"
           features={[
             { icon: Inbox, label: 'Invitations' },
@@ -107,17 +105,16 @@ export const ProfessionalWorkspaces: React.FC<ProfessionalWorkspacesProps> = ({
 
       {/* Staff With Facilities - Workspace Cards */}
       {isStaffWithFacility && (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+        <div className="space-y-3 sm:space-y-4">
           {facilityRoles.map((facilityRole) => {
             const badges = [
               { label: 'Active', variant: 'success' as const, animated: true },
             ];
 
             if (facilityRole.is_primary_facility) {
-              badges.push({ label: 'Primary', variant: 'success' ,animated:true});
+              badges.push({ label: 'Primary', variant: 'success', animated: true });
             }
 
-            // Get the facility logo URL from the staff facilities array
             const facilityLogoUrl = getFacilityLogoUrl(facilityRole.facility_id);
 
             return (
@@ -126,10 +123,10 @@ export const ProfessionalWorkspaces: React.FC<ProfessionalWorkspacesProps> = ({
                 id={`${facilityRole.facility_id}-${facilityRole.role_code}`}
                 title={facilityRole.facility_name || `Facility ${facilityRole.facility_id}`}
                 subtitle={getRoleDisplayName(facilityRole.role_code)}
-                description={`Access your ${getRoleDisplayName(facilityRole.role_code).toLowerCase()} dashboard.`}
+                description={`Your ${getRoleDisplayName(facilityRole.role_code).toLowerCase()} workspace. See what needs you — patients, orders, results — all in one place.`}
                 icon={Sparkles}
                 iconGradient="bg-gradient-to-br from-blue-500 to-cyan-500"
-                buttonText="Open Dashboard"
+                buttonText="Open Workspace"
                 buttonGradient="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
                 badges={badges}
                 imageUrl={facilityLogoUrl}

@@ -61,7 +61,7 @@ export const PersonalAccessSection: React.FC<PersonalAccessSectionProps> = ({
             theme === 'dark' ? 'text-white' : 'text-gray-900'
           )}
         >
-          Personal Access
+          Your Health
         </h2>
       </div>
 
@@ -69,12 +69,12 @@ export const PersonalAccessSection: React.FC<PersonalAccessSectionProps> = ({
       {isPatient ? (
         <WorkspaceCard
           id="patient-portal"
-          title="My Patient Portal"
-          subtitle="View your personal health records"
-          description="Access your test results, appointments, medical history, and billing information."
+          title="Your Health Portal"
+          subtitle="Your records, always with you"
+          description="See your test results as soon as they're ready. Track appointments. Review your history. Everything in one place."
           icon={Heart}
           iconGradient="bg-linear-to-br from-purple-500 to-pink-500"
-          buttonText="View My Health"
+          buttonText="Go to My Health"
           buttonGradient="bg-linear-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
           features={[
             { icon: FileText, label: 'Test Results' },
@@ -100,7 +100,7 @@ export const PersonalAccessSection: React.FC<PersonalAccessSectionProps> = ({
               : 'bg-white border-gray-200'
           )}
         >
-          <div className="flex col sm:row items-start gap-4">
+          <div className="flex flex-col sm:flex-row items-start gap-4">
             <div
               className={cn(
                 'w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center shrink-0',
@@ -109,14 +109,14 @@ export const PersonalAccessSection: React.FC<PersonalAccessSectionProps> = ({
             >
               <Heart className="w-5 h-5 sm:w-6 sm:h-6 text-purple-600 dark:text-purple-400" />
             </div>
-            <div className="1 min-w-0">
+            <div className="flex-1 min-w-0">
               <h3
                 className={cn(
                   'text-base sm:text-lg font-bold mb-2',
                   theme === 'dark' ? 'text-white' : 'text-gray-900'
                 )}
               >
-                Activate Patient Portal
+                Take Control of Your Health
               </h3>
               <p
                 className={cn(
@@ -124,11 +124,10 @@ export const PersonalAccessSection: React.FC<PersonalAccessSectionProps> = ({
                   theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
                 )}
               >
-                Access your personal health records, appointments, test results, and billing
-                information by activating your patient portal.
+                See your results. Know your appointments. Own your story. Activate your patient portal — it takes less than a minute.
               </p>
 
-              <div className="flex col sm:row wrap gap-3">
+              <div className="flex flex-col sm:flex-row gap-3">
                 <button
                   type="button"
                   onClick={onActivatePatientPortal}
@@ -142,7 +141,7 @@ export const PersonalAccessSection: React.FC<PersonalAccessSectionProps> = ({
                   )}
                 >
                   <CheckCircle className="w-4 h-4 shrink-0" />
-                  <span>Activate Patient Portal</span>
+                  <span>Activate Portal</span>
                 </button>
 
                 {!isStaff && (
@@ -159,7 +158,7 @@ export const PersonalAccessSection: React.FC<PersonalAccessSectionProps> = ({
                     )}
                   >
                     <Stethoscope className="w-4 h-4 shrink-0" />
-                    <span>Register as Medical Staff</span>
+                    <span>Join as Medical Staff</span>
                   </button>
                 )}
               </div>

@@ -11,11 +11,11 @@ import {
   Shield,
   Globe,
   Settings,
-  Users,
-  Database,
   Lock,
   Award,
   Zap,
+  ClipboardCheck,
+  type LucideIcon,
 } from 'lucide-react';
 import { cn } from '../../../../../../shared/types/cn';
 import { WorkspaceCard } from './WorkspaceCard';
@@ -27,33 +27,38 @@ interface GlobalCapabilitiesProps {
   onSelectCapability: (capabilityName: string) => void;
 }
 
-// Map capability names to icons and gradients
-const capabilityConfig: Record<string, { icon: any; gradient: string; description: string }> = {
+// Map capability names to icons, gradients, and human descriptions
+const capabilityConfig: Record<string, { icon: LucideIcon; gradient: string; description: string; benefits: string[] }> = {
   super_admin: {
     icon: Shield,
     gradient: 'bg-gradient-to-br from-purple-500 to-indigo-500',
-    description: 'Full platform control and system configuration',
+    description: 'Oversee everything. Control what matters. Keep the system running smoothly.',
+    benefits: ['Full platform visibility', 'System-wide settings', 'User permissions'],
   },
   admin: {
     icon: Settings,
     gradient: 'bg-gradient-to-br from-slate-500 to-gray-500',
-    description: 'Administrative access to platform settings',
+    description: 'Manage day-to-day operations. Configure workflows. Keep teams moving.',
+    benefits: ['Operational control', 'Workflow configuration', 'Team support'],
   },
   regulator: {
     icon: Award,
     gradient: 'bg-gradient-to-br from-amber-500 to-orange-500',
-    description: 'Regulatory oversight and compliance monitoring',
+    description: 'Ensure compliance. Monitor quality. Protect standards across every facility.',
+    benefits: ['Compliance oversight', 'Quality monitoring', 'Audit-ready reports'],
   },
   auditor: {
-    icon: Database,
+    icon: ClipboardCheck,
     gradient: 'bg-gradient-to-br from-emerald-500 to-teal-500',
-    description: 'Audit logs and system review access',
+    description: 'Review activity. Track changes. Maintain integrity across the platform.',
+    benefits: ['Complete audit trails', 'Change history', 'System integrity'],
   },
   // Default for any other Spatie roles
   default: {
     icon: Zap,
     gradient: 'bg-gradient-to-br from-blue-500 to-cyan-500',
-    description: 'Access your specialized workspace',
+    description: 'Your specialized workspace. Everything you need, nothing you don\'t.',
+    benefits: ['Tailored tools', 'Focused workflows', 'Quick access'],
   },
 };
 
@@ -87,7 +92,7 @@ export const GlobalCapabilities: React.FC<GlobalCapabilitiesProps> = ({
             theme === 'dark' ? 'text-white' : 'text-gray-900'
           )}
         >
-          Platform Capabilities
+          Platform Leadership
         </h2>
       </div>
 
@@ -98,28 +103,22 @@ export const GlobalCapabilities: React.FC<GlobalCapabilitiesProps> = ({
           const Icon = config.icon;
           const displayName = getRoleDisplayName(capabilityName);
           
-          // Generate features based on capability
-          const features = [
-            { icon: Lock, label: 'Secure Access' },
-            { icon: Settings, label: 'Full Control' },
-            { icon: Users, label: 'User Management' },
-          ];
-
-          // Special features for specific capabilities
-          if (capabilityName === 'super_admin') {
-            features.push({ icon: Database, label: 'System Config' });
-          }
+          // Use benefits from config
+          const features = config.benefits.map((benefit) => ({
+            icon: Lock,
+            label: benefit,
+          }));
 
           return (
             <WorkspaceCard
               key={capabilityName}
               id={capabilityName}
               title={displayName}
-              subtitle="Platform Access"
+              subtitle="Global Access"
               description={config.description}
               icon={Icon}
               iconGradient={config.gradient}
-              buttonText={`Open ${displayName}`}
+              buttonText={`Enter ${displayName}`}
               buttonGradient="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700"
               features={features}
               badges={[
