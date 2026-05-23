@@ -184,7 +184,7 @@ export const PlanSelectionStep: React.FC<PlanSelectionStepProps> = ({
       </div>
 
       <PlanDetailsModal
-        plan={detailPlan ? { ...detailPlan, features: TIER_FEATURES[detailPlan.slug] || [] } : null}
+        plan={detailPlan ? { ...detailPlan, features: TIER_FEATURES[detailPlan.slug]?.features || [] } : null}
         allPlans={sorted.map((p) => ({ ...p, features: (TIER_FEATURES[p.slug]?.features) || [] }))}
         onClose={() => setDetailPlan(null)}
         theme={theme}
