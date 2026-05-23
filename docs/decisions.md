@@ -13,6 +13,12 @@
 - Changed icon color from `text-red-500` to `text-amber-400` — softer, less urgent
 - Messaging ("Something Went Wrong" + friendly description) was already correct and unchanged
 
+**Follow-up (2026-05-23): Theme awareness**
+- Added optional `theme?: 'light' | 'dark'` prop to `ErrorBoundary`
+- Replaced all `dark:` Tailwind classes with explicit `cn()` + `isDark` ternary pattern for programmatic theme control
+- Data flow: `Redux uiSlice → SuspenseWrapper useSelector → <ErrorBoundary theme={theme}>`
+- Updated `routeUtils.tsx` to pass the theme from Redux into ErrorBoundary
+
 ---
 
 ## 2026-05-22: Custocare Hub + Platform Admin — Optimistic Updates, Meaningful Icons, Refresh Buttons

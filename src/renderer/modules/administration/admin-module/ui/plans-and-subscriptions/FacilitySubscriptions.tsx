@@ -7,7 +7,6 @@ import {
   XCircle,
   AlertCircle,
   Calendar,
-  Building2,
   Package,
   RefreshCw,
   ChevronRight,
@@ -23,11 +22,10 @@ import {
   EyeOff,
   ArrowLeft,
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 
 import {
   useGetFacilitySubscription,
-  useCancelSubscription,
   useGetFacilityPayments,
 } from '../../api/subscriptions/SubscriptionQueries';
 import {
@@ -38,7 +36,6 @@ import {
   SUBSCRIPTION_STATUS_LABELS,
 } from '../../api/subscriptions/SubscriptionTypes';
 import LoadingSkeleton from '../../../../../shared/components/Loading/LoadingSkeletons';
-import { useConfirm } from '../../../../../shared/components/Feedback/ConfirmDialog/ConfirmContext';
 import { ADMINISTRATION_PLANS_SUBSCRIPTIONS_ROUTES } from '../../../../../app/routes/constants/administration.paths';
 import { cn } from '../../../../../shared/utils/classNameUtils';
 
@@ -296,17 +293,11 @@ export const FacilitySubscriptions: React.FC<FacilitySubscriptionsProps> = ({
 }) => {
   const isDark = theme === 'dark';
   const navigate = useNavigate();
-  const { confirm } = useConfirm();
 
   const [showTimeline, setShowTimeline]     = useState(false);
-  const [showCancelModal, setShowCancelModal] = useState(false);
-  const [cancelReason, setCancelReason]     = useState('');
 
-  const { data: subResp, isLoading: subLoading, error: subError, refetch } = useGetFacilitySubscription();
+  const { data: subResp, isLoading: subLoading, error: subError } = useGetFacilitySubscription();
   const { data: paymentsResp } = useGetFacilityPayments({ per_page: 20 });
-  const cancelSubscription = useCancelSubscription({
-    onSuccess: () => { setShowCancelModal(false); setCancelReason(''); refetch(); },
-  });
 
   const subscription = subResp?.data;
   const payments     = paymentsResp?.data || [];
@@ -349,8 +340,7 @@ export const FacilitySubscriptions: React.FC<FacilitySubscriptionsProps> = ({
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div>
-            <h1 className="text-2xl font-bold mb-1">Subscription Management</h1>
-            <p className={cn(isDark ? 'text-gray-400' : 'text-gray-600')}>Manage your facility's subscription and billing</p>
+            <h1 className="text-2xl font-bold mb-1">Subscription</h1>
           </div>
         </div>
 
@@ -372,23 +362,6 @@ export const FacilitySubscriptions: React.FC<FacilitySubscriptionsProps> = ({
     );
   }
 
-  // ── Handlers ─────────────────────────────────────────────────────────────────
-  const handleCancelSubscription = async () => {
-    const confirmed = await confirm({
-      title: 'Cancel Subscription',
-      message: 'Are you sure you want to cancel your subscription? This action cannot be undone.',
-      confirmText: 'Yes, Cancel',
-      cancelText: 'Keep Subscription',
-      variant: 'danger',
-      theme,
-    });
-    if (confirmed) setShowCancelModal(true);
-  };
-
-  const handleConfirmCancel = () => {
-    cancelSubscription.mutate({ data: { reason: cancelReason || undefined } });
-  };
-
   // ── GATE: only show "current subscription" UI for TRIAL or ACTIVE ─────────
   const showCurrentSubscription = isCurrentlyVisible(subscription.status);
 
@@ -402,8 +375,7 @@ export const FacilitySubscriptions: React.FC<FacilitySubscriptionsProps> = ({
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div>
-            <h1 className="text-2xl font-bold mb-1">Subscription Management</h1>
-            <p className={cn(isDark ? 'text-gray-400' : 'text-gray-600')}>Your subscription requires attention</p>
+            <h1 className="text-2xl font-bold mb-1">Subscription</h1>
           </div>
         </div>
 
@@ -429,39 +401,9 @@ export const FacilitySubscriptions: React.FC<FacilitySubscriptionsProps> = ({
           <ArrowLeft className="w-5 h-5" />
         </button>
         <div>
-          <h1 className="text-2xl font-bold mb-1">Subscription Management</h1>
-          <p className={cn(isDark ? 'text-gray-400' : 'text-gray-600')}>Manage your facility's subscription and billing</p>
+          <h1 className="text-2xl font-bold mb-1">Subscription</h1>
         </div>
       </div>
-
-      {/* Trial banner — prompt to pay */}
-      {isTrial && (
-        <div className={cn(
-          'rounded-xl p-4 border flex items-start gap-3',
-          isDark ? 'bg-blue-900/20 border-blue-700/50' : 'bg-blue-50 border-blue-200',
-        )}>
-          <Clock className={cn('w-5 h-5 mt-0.5 flex-shrink-0', isDark ? 'text-blue-400' : 'text-blue-600')} />
-          <div className="flex-1">
-            <p className="font-semibold">
-              Free Trial Active
-              {subscription.trial_ends_at && (
-                <span className={cn('ml-2 text-sm font-normal', isDark ? 'text-gray-400' : 'text-gray-600')}>
-                  — ends {new Date(subscription.trial_ends_at).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })}
-                </span>
-              )}
-            </p>
-            <p className={cn('text-sm', isDark ? 'text-gray-400' : 'text-gray-600')}>
-              To continue after your trial, please make a payment to activate your subscription.
-            </p>
-          </div>
-          <button
-            onClick={() => navigate(paymentsUrl)}
-            className={cn('px-3 py-1.5 rounded-lg text-sm font-medium flex-shrink-0',
-              isDark ? 'bg-blue-900/40 text-blue-300 hover:bg-blue-900/60' : 'bg-blue-200 text-blue-700 hover:bg-blue-300')}>
-            Make Payment
-          </button>
-        </div>
-      )}
 
       {/* Main Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -609,45 +551,14 @@ export const FacilitySubscriptions: React.FC<FacilitySubscriptionsProps> = ({
                       </div>
                     )}
 
-                    {/* Actions */}
-                    <div className="pt-2 space-y-3">
+                    {/* Go to Payments */}
+                    <div className="pt-2">
                       <button
                         onClick={() => navigate(paymentsUrl)}
-                        className={cn(
-                          'w-full py-2.5 rounded-lg font-medium flex items-center justify-center gap-2 transition-all',
-                          isDark ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-gray-100 text-gray-700 hover:bg-gray-200',
-                        )}
+                        className="w-full py-2.5 rounded-lg font-medium flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white transition-all shadow-lg"
                       >
                         <CreditCard className="w-4 h-4" />
-                        View Payment History
-                      </button>
-
-                      {isTrial && (
-                        <button
-                          onClick={() => navigate(paymentsUrl)}
-                          className="w-full py-2.5 rounded-lg font-medium flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white transition-all shadow-lg shadow-blue-500/20"
-                        >
-                          <CreditCard className="w-4 h-4" />
-                          Make Payment to Activate
-                        </button>
-                      )}
-
-                      <button
-                        onClick={handleCancelSubscription}
-                        disabled={cancelSubscription.isPending}
-                        className={cn(
-                          'w-full py-2.5 rounded-lg font-medium flex items-center justify-center gap-2 border transition-all',
-                          isDark
-                            ? 'bg-red-900/20 text-red-300 hover:bg-red-900/40 border-red-800'
-                            : 'bg-red-50 text-red-700 hover:bg-red-100 border-red-200',
-                          cancelSubscription.isPending && 'opacity-70 cursor-wait',
-                        )}
-                      >
-                        {cancelSubscription.isPending ? (
-                          <><RefreshCw className="w-4 h-4 animate-spin" /> Cancelling…</>
-                        ) : (
-                          <><XCircle className="w-4 h-4" /> Cancel Subscription</>
-                        )}
+                        Go to Payments
                       </button>
                     </div>
                   </div>
@@ -734,41 +645,6 @@ export const FacilitySubscriptions: React.FC<FacilitySubscriptionsProps> = ({
             </div>
           </div>
 
-          {/* Prompt to make payment — only during trial */}
-          {isTrial && (
-            <div>
-              <p className={cn('text-sm', isDark ? 'text-gray-400' : 'text-gray-600')}>
-                Make a payment to activate your subscription. Go to Payments to submit your payment.
-              </p>
-            </div>
-          )}
-
-          {/* Facility Info */}
-          <div className={cn('rounded-2xl border p-6', isDark ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200')}>
-            <h3 className="font-semibold mb-4 flex items-center gap-2">
-              <Building2 className="w-5 h-5 text-blue-500" />
-              Facility Information
-            </h3>
-            <div className="space-y-3">
-              <div className="flex items-start gap-2">
-                <Building2 className={cn('w-4 h-4 mt-0.5', isDark ? 'text-gray-500' : 'text-gray-400')} />
-                <div>
-                  <p className={cn('text-sm', isDark ? 'text-gray-400' : 'text-gray-600')}>Facility</p>
-                  <p className="font-medium">{subscription.facility?.facility_name || 'N/A'}</p>
-                </div>
-              </div>
-              {subscription.facility?.facility_code && (
-                <div className="flex items-start gap-2">
-                  <FileText className={cn('w-4 h-4 mt-0.5', isDark ? 'text-gray-500' : 'text-gray-400')} />
-                  <div>
-                    <p className={cn('text-sm', isDark ? 'text-gray-400' : 'text-gray-600')}>Facility Code</p>
-                    <p className="font-medium">{subscription.facility.facility_code}</p>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-
           {/* Support */}
           <div className={cn(
             'rounded-2xl border p-6',
@@ -795,78 +671,6 @@ export const FacilitySubscriptions: React.FC<FacilitySubscriptionsProps> = ({
         </div>
       </div>
 
-      {/* Cancel Modal */}
-      <AnimatePresence>
-        {showCancelModal && (
-          <motion.div
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4"
-            onClick={() => !cancelSubscription.isPending && setShowCancelModal(false)}
-          >
-            <motion.div
-              initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }}
-              onClick={(e) => e.stopPropagation()}
-              className={cn('relative rounded-2xl max-w-md w-full border', isDark ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200')}
-            >
-              <div className="p-6">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className={cn('p-2 rounded-full', isDark ? 'bg-red-900/30' : 'bg-red-100')}>
-                    <AlertTriangle className={cn('w-6 h-6', isDark ? 'text-red-400' : 'text-red-600')} />
-                  </div>
-                  <h3 className="text-xl font-bold">Cancel Subscription</h3>
-                </div>
-                <p className={cn('mb-4', isDark ? 'text-gray-300' : 'text-gray-700')}>
-                  This will immediately cancel your subscription. You will lose access at the end of the current billing period.
-                </p>
-                <div className="mb-6">
-                  <label className={cn('block text-sm font-medium mb-2', isDark ? 'text-gray-300' : 'text-gray-700')}>
-                    Reason for cancellation <span className={cn('font-normal text-xs', isDark ? 'text-gray-500' : 'text-gray-400')}>(optional)</span>
-                  </label>
-                  <textarea
-                    value={cancelReason}
-                    onChange={(e) => setCancelReason(e.target.value)}
-                    placeholder="Tell us why you're leaving…"
-                    rows={3}
-                    disabled={cancelSubscription.isPending}
-                    className={cn(
-                      'w-full px-3 py-2 rounded-lg border text-sm',
-                      isDark ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-500' : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400',
-                      'focus:outline-none focus:ring-2 focus:ring-blue-500',
-                      cancelSubscription.isPending && 'opacity-50 cursor-not-allowed',
-                    )}
-                  />
-                </div>
-                <div className="flex gap-3">
-                  <button
-                    onClick={handleConfirmCancel}
-                    disabled={cancelSubscription.isPending}
-                    className={cn(
-                      'flex-1 py-2.5 rounded-lg font-medium flex items-center justify-center gap-2',
-                      'bg-red-600 hover:bg-red-700 text-white',
-                      cancelSubscription.isPending && 'opacity-70 cursor-wait',
-                    )}
-                  >
-                    {cancelSubscription.isPending
-                      ? <><RefreshCw className="w-4 h-4 animate-spin" /> Cancelling…</>
-                      : 'Yes, Cancel Subscription'}
-                  </button>
-                  <button
-                    onClick={() => setShowCancelModal(false)}
-                    disabled={cancelSubscription.isPending}
-                    className={cn(
-                      'flex-1 py-2.5 rounded-lg font-medium',
-                      isDark ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-gray-100 text-gray-700 hover:bg-gray-200',
-                      cancelSubscription.isPending && 'opacity-50 cursor-not-allowed',
-                    )}
-                  >
-                    Keep It
-                  </button>
-                </div>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
   );
 };

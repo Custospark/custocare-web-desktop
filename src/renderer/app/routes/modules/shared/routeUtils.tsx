@@ -103,7 +103,7 @@ export const SuspenseWrapper: React.FC<{
         </div>
       }
     >
-      <ErrorBoundary>
+      <ErrorBoundary theme={theme}>
         {children}
       </ErrorBoundary>
     </Suspense>
