@@ -26,6 +26,7 @@ import patientForwardingReducer from './slices/forwardPatientSlice';
 // MODULE NAVIGATION (NEW)
 // ==============================
 import moduleNavigationReducer from './slices/moduleNavigationSlice';
+import planReducer from './slices/planSlice';
 
 // ==============================
 // ROOT REDUCER
@@ -52,6 +53,7 @@ export const rootReducer = combineReducers({
   billing: billingReducer,
   role: roleReducer,
   audit: auditReducer,
+  plan: planReducer,
 
 });
 

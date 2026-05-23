@@ -5,6 +5,8 @@ import {
   Building2, CheckCircle2, Users, Loader2, Info,
   Crown, ArrowUp, ArrowDown, RefreshCw, CreditCard,
 } from 'lucide-react';
+import { useAppDispatch } from '../../../../../app/store/hooks/useApp';
+import { selectPlan } from '../../../../../app/store/slices/planSlice';
 import { cn } from '../../../../../shared/types/cn';
 import { TIER_FEATURES } from '../../../../../shared/config/planConfig';
 import { PlanDetailsModal } from '../../../onboarding/ui/role-based-ui/facility-onboarding/PlanDetailsModal';
@@ -52,6 +54,7 @@ const PLAN_ICONS: Record<string, React.ReactNode> = {
 
 export const AvailablePlans: React.FC<AvailablePlansProps> = ({ theme }) => {
   const navigate = useNavigate();
+  const dispatch = useAppDispatch();
   const { confirm } = useConfirm();
   const [detailPlan, setDetailPlan] = useState<Plan | null>(null);
 
@@ -97,6 +100,16 @@ export const AvailablePlans: React.FC<AvailablePlansProps> = ({ theme }) => {
   };
 
   const handlePlanAction = async (planId: number) => {
+    const plan = sorted.find(p => p.id === planId);
+    if (!plan) return;
+
+    dispatch(selectPlan({
+      planId: plan.id,
+      planName: plan.name,
+      planPrice: plan.pricing.usd,
+      onboardingFee: plan.onboarding_fee?.usd || 0,
+    }));
+
     if (!hasActiveSubscription) {
       const confirmed = await confirm({
         title: 'Subscribe to Plan',
@@ -108,6 +121,7 @@ export const AvailablePlans: React.FC<AvailablePlansProps> = ({ theme }) => {
       });
       if (!confirmed) return;
       createSubscription.mutate({ data: { plan_id: planId } });
+      navigate(ADMINISTRATION_PLANS_SUBSCRIPTIONS_ROUTES.PAYMENTS);
       return;
     }
 
@@ -124,6 +138,7 @@ export const AvailablePlans: React.FC<AvailablePlansProps> = ({ theme }) => {
       cancelSubscription.mutate(undefined, {
         onSuccess: () => {
           createSubscription.mutate({ data: { plan_id: planId } });
+          navigate(ADMINISTRATION_PLANS_SUBSCRIPTIONS_ROUTES.PAYMENTS);
         },
       });
       return;
@@ -142,6 +157,7 @@ export const AvailablePlans: React.FC<AvailablePlansProps> = ({ theme }) => {
       cancelSubscription.mutate(undefined, {
         onSuccess: () => {
           createSubscription.mutate({ data: { plan_id: planId } });
+          navigate(ADMINISTRATION_PLANS_SUBSCRIPTIONS_ROUTES.PAYMENTS);
         },
       });
       return;
