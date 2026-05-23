@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { CheckCircle2, Users, Building2, Loader2 } from 'lucide-react';
+import { CheckCircle2, Users, Building2, Loader2, Info } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { axiosInstance } from '../../../../../../app/api/axiosConfig';
 import { cn } from '../../../../../../shared/types/cn';
+import { PlanDetailsModal } from './PlanDetailsModal';
 
 interface PlanPricing {
   usd: number;
@@ -33,6 +34,34 @@ interface PlanSelectionStepProps {
   theme: string;
 }
 
+const TIER_FEATURES: Record<string, string[]> = {
+  essential: [
+    'Patient records & visits',
+    'Clinical documentation (notes, diagnosis, vitals)',
+    'Order lab tests, prescribe, admit to ward',
+    'Billing, invoices & revenue',
+    'Facility & team management',
+    'Inventory & supplies',
+    'Patient portal (self-service)',
+    'Messaging center',
+    'Custocare Hub (learning, community, support)',
+    'Patient analytics',
+  ],
+  professional: [
+    'Everything in Essential',
+    'Dedicated laboratory workspace — catalog, panels, results management',
+    'Dedicated pharmacy workspace — dispensing, inventory, Rx workbench',
+    'Dedicated nursing workspace — ward board, beds, med admin, tasks',
+    'Dedicated clinical workspace — appointments, clinical documentation, scheduling',
+  ],
+  enterprise: [
+    'Everything in Professional',
+    'Referral management & network',
+    'Ambulance fleet, dispatch & crew',
+    'Priority support & dedicated account manager',
+  ],
+};
+
 const PLAN_ICONS: Record<string, React.ReactNode> = {
   essential: <Building2 className="w-5 h-5" />,
   professional: <Building2 className="w-5 h-5" />,
@@ -49,11 +78,14 @@ export const PlanSelectionStep: React.FC<PlanSelectionStepProps> = ({
   onSelectPlan,
   theme,
 }) => {
+  const [detailPlan, setDetailPlan] = useState<Plan | null>(null);
   const { data: plans, isLoading, error } = useQuery({
     queryKey: ['billing-plans'],
     queryFn: fetchPlans,
     staleTime: 5 * 60 * 1000,
   });
+
+  const sorted = plans ? [...plans].sort((a, b) => a.pricing.usd - b.pricing.usd) : [];
 
   if (isLoading) {
     return (
@@ -89,21 +121,17 @@ export const PlanSelectionStep: React.FC<PlanSelectionStepProps> = ({
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        {plans.sort((a, b) => a.pricing.usd - b.pricing.usd).map((plan) => {
+        {sorted.map((plan) => {
           const isSelected = selectedPlanId === plan.id;
           const limitDisplay = plan.limits.max_staff
             ? `${plan.limits.max_staff} staff · ${plan.limits.max_departments} depts · ${plan.limits.max_patients_per_month} pts/mo`
             : 'Unlimited staff, departments & patients';
 
           return (
-            <motion.button
+            <motion.div
               key={plan.id}
-              type="button"
-              onClick={() => onSelectPlan(plan.id)}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
               className={cn(
-                "relative rounded-xl border-2 p-5 text-left transition-all duration-200 cursor-pointer",
+                "relative rounded-xl border-2 p-5 text-left transition-all duration-200",
                 isSelected
                   ? theme === 'dark'
                     ? 'border-blue-500 bg-blue-500/10 shadow-lg shadow-blue-500/10'
@@ -119,58 +147,74 @@ export const PlanSelectionStep: React.FC<PlanSelectionStepProps> = ({
                 </span>
               )}
 
-              <div className="flex items-center justify-between mb-3">
+              <div onClick={() => onSelectPlan(plan.id)} className="cursor-pointer">
+                <div className="flex items-center justify-between mb-3">
+                  <div className={cn(
+                    "w-9 h-9 rounded-lg flex items-center justify-center",
+                    isSelected ? "bg-blue-600 text-white" : theme === 'dark' ? "bg-slate-700 text-slate-300" : "bg-slate-100 text-slate-600"
+                  )}>
+                    {PLAN_ICONS[plan.slug]}
+                  </div>
+                  {isSelected && (
+                    <CheckCircle2 className="w-5 h-5 text-blue-600" />
+                  )}
+                </div>
+
+                <h4 className={cn("font-bold text-base mb-1", theme === 'dark' ? "text-white" : "text-slate-900")}>
+                  {plan.name}
+                </h4>
+
+                <div className="mb-3">
+                  <span className={cn("text-2xl font-extrabold", theme === 'dark' ? "text-white" : "text-slate-900")}>
+                    ${plan.pricing.usd}
+                  </span>
+                  <span className={cn("text-sm ml-1", theme === 'dark' ? "text-slate-400" : "text-slate-500")}>
+                    /month
+                  </span>
+                </div>
+
+                <p className={cn("text-xs mb-3 leading-relaxed line-clamp-2", theme === 'dark' ? "text-slate-400" : "text-slate-600")}>
+                  {plan.description}
+                </p>
+
                 <div className={cn(
-                  "w-9 h-9 rounded-lg flex items-center justify-center",
-                  isSelected ? "bg-blue-600 text-white" : theme === 'dark' ? "bg-slate-700 text-slate-300" : "bg-slate-100 text-slate-600"
+                  "text-[10px] font-medium px-2.5 py-1.5 rounded-lg",
+                  theme === 'dark' ? "bg-slate-900/60 text-slate-400" : "bg-slate-50 text-slate-500"
                 )}>
-                  {PLAN_ICONS[plan.slug]}
+                  <div className="flex items-center gap-1.5">
+                    <Users className="w-3 h-3" />
+                    {limitDisplay}
+                  </div>
                 </div>
-                {isSelected && (
-                  <CheckCircle2 className="w-5 h-5 text-blue-600" />
+
+                <div className={cn("text-[10px] mt-2 font-medium", theme === 'dark' ? "text-emerald-400" : "text-emerald-600")}>
+                  {plan.trial_days}-day free trial
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setDetailPlan(plan)}
+                className={cn(
+                  "mt-3 w-full flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-semibold transition-all duration-200 border-2",
+                  theme === 'dark'
+                    ? "border-slate-700 text-slate-400 hover:bg-slate-800 hover:text-slate-300"
+                    : "border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-700"
                 )}
-              </div>
-
-              <h4 className={cn(
-                "font-bold text-base mb-1",
-                theme === 'dark' ? "text-white" : "text-slate-900"
-              )}>
-                {plan.name}
-              </h4>
-
-              <div className="mb-3">
-                <span className={cn("text-2xl font-extrabold", theme === 'dark' ? "text-white" : "text-slate-900")}>
-                  ${plan.pricing.usd}
-                </span>
-                <span className={cn("text-sm ml-1", theme === 'dark' ? "text-slate-400" : "text-slate-500")}>
-                  /month
-                </span>
-              </div>
-
-              <p className={cn("text-xs mb-3 leading-relaxed", theme === 'dark' ? "text-slate-400" : "text-slate-600")}>
-                {plan.description}
-              </p>
-
-              <div className={cn(
-                "text-[10px] font-medium px-2.5 py-1.5 rounded-lg",
-                theme === 'dark' ? "bg-slate-900/60 text-slate-400" : "bg-slate-50 text-slate-500"
-              )}>
-                <div className="flex items-center gap-1.5">
-                  <Users className="w-3 h-3" />
-                  {limitDisplay}
-                </div>
-              </div>
-
-              <div className={cn(
-                "text-[10px] mt-2 font-medium",
-                theme === 'dark' ? "text-emerald-400" : "text-emerald-600"
-              )}>
-                {plan.trial_days}-day free trial
-              </div>
-            </motion.button>
+              >
+                <Info className="w-3.5 h-3.5" />
+                View Details
+              </button>
+            </motion.div>
           );
         })}
       </div>
+
+      <PlanDetailsModal
+        plan={detailPlan ? { ...detailPlan, features: TIER_FEATURES[detailPlan.slug] || [] } : null}
+        onClose={() => setDetailPlan(null)}
+        theme={theme}
+      />
     </motion.div>
   );
 };
