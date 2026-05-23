@@ -62,13 +62,14 @@ export interface RegisterFacilityRequest {
   city: string;
   state_province: string;
   postal_code: string;
-  country_code: string; // ISO-3166-1 alpha-3
+  country_code: string;
   main_phone: string;
   operating_hours?: OperatingHours;
   available_services: string[];
   data_residency_region: string;
   operational_status: OperationalStatus;
   user_id: string;
+  plan_id?: number | null;
 }
 
 export interface FacilityResponse {

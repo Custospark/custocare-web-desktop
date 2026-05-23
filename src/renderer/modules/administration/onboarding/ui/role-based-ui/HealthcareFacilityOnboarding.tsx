@@ -39,6 +39,7 @@ import { Step1Identity } from './facility-onboarding/Step1Identity';
 import { Step2Location } from './facility-onboarding/Step2Location';
 import { Step3Services } from './facility-onboarding/Step3Services';
 import { SuccessScreen } from './facility-onboarding/SuccessScreen';
+import { PlanSelectionStep } from './facility-onboarding/PlanSelectionStep';
 
 // Import types and constants
 import { 
@@ -57,7 +58,8 @@ export const Index: React.FC = () => {
   const theme = useAppSelector((state) => state.ui.theme);
   const { user } = useAppSelector((state) => state.auth);
   
-  const [currentStep, setCurrentStep] = useState<1 | 2 | 3>(1);
+  const [currentStep, setCurrentStep] = useState<1 | 2 | 3 | 4>(1);
+  const [selectedPlanId, setSelectedPlanId] = useState<number | null>(null);
   const [formData, setFormData] = useState<FacilityFormData>({
     facility_name: '',
     legal_entity_name: '',
@@ -162,14 +164,17 @@ export const Index: React.FC = () => {
            formData.operational_status !== '';
   }, [formData.available_services, formData.operational_status]);
 
+  const isStep4Valid = useMemo(() => selectedPlanId !== null, [selectedPlanId]);
+
   const isCurrentStepValid = useMemo(() => {
     switch (currentStep) {
       case 1: return isStep1Valid;
       case 2: return isStep2Valid;
       case 3: return isStep3Valid;
+      case 4: return isStep4Valid;
       default: return false;
     }
-  }, [currentStep, isStep1Valid, isStep2Valid, isStep3Valid]);
+  }, [currentStep, isStep1Valid, isStep2Valid, isStep3Valid, isStep4Valid]);
 
   /* ==========================================================================
      SUBMISSION
@@ -178,7 +183,7 @@ export const Index: React.FC = () => {
   const handleSubmit = useCallback((e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!user?.id || !isStep1Valid || !isStep2Valid || !isStep3Valid) {
+    if (!user?.id || !isStep1Valid || !isStep2Valid || !isStep3Valid || !isStep4Valid) {
       return;
     }
 
@@ -199,10 +204,11 @@ export const Index: React.FC = () => {
       data_residency_region: 'US-East',
       operational_status: formData.operational_status as OperationalStatus,
       user_id: user.id,
+      plan_id: selectedPlanId,
     };
     
     registerFacilityMutation.mutate(payload);
-  }, [formData, user, isStep1Valid, isStep2Valid, isStep3Valid, registerFacilityMutation]);
+  }, [formData, user, isStep1Valid, isStep2Valid, isStep3Valid, isStep4Valid, selectedPlanId, registerFacilityMutation]);
 
   const handleContinueToDashboard = useCallback(() => {
     if (!registerFacilityMutation.data?.data) return;
@@ -226,11 +232,12 @@ export const Index: React.FC = () => {
   const isComplete = registerFacilityMutation.isSuccess;
 
   const completionPercentage = useMemo(() => {
-    const step1Progress = isStep1Valid ? 33.33 : 0;
-    const step2Progress = isStep2Valid ? 33.33 : 0;
-    const step3Progress = isStep3Valid ? 33.34 : 0;
-    return step1Progress + (currentStep > 1 ? step2Progress : 0) + (currentStep > 2 ? step3Progress : 0);
-  }, [currentStep, isStep1Valid, isStep2Valid, isStep3Valid]);
+    const step1Progress = isStep1Valid ? 25 : 0;
+    const step2Progress = isStep2Valid ? 25 : 0;
+    const step3Progress = isStep3Valid ? 25 : 0;
+    const step4Progress = isStep4Valid ? 25 : 0;
+    return step1Progress + (currentStep > 1 ? step2Progress : 0) + (currentStep > 2 ? step3Progress : 0) + (currentStep > 3 ? step4Progress : 0);
+  }, [currentStep, isStep1Valid, isStep2Valid, isStep3Valid, isStep4Valid]);
 
   /* ==========================================================================
      MAIN RENDER
@@ -364,6 +371,13 @@ export const Index: React.FC = () => {
                         theme={theme}
                       />
                     )}
+                    {currentStep === 4 && (
+                      <PlanSelectionStep
+                        selectedPlanId={selectedPlanId}
+                        onSelectPlan={setSelectedPlanId}
+                        theme={theme}
+                      />
+                    )}
                   </AnimatePresence>
 
                   {/* Compact Navigation */}
@@ -371,13 +385,11 @@ export const Index: React.FC = () => {
                   {/* Back button - Always visible on all steps */}
                  <motion.button
                   type="button"
-                  onClick={() => {
+                   onClick={() => {
                     if (currentStep === 1) {
-                      // Navigate to Previous step.
                       navigate(-1);
                     } else {
-                      // Go to previous step
-                      setCurrentStep(prev => (prev - 1) as 1 | 2 | 3);
+                      setCurrentStep(prev => (prev - 1) as 1 | 2 | 3 | 4);
                     }
                   }}
                   disabled={isSubmitting}
@@ -402,11 +414,11 @@ export const Index: React.FC = () => {
                 </motion.button>
   
                   {/* Right side buttons */}
-                  {currentStep < 3 ? (
+                  {currentStep < 4 ? (
                     <motion.button
                       type="button"
                       disabled={!isCurrentStepValid}
-                      onClick={() => setCurrentStep(prev => (prev + 1) as 1 | 2 | 3)}
+                      onClick={() => setCurrentStep(prev => (prev + 1) as 1 | 2 | 3 | 4)}
                       whileHover={isCurrentStepValid ? { scale: 1.02, x: 5 } : {}}
                       whileTap={isCurrentStepValid ? { scale: 0.98 } : {}}
                       className={cn(

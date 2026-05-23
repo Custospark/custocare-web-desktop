@@ -1,9 +1,10 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Building2, MapPin, Stethoscope, Check } from 'lucide-react';
+import { Building2, MapPin, Stethoscope, CreditCard, Check } from 'lucide-react';
 import { cn } from '../../../../../../shared/utils/classNameUtils';
+
 interface ProgressIndicatorProps {
-  currentStep: 1 | 2 | 3;
+  currentStep: 1 | 2 | 3 | 4;
   completionPercentage: number;
   theme: string;
 }
@@ -16,12 +17,12 @@ export const ProgressIndicator: React.FC<ProgressIndicatorProps> = ({
   const steps = [
     { num: 1, label: 'Facility Identity', icon: Building2 },
     { num: 2, label: 'Location & Contact', icon: MapPin },
-    { num: 3, label: 'Services & Operations', icon: Stethoscope }
+    { num: 3, label: 'Services & Operations', icon: Stethoscope },
+    { num: 4, label: 'Select Plan', icon: CreditCard },
   ];
 
   return (
     <div className="mb-6">
-      {/* Compact Step Labels */}
       <div className="flex justify-between mb-4">
         {steps.map((step, idx) => (
           <div key={step.num} className="flex-1 relative">
@@ -48,7 +49,7 @@ export const ProgressIndicator: React.FC<ProgressIndicatorProps> = ({
                   )} />
                 )}
               </motion.div>
-              
+
               <div className="text-center">
                 <div className={cn(
                   "text-[10px] sm:text-sm font-bold",
@@ -60,9 +61,8 @@ export const ProgressIndicator: React.FC<ProgressIndicatorProps> = ({
                 </div>
               </div>
             </div>
-            
-            {/* Connector Line */}
-            {idx < 2 && (
+
+            {idx < 3 && (
               <div className={cn(
                 "absolute top-5 sm:top-6 left-1/2 w-full h-0.5 z-0",
                 currentStep > step.num
@@ -76,12 +76,11 @@ export const ProgressIndicator: React.FC<ProgressIndicatorProps> = ({
         ))}
       </div>
 
-      {/* Compact Progress Bar */}
       <div className="relative h-2 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden">
         <motion.div
           className="absolute top-0 left-0 h-full rounded-full bg-linear-to-r from-blue-600 via-blue-500 to-emerald-600"
           initial={{ width: 0 }}
-          animate={{ width: `${(currentStep / 3) * 100}%` }}
+          animate={{ width: `${(currentStep / 4) * 100}%` }}
           transition={{ duration: 0.5, ease: "easeOut" }}
         >
           <div className="absolute inset-0 bg-linear-to-r from-transparent via-white/20 to-transparent animate-shimmer" />
@@ -101,7 +100,7 @@ export const ProgressIndicator: React.FC<ProgressIndicatorProps> = ({
             ? "bg-slate-800 text-slate-300"
             : "bg-slate-100 text-slate-700"
         )}>
-          Step {currentStep}/3
+          Step {currentStep}/4
         </span>
       </div>
     </div>
