@@ -17,4 +17,6 @@ export const ROUTES = {
   HEALTHCARE_ONBOARDING: '/healthcare-onboarding', 
   STAFF_DASHBOARD: '/staff-dashboard', 
   PATIENT_DASHBOARD: '/dashboard/patient',
+  PRICING: '/pricing',
+  PRIVACY: '/privacy',
 } as const;

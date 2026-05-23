@@ -20,6 +20,8 @@ const PortalSelector = React.lazy(() => import('../ui/role-based-ui/PortalSelect
 const Dashboard = React.lazy(() => import('../../../../shared/pages/Dashboard'));
 import Layout from '../../../../shared/components/Navigation/Layout';
 import Landing from '../ui/role-based-ui/Landing';
+import { PricingPage } from '../ui/role-based-ui/PricingPage';
+import { PrivacyPage } from '../ui/role-based-ui/PrivacyPage';
 import PatientPortalModule from '../../../patient-portal/ui/PatientPortalModule';
 import PasswordResetSuccess from '../ui/auth/PasswordResetSuccess';
 
@@ -45,6 +47,27 @@ export const OnboardingRoutes = () => [
     element={
       <Suspense fallback={<LoadingScreen />}>
         <Landing />
+      </Suspense>
+    } 
+  />,
+  
+  // Pricing & Privacy routes
+  <Route 
+    key="pricing"
+    path={ROUTES.PRICING} 
+    element={
+      <Suspense fallback={<LoadingScreen />}>
+        <PricingPage />
+      </Suspense>
+    } 
+  />,
+  
+  <Route 
+    key="privacy"
+    path={ROUTES.PRIVACY} 
+    element={
+      <Suspense fallback={<LoadingScreen />}>
+        <PrivacyPage />
       </Suspense>
     } 
   />,
