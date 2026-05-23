@@ -13,7 +13,7 @@
  * - Better mobile experience
  */
 
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -52,36 +52,86 @@ import { BrandName } from '../../../../../shared/utils/BrandName';
    MAIN COMPONENT
    ========================================================================== */
 
+const ONBOARDING_STORAGE_KEY = 'custocare_facility_onboarding';
+
 export const Index: React.FC = () => {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const theme = useAppSelector((state) => state.ui.theme);
   const { user } = useAppSelector((state) => state.auth);
-  
-  const [currentStep, setCurrentStep] = useState<1 | 2 | 3 | 4>(1);
-  const [selectedPlanId, setSelectedPlanId] = useState<number | null>(null);
-  const [formData, setFormData] = useState<FacilityFormData>({
-    facility_name: '',
-    legal_entity_name: '',
-    nature_of_facility: '',
-    facility_type: '',
-    facility_tier: '',
-    address_line1: '',
-    city: '',
-    state_province: '',
-    postal_code: '',
-    country_code: 'US',
-    main_phone: '',
-    email: '',
-    website: '',
-    operating_hours: DEFAULT_OPERATING_HOURS,
-    available_services: [],
-    operational_status: 'fully_operational'
-  });
-  
+  const restored = useRef(false);
+
+  const loadSaved = <T,>(key: string, fallback: T): T => {
+    try {
+      const raw = localStorage.getItem(`${ONBOARDING_STORAGE_KEY}_${key}`);
+      return raw ? JSON.parse(raw) : fallback;
+    } catch {
+      return fallback;
+    }
+  };
+
+  const saveToStorage = (key: string, value: unknown) => {
+    try {
+      localStorage.setItem(`${ONBOARDING_STORAGE_KEY}_${key}`, JSON.stringify(value));
+    } catch { /* storage full or unavailable */ }
+  };
+
+  const clearStorage = () => {
+    try {
+      localStorage.removeItem(`${ONBOARDING_STORAGE_KEY}_step`);
+      localStorage.removeItem(`${ONBOARDING_STORAGE_KEY}_plan`);
+      localStorage.removeItem(`${ONBOARDING_STORAGE_KEY}_form`);
+    } catch { /* noop */ }
+  };
+
+  const [currentStep, setCurrentStep] = useState<1 | 2 | 3 | 4>(
+    () => loadSaved('step', 1) as 1 | 2 | 3 | 4
+  );
+  const [selectedPlanId, setSelectedPlanId] = useState<number | null>(
+    () => loadSaved<number | null>('plan', null)
+  );
+  const [formData, setFormData] = useState<FacilityFormData>(
+    () => loadSaved<FacilityFormData | null>('form', null) || {
+      facility_name: '',
+      legal_entity_name: '',
+      nature_of_facility: '',
+      facility_type: '',
+      facility_tier: '',
+      address_line1: '',
+      city: '',
+      state_province: '',
+      postal_code: '',
+      country_code: 'US',
+      main_phone: '',
+      email: '',
+      website: '',
+      operating_hours: DEFAULT_OPERATING_HOURS,
+      available_services: [],
+      operational_status: 'fully_operational'
+    }
+  );
+
+  useEffect(() => {
+    if (!restored.current) {
+      restored.current = true;
+      return;
+    }
+    saveToStorage('step', currentStep);
+  }, [currentStep]);
+
+  useEffect(() => {
+    if (!restored.current) return;
+    saveToStorage('plan', selectedPlanId);
+  }, [selectedPlanId]);
+
+  useEffect(() => {
+    if (!restored.current) return;
+    saveToStorage('form', formData);
+  }, [formData]);
+
   const registerFacilityMutation = useRegisterFacility({
-    onSuccess: (data) => {
-      console.log('Facility registered:', data.data.facility_uuid);
+    onSuccess: () => {
+      clearStorage();
     },
     onError: (error) => {
       console.error('Registration failed:', error);
