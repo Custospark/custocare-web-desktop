@@ -4,6 +4,7 @@ import { CheckCircle2, Users, Building2, Loader2, Info } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { axiosInstance } from '../../../../../../app/api/axiosConfig';
 import { cn } from '../../../../../../shared/types/cn';
+import { TIER_FEATURES } from '../../../../../../shared/config/planConfig';
 import { PlanDetailsModal } from './PlanDetailsModal';
 
 interface PlanPricing {
@@ -33,34 +34,6 @@ interface PlanSelectionStepProps {
   onSelectPlan: (planId: number) => void;
   theme: string;
 }
-
-const TIER_FEATURES: Record<string, string[]> = {
-  essential: [
-    'Patient records & visits',
-    'Clinical documentation (notes, diagnosis, vitals)',
-    'Order lab tests, prescribe, admit to ward',
-    'Billing, invoices & revenue',
-    'Facility & team management',
-    'Inventory & supplies',
-    'Patient portal (self-service)',
-    'Messaging center',
-    'Custocare Hub (learning, community, support)',
-    'Patient analytics',
-  ],
-  professional: [
-    'Everything in Essential',
-    'Dedicated laboratory workspace — catalog, panels, results management',
-    'Dedicated pharmacy workspace — dispensing, inventory, Rx workbench',
-    'Dedicated nursing workspace — ward board, beds, med admin, tasks',
-    'Dedicated clinical workspace — appointments, clinical documentation, scheduling',
-  ],
-  enterprise: [
-    'Everything in Professional',
-    'Referral management & network',
-    'Ambulance fleet, dispatch & crew',
-    'Priority support & dedicated account manager',
-  ],
-};
 
 const PLAN_ICONS: Record<string, React.ReactNode> = {
   essential: <Building2 className="w-5 h-5" />,
@@ -212,7 +185,7 @@ export const PlanSelectionStep: React.FC<PlanSelectionStepProps> = ({
 
       <PlanDetailsModal
         plan={detailPlan ? { ...detailPlan, features: TIER_FEATURES[detailPlan.slug] || [] } : null}
-        allPlans={sorted.map((p) => ({ ...p, features: TIER_FEATURES[p.slug] || [] }))}
+        allPlans={sorted.map((p) => ({ ...p, features: (TIER_FEATURES[p.slug]?.features) || [] }))}
         onClose={() => setDetailPlan(null)}
         theme={theme}
       />

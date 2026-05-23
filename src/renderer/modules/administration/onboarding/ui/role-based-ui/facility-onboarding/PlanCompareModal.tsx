@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, CheckCircle2 } from 'lucide-react';
 import { cn } from '../../../../../../shared/types/cn';
+import { COMPARISON_ROWS, calcAnnualPrice } from '../../../../../../shared/config/planConfig';
 
 interface PlanPricing {
   usd: number;
@@ -30,25 +31,8 @@ interface PlanCompareModalProps {
   theme: string;
 }
 
-const COMPARISON_ROWS: { label: string; check: (features: string[]) => boolean }[] = [
-  { label: 'Patient Records & Visits', check: () => true },
-  { label: 'Clinical Documentation', check: () => true },
-  { label: 'Lab Tests, Prescriptions, Admissions', check: () => true },
-  { label: 'Billing & Revenue', check: () => true },
-  { label: 'Facility & Team Management', check: () => true },
-  { label: 'Inventory & Supplies', check: () => true },
-  { label: 'Patient Portal', check: () => true },
-  { label: 'Messaging', check: () => true },
-  { label: 'Custocare Hub', check: () => true },
-  { label: 'Lab Workspace', check: (f) => f.some(x => x.includes('Laboratory') || x.includes('lab')) },
-  { label: 'Pharmacy Workspace', check: (f) => f.some(x => x.includes('Pharmacy') || x.includes('pharmacy')) },
-  { label: 'Nursing Workspace', check: (f) => f.some(x => x.includes('Nursing') || x.includes('nursing')) },
-  { label: 'Clinical Workspace', check: (f) => f.some(x => x.includes('Clinical') || x.includes('clinical')) },
-  { label: 'Referral Workspace', check: (f) => f.some(x => x.includes('Referral') || x.includes('referral')) },
-  { label: 'Ambulance Workspace', check: (f) => f.some(x => x.includes('Ambulance') || x.includes('ambulance')) },
-];
-
 export const PlanCompareModal: React.FC<PlanCompareModalProps> = ({ plans, onClose, theme }) => {
+  const [annual, setAnnual] = useState(false);
   const sorted = [...plans].sort((a, b) => a.pricing.usd - b.pricing.usd);
 
   return (
@@ -91,63 +75,90 @@ export const PlanCompareModal: React.FC<PlanCompareModalProps> = ({ plans, onClo
             <h3 className={cn("text-lg font-bold mb-1", theme === 'dark' ? "text-white" : "text-slate-900")}>
               Compare Plans
             </h3>
-            <p className={cn("text-sm mb-6", theme === 'dark' ? "text-slate-400" : "text-slate-600")}>
+            <p className={cn("text-sm mb-4", theme === 'dark' ? "text-slate-400" : "text-slate-600")}>
               Side-by-side comparison of features, limits, and pricing.
             </p>
 
-            {/* Price Header Row */}
-            <div className={cn(
-              "grid rounded-xl border-2 overflow-hidden mb-6",
-              `grid-cols-${Math.min(sorted.length + 1, 4)}`
-            )}
-            style={{ gridTemplateColumns: `1.5fr repeat(${sorted.length}, 1fr)` }}
+            {/* Billing toggle */}
+            <div className="flex items-center justify-center gap-3 mb-6">
+              <span className={cn("text-xs font-semibold", !annual ? "text-blue-600" : theme === 'dark' ? "text-slate-500" : "text-slate-400")}>
+                Monthly
+              </span>
+              <button
+                type="button"
+                onClick={() => setAnnual(!annual)}
+                className={cn(
+                  "relative w-12 h-6 rounded-full transition-colors duration-300",
+                  annual ? "bg-blue-600" : theme === 'dark' ? "bg-slate-700" : "bg-slate-300"
+                )}
+              >
+                <motion.div
+                  layout
+                  transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                  className={cn("absolute top-1 left-1 w-4 h-4 rounded-full bg-white shadow-sm", annual && "translate-x-6")}
+                />
+              </button>
+              <span className={cn("text-xs font-semibold", annual ? "text-blue-600" : theme === 'dark' ? "text-slate-500" : "text-slate-400")}>
+                Annual
+              </span>
+              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
+                Save ~17%
+              </span>
+            </div>
+
+            {/* Price Header */}
+            <div
+              className="grid rounded-xl border-2 overflow-hidden mb-6"
+              style={{ gridTemplateColumns: `1.5fr repeat(${sorted.length}, 1fr)` }}
             >
-              <div className={cn(
-                "p-4 font-bold text-sm border-r-2",
+              <div className={cn("p-4 font-bold text-sm border-r-2 flex items-center",
                 theme === 'dark' ? "bg-slate-800 border-slate-700 text-slate-300" : "bg-slate-50 border-slate-200 text-slate-700"
               )}>
                 Plan
               </div>
-              {sorted.map((plan) => (
-                <div key={plan.id} className={cn(
-                  "p-4 text-center relative",
-                  theme === 'dark' ? "bg-slate-800" : "bg-slate-50"
-                )}>
-                  {plan.is_popular && (
-                    <span className="block text-[9px] font-bold text-emerald-600 dark:text-emerald-400 mb-1 uppercase tracking-wide">
-                      Most Popular
-                    </span>
-                  )}
-                  <div className={cn("font-bold text-sm", theme === 'dark' ? "text-white" : "text-slate-900")}>
-                    {plan.name}
+              {sorted.map((plan) => {
+                const price = annual ? calcAnnualPrice(plan.pricing.usd) : plan.pricing.usd;
+                return (
+                  <div key={plan.id} className={cn("p-4 text-center relative", theme === 'dark' ? "bg-slate-800" : "bg-slate-50")}>
+                    {plan.is_popular && (
+                      <span className="block text-[9px] font-bold text-emerald-600 dark:text-emerald-400 mb-1 uppercase tracking-wide">
+                        Most Popular
+                      </span>
+                    )}
+                    <div className={cn("font-bold text-sm", theme === 'dark' ? "text-white" : "text-slate-900")}>
+                      {plan.name}
+                    </div>
+                    <div className={cn("text-lg font-extrabold mt-1", theme === 'dark' ? "text-white" : "text-slate-900")}>
+                      ${price}
+                    </div>
+                    <div className={cn("text-[10px]", theme === 'dark' ? "text-slate-400" : "text-slate-500")}>
+                      /mo {annual ? '(billed annually)' : ''}
+                    </div>
                   </div>
-                  <div className={cn("text-lg font-extrabold mt-1", theme === 'dark' ? "text-white" : "text-slate-900")}>
-                    ${plan.pricing.usd}
-                  </div>
-                  <div className={cn("text-[10px]", theme === 'dark' ? "text-slate-400" : "text-slate-500")}>
-                    /month
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             {/* Features */}
             <div className="space-y-1 mb-6">
               {COMPARISON_ROWS.map((row, i) => (
-                <div key={row.label} className={cn(
-                  "grid rounded-lg overflow-hidden",
-                  i % 2 === 0 ? (theme === 'dark' ? "bg-slate-800/40" : "bg-slate-50/50") : ""
-                )}
-                style={{ gridTemplateColumns: `1.5fr repeat(${sorted.length}, 1fr)` }}
+                <div
+                  key={row.label}
+                  className="grid rounded-lg overflow-hidden"
+                  style={{ gridTemplateColumns: `1.5fr repeat(${sorted.length}, 1fr)` }}
                 >
                   <div className={cn(
                     "p-2.5 text-xs font-medium border-r-2 flex items-center",
+                    i % 2 === 0 ? (theme === 'dark' ? "bg-slate-800/40" : "bg-slate-50/50") : "",
                     theme === 'dark' ? "border-slate-700 text-slate-300" : "border-slate-200 text-slate-700"
                   )}>
                     {row.label}
                   </div>
                   {sorted.map((plan) => (
-                    <div key={plan.id} className="p-2.5 flex items-center justify-center">
+                    <div key={plan.id} className={cn(
+                      "p-2.5 flex items-center justify-center",
+                      i % 2 === 0 ? (theme === 'dark' ? "bg-slate-800/40" : "bg-slate-50/50") : ""
+                    )}>
                       {row.check(plan.features) ? (
                         <CheckCircle2 className="w-4 h-4 text-emerald-500" />
                       ) : (
@@ -163,47 +174,33 @@ export const PlanCompareModal: React.FC<PlanCompareModalProps> = ({ plans, onClo
             <h4 className={cn("text-xs font-bold uppercase tracking-wide mb-3", theme === 'dark' ? "text-slate-400" : "text-slate-500")}>
               Limits
             </h4>
-            <div className={cn(
-              "grid rounded-xl border-2 overflow-hidden mb-4",
-              theme === 'dark' ? "border-slate-700" : "border-slate-200"
-            )}
-            style={{ gridTemplateColumns: `1.5fr repeat(${sorted.length}, 1fr)` }}
+            <div
+              className="grid rounded-xl border-2 overflow-hidden"
+              style={{ gridTemplateColumns: `1.5fr repeat(${sorted.length}, 1fr)` }}
             >
-              <div className={cn("p-3 text-xs font-medium border-r-2 flex items-center",
-                theme === 'dark' ? "border-slate-700 text-slate-300 bg-slate-800/40" : "border-slate-200 text-slate-700 bg-slate-50/50"
-              )}>
-                Staff Limit
-              </div>
-              {sorted.map((plan) => (
-                <div key={plan.id} className={cn("p-3 text-xs font-bold text-center flex items-center justify-center",
-                  theme === 'dark' ? "text-white bg-slate-800/40" : "text-slate-900 bg-slate-50/50"
-                )}>
-                  {plan.limits.max_staff ?? 'Unlimited'}
-                </div>
-              ))}
-              <div className={cn("p-3 text-xs font-medium border-r-2 border-t-2 flex items-center",
-                theme === 'dark' ? "border-slate-700 text-slate-300 bg-slate-800/40" : "border-slate-200 text-slate-700 bg-slate-50/50"
-              )}>
-                Departments
-              </div>
-              {sorted.map((plan) => (
-                <div key={plan.id} className={cn("p-3 text-xs font-bold text-center border-t-2 flex items-center justify-center",
-                  theme === 'dark' ? "text-white border-slate-700 bg-slate-800/40" : "text-slate-900 border-slate-200 bg-slate-50/50"
-                )}>
-                  {plan.limits.max_departments ?? 'Unlimited'}
-                </div>
-              ))}
-              <div className={cn("p-3 text-xs font-medium border-r-2 border-t-2 flex items-center",
-                theme === 'dark' ? "border-slate-700 text-slate-300 bg-slate-800/40" : "border-slate-200 text-slate-700 bg-slate-50/50"
-              )}>
-                Patients / Month
-              </div>
-              {sorted.map((plan) => (
-                <div key={plan.id} className={cn("p-3 text-xs font-bold text-center border-t-2 flex items-center justify-center",
-                  theme === 'dark' ? "text-white border-slate-700 bg-slate-800/40" : "text-slate-900 border-slate-200 bg-slate-50/50"
-                )}>
-                  {plan.limits.max_patients_per_month ?? 'Unlimited'}
-                </div>
+              {[
+                { label: 'Staff Limit', key: 'max_staff' as const },
+                { label: 'Departments', key: 'max_departments' as const },
+                { label: 'Patients / Month', key: 'max_patients_per_month' as const },
+              ].map((row, ri) => (
+                <React.Fragment key={row.key}>
+                  <div className={cn(
+                    "p-3 text-xs font-medium border-r-2 flex items-center",
+                    ri > 0 && "border-t-2",
+                    theme === 'dark' ? "border-slate-700 text-slate-300 bg-slate-800/40" : "border-slate-200 text-slate-700 bg-slate-50/50"
+                  )}>
+                    {row.label}
+                  </div>
+                  {sorted.map((plan) => (
+                    <div key={plan.id} className={cn(
+                      "p-3 text-xs font-bold text-center flex items-center justify-center",
+                      ri > 0 && "border-t-2",
+                      theme === 'dark' ? "text-white border-slate-700 bg-slate-800/40" : "text-slate-900 border-slate-200 bg-slate-50/50"
+                    )}>
+                      {plan.limits[row.key] ?? 'Unlimited'}
+                    </div>
+                  ))}
+                </React.Fragment>
               ))}
             </div>
           </div>

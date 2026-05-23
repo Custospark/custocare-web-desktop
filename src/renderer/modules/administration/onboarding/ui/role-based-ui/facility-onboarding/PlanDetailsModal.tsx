@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, CheckCircle2, Users, Shield, Lock, BadgeCheck, ArrowRight } from 'lucide-react';
 import { cn } from '../../../../../../shared/types/cn';
+import { TIER_LIMIT_LABELS, TIER_GRADIENT_BG } from '../../../../../../shared/config/planConfig';
 import { PlanCompareModal } from './PlanCompareModal';
 
 interface PlanPricing {
@@ -34,18 +35,12 @@ interface PlanDetailsModalProps {
   theme: string;
 }
 
-const PLAN_LIMIT_LABELS: Record<string, { staff: string; depts: string; patients: string }> = {
-  essential: { staff: '10 staff', depts: '3 departments', patients: '500 patients/month' },
-  professional: { staff: '50 staff', depts: '10 departments', patients: '3,000 patients/month' },
-  enterprise: { staff: 'Unlimited staff', depts: 'Unlimited departments', patients: 'Unlimited patients' },
-};
-
 export const PlanDetailsModal: React.FC<PlanDetailsModalProps> = ({ plan, allPlans, onClose, theme }) => {
   const [showCompare, setShowCompare] = useState(false);
 
   if (!plan) return null;
 
-  const labels = PLAN_LIMIT_LABELS[plan.slug];
+  const labels = TIER_LIMIT_LABELS[plan.slug];
 
   return (
     <>
@@ -90,9 +85,7 @@ export const PlanDetailsModal: React.FC<PlanDetailsModalProps> = ({ plan, allPla
                 <div className={cn(
                   "w-12 h-12 rounded-xl flex items-center justify-center text-lg font-bold",
                   "bg-gradient-to-br text-white shadow-md",
-                  plan.slug === 'essential' && "from-blue-600 to-blue-700",
-                  plan.slug === 'professional' && "from-blue-600 to-emerald-600",
-                  plan.slug === 'enterprise' && "from-purple-600 to-indigo-700",
+                  TIER_GRADIENT_BG[plan.slug],
                 )}>
                   {plan.name[0]}
                 </div>

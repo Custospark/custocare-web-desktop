@@ -6,6 +6,7 @@ import { useAppSelector } from '../../../../../app/store/hooks/useApp';
 import { cn } from '../../../../../shared/types/cn';
 import { LandingLayout } from './LandingLayout';
 import { useGetPlans } from '../../../admin-module/api/subscriptions/SubscriptionQueries';
+import { TIER_FEATURES, calcAnnualPrice } from '../../../../../shared/config/planConfig';
 import type { Plan } from '../../../admin-module/api/subscriptions/SubscriptionTypes';
 
 interface DisplayTier {
@@ -20,46 +21,6 @@ interface DisplayTier {
   gradient: string;
   cta: string;
 }
-
-const TIER_FEATURES: Record<string, { features: string[]; gradient: string; cta: string }> = {
-  essential: {
-    features: [
-      'Patient records & visits',
-      'Clinical documentation (notes, diagnosis, vitals)',
-      'Order lab tests, prescribe, admit to ward',
-      'Billing, invoices & revenue',
-      'Facility & team management',
-      'Inventory & supplies',
-      'Patient portal (self-service)',
-      'Messaging center',
-      'Custocare Hub (learning, community, support)',
-      'Patient analytics',
-    ],
-    gradient: 'from-blue-600 to-blue-700',
-    cta: 'Start Free Trial',
-  },
-  professional: {
-    features: [
-      'Everything in Essential',
-      'Dedicated laboratory workspace — catalog, panels, results management',
-      'Dedicated pharmacy workspace — dispensing, inventory, Rx workbench',
-      'Dedicated nursing workspace — ward board, beds, med admin, tasks',
-      'Dedicated clinical workspace — appointments, clinical documentation, scheduling',
-    ],
-    gradient: 'from-blue-600 to-emerald-600',
-    cta: 'Start Free Trial',
-  },
-  enterprise: {
-    features: [
-      'Everything in Professional',
-      'Referral management & network',
-      'Ambulance fleet, dispatch & crew',
-      'Priority support & dedicated account manager',
-    ],
-    gradient: 'from-purple-600 to-indigo-700',
-    cta: 'Contact Sales',
-  },
-};
 
 const buildTiers = (plans: Plan[]): DisplayTier[] => {
   return plans
@@ -168,7 +129,7 @@ export const PricingPage: React.FC = () => {
           <>
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8 mb-16">
               {tiers.map((tier, index) => {
-                const annualPrice = Math.round(tier.monthlyPrice * 10 / 12);
+                const annualPrice = calcAnnualPrice(tier.monthlyPrice);
                 const displayPrice = annual ? `$${annualPrice}` : `$${tier.monthlyPrice}`;
 
                 return (
