@@ -48,7 +48,7 @@ import { UserProfileMenu } from './UserProfileMenu';
 import ContextSwitcher from './ContextSwitcher';
 import StaffPresence from './StaffPresence';
 import MySpace from './MySpace';
-// import Subscription from './Subscription';
+import Subscription from './Subscription';
 import { BrandName } from '../../../utils/BrandName';
 
 export interface NavbarProps {
@@ -351,18 +351,16 @@ export const Navbar: React.FC<NavbarProps> = ({
   >
     <Menu className="w-5 h-5" />
   </button>
-      {/* <Subscription 
-      isDark={isDark} 
-      isMobile={isMobile}
-      onUpgradeClick={() => {
-        // Handle upgrade navigation
-        navigate(ADMINISTRATION_PLANS_SUBSCRIPTIONS_ROUTES.AVAILABLE_PLANS);
-      }}
-      onManageClick={() => {
-        // Handle manage billing navigation
-        navigate(ADMINISTRATION_PLANS_SUBSCRIPTIONS_ROUTES.PAYMENTS);
-      }}
-    /> */}
+      <Subscription 
+        isDark={isDark} 
+        isMobile={isMobile}
+        onUpgradeClick={() => {
+          navigate(ADMINISTRATION_PLANS_SUBSCRIPTIONS_ROUTES.AVAILABLE_PLANS);
+        }}
+        onManageClick={() => {
+          navigate(ADMINISTRATION_PLANS_SUBSCRIPTIONS_ROUTES.PAYMENTS);
+        }}
+      />
 
   {/* Context switcher */}
   {allContextOptions.length > 0 && (
