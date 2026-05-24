@@ -142,7 +142,7 @@ export interface Plan {
 
 /** Minimal approved-by block embedded in PaymentResource. */
 export interface PaymentApprovedBy {
-  staff_id: number;
+  user_id: number;
 }
 
 /**
