@@ -24,7 +24,13 @@ import { adminRoutes } from './modules/adminstration/admin.routes';
 import PlansAndSubscriptions from '../../modules/administration/admin-module/ui/plans-and-subscriptions/PlansAndSubscriptions';
 import FacilitySettings from '../../modules/administration/admin-module/ui/facility-settings/FacilitySettings';
 import ClinicalSpaceManagement from '../../modules/administration/admin-module/ui/clinical-space/ClinicalSpaceManagement';
-import { ADMIN_ROUTES, ADMINISTRATION_CLINICAL_SPACE_MGT_ROUTES } from './constants/administration.paths';
+import {
+  ADMIN_ROUTES,
+  ADMINISTRATION_CLINICAL_SPACE_MGT_ROUTES,
+  ADMINISTRATION_FACILITY_SETTINGS_ROUTE_SEGMENTS,
+  ADMINISTRATION_PLANS_SUBSCRIPTIONS_ROUTE_SEGMENTS,
+} from './constants/administration.paths';
+import AdministrationIndexRedirect from '../../modules/administration/admin-module/ui/AdministrationIndexRedirect';
 import LoadingRedirect from '../../shared/components/Loading/LoadingRedirect';
 import { CLINICAL_ROUTES, MEDICAL_RECORDS_ROUTES, CUSTOCARE_HUB_ROUTES, AMBULANCE_ROUTES, REFERRAL_ROUTES } from './routeConstants';
 import FacilityAdminBillingCycle from '../../modules/billling/ui/billling/FacilityAdminBillingCycle';
@@ -237,18 +243,7 @@ export const ProtectedRoutes = ({
               </SuspenseWrapper>
             }
           >
-            {/* Redirect base path to admin overview */}
-            <Route 
-              path={ROUTES.ADMINISTRATION} 
-              element={
-                <LoadingRedirect 
-                  to={ADMIN_ROUTES.OVERVIEW} 
-                  replace 
-                  variant="dashboard" 
-                  message="Loading Facility Intelligence..." 
-                />
-              } 
-            />    
+            <Route index element={<AdministrationIndexRedirect />} />    
 
             {adminRoutes}
           
@@ -278,7 +273,7 @@ export const ProtectedRoutes = ({
             
             {/* Facility Settings */}
             <Route
-              path="settings"
+              path={ADMINISTRATION_FACILITY_SETTINGS_ROUTE_SEGMENTS.ROOT}
               element={
                 <SuspenseWrapper variant="detail">
                   <WithThemeProp Component={FacilitySettings} />
@@ -286,11 +281,10 @@ export const ProtectedRoutes = ({
               }
             >
               {facilitySettingsRoutes}
-            </Route>      
-            
-            {/* Plans & Subscriptions */}
+            </Route>
+
             <Route
-              path="plans-subscriptions"
+              path={ADMINISTRATION_PLANS_SUBSCRIPTIONS_ROUTE_SEGMENTS.ROOT}
               element={
                 <SuspenseWrapper variant="detail">
                   <WithThemeProp Component={PlansAndSubscriptions} />

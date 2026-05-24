@@ -25,8 +25,14 @@ import {
   switchCapability,
   switchFacility,
   getRoleDisplayName,
+  selectStaffFacilities,
   type FacilityRole,
 } from '../../../../../app/store/slices/activeContextSlice';
+import {
+  getStaffFacilitySwitchToast,
+  mergeStaffFacilityContext,
+  resolveStaffFacilityLandingPath,
+} from '../../../../../shared/navigation/facilityContextNavigation';
 
 // Import child components
 import { PortalHeader } from './port-selector-components/PortalHeader';
@@ -44,6 +50,7 @@ export const PortalSelector: React.FC = () => {
 
   const theme = useAppSelector((state) => state.ui.theme);
   const activeContext = useAppSelector((state) => state.activeContext);
+  const staffFacilities = useAppSelector(selectStaffFacilities);
 
   const {
     user,
@@ -78,26 +85,26 @@ export const PortalSelector: React.FC = () => {
    */
   const handleWorkspaceSelect = useCallback(
     (facilityRole: FacilityRole): void => {
+      const facilityMeta =
+        staffFacilities.find((f) => f.facility_id === facilityRole.facility_id) ?? null;
+
       dispatch(switchCapability('staff'));
       dispatch(switchFacility(facilityRole.facility_id));
 
-      navigate(ROUTES.DASHBOARD, {
-        state: {
-          user,
-          facilityRole,
-          timestamp: new Date().toISOString(),
-        },
-      });
+      const facilityContext = mergeStaffFacilityContext(facilityMeta, facilityRole);
+      const landingPath = resolveStaffFacilityLandingPath(facilityContext);
+      navigate(landingPath);
 
-      showToast(
-        'success',
-        `Switched to ${facilityRole.facility_name || 'facility'} - ${getRoleDisplayName(
-          facilityRole.role_code
-        )}`,
-        3000
+      const toast = getStaffFacilitySwitchToast(
+        facilityContext,
+        facilityRole.facility_name ?? facilityMeta?.facility_name ?? 'This facility',
+        getRoleDisplayName(facilityRole.role_code),
       );
+      if (toast) {
+        showToast(toast.type, toast.message, toast.type === 'success' ? 3000 : 6000);
+      }
     },
-    [dispatch, navigate, showToast, user]
+    [dispatch, navigate, showToast, staffFacilities],
   );
 
   /**

@@ -237,7 +237,7 @@ const LoadingScreen: React.FC<LoadingScreenProps> = ({ message }) => {
             "text-sm font-medium tracking-wide",
             theme === 'dark' ? "text-gray-400" : "text-gray-600"
           )}>
-            Healthcare Intelligence Platform
+            Continous Care. Clinical Excellence.
           </p>
         </motion.div>
 

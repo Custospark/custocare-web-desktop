@@ -2,6 +2,127 @@
 
 ---
 
+## 2026-05-24: Plan-Based Module Resolution for Staff Context
+
+**Context:** Staff with facility assignments received modules solely from `facility_staff_roles.module_code`, ignoring the facility's subscription plan. The pricing strategy notebook (`Custocare_Pricing_Strategy.ipynb` §4) defines tier-gated module workspaces, but context resolution did not intersect role modules with plan features. Module/plan seed data was also out of sync (missing `patient_dashboard`, `custocare_hub`; Enterprise incorrectly included `platform_administration`).
+
+**Decisions:**
+
+**Backend (Laravel):**
+- Extended `App\Constants\Billing\PlanFeatures` with canonical module codes, always-available modules (`account`, `custocare_hub`), tier default feature flags, and helpers: `enabledModuleCodes()`, `intersectRoleModulesWithPlan()`, `restrictedModuleCodes()`
+- Updated `UserContextResolverService::resolveStaffFacilitiesWithModules()` to eager-load `facility.subscription.plan`, resolve plan-enabled modules via `Subscription::hasAccess()`, and intersect with role-assigned modules
+- Restricted/suspended facilities and facilities without accessible subscriptions resolve to always-available modules only
+- Updated `DatabaseSeeder` modules list to 13 codes aligned with Frontend Sidebar: added `patient_dashboard`, `custocare_hub`; ordered consistently
+- Added `RoleModuleDefault` rows for `patient` and `staff` capability roles
+- Updated `PlanSeeder` to derive features from `PlanFeatures::defaultFeatureFlagsForPlan()` — Essential (MR + admin + billing), Professional (+ nursing/clinical/lab/pharmacy), Enterprise (+ referrals/ambulance); removed `platform_administration` from plan tiers
+- Added `tests/Unit/PlanFeaturesTest.php` (3 tests)
+
+**Frontend (React/TypeScript):**
+- Extended `shared/entitlements/entitlements.ts` with `SubscriptionModuleCode`, `ALWAYS_AVAILABLE_MODULES`, `MODULE_REQUIRED_TIER`, `PLAN_ENABLED_MODULES`, and `intersectRoleModulesWithPlan()` — mirrors Backend `PlanFeatures`
+
+**Module tier mapping (source of truth):**
+
+| Tier | Gated modules |
+|------|---------------|
+| Essential | `medical_records`, `administration`, `billing`, `patient_dashboard` |
+| Professional | + `nursing`, `clinical`, `laboratory`, `pharmacy` |
+| Enterprise | + `referrals`, `ambulance` |
+| Always available | `account`, `custocare_hub` |
+| Internal only | `platform_administration` (Spatie `super_admin`) |
+
+**Trade-offs:**
+- Role assignments may still store modules above the plan tier; resolution-time intersection keeps DB assignments intact while gating UI access. Future work could validate assignments at invite/assign time.
+- Notebook uses `patient_portal` / `referral` naming; codebase standard is `patient_dashboard` / `referrals` — documented here to avoid drift.
+
+---
+
+## 2026-05-24: Plan Limit Enforcement (Staff, Departments, Visits)
+
+**Context:** Subscription plans define `max_staff`, `max_departments`, and `max_patients_per_month` but limits were not enforced when inviting staff, creating departments, or registering visits. Invitation UI also listed all modules regardless of plan tier.
+
+**Decisions:**
+
+**Backend (Laravel):**
+- Added `PlanLimitService` + interface with `assertCanAddStaff`, `assertCanAddDepartment`, `assertCanCreateVisit`, `assertModulesAllowed`, `filterModulesForPlan`, `getPlanLimits`
+- Updated `UsageService`: staff count = active/on_leave assignments + pending invitations (excluding staff already assigned); visits = total visits in current calendar month
+- Extended `GET /facilities/{facility}/usage` to include plan `limits`
+- Enforced limits in `StaffInvitationService` (create + accept), `FacilityStaffRoleService` (create assignment), `DepartmentService` (create), `VisitService` (new visit only — existing active visit reuse exempt)
+- Module codes on invitations/assignments validated and filtered against plan features
+
+**Frontend (React/TypeScript):**
+- Added `usePlanEntitlements` hook + `getPlanEnabledModuleCodesFromPlan()` / `isStaffLimitReached()` in `entitlements.ts`
+- `InvitationManager` filters module checkboxes by plan; shows staff limit banner; disables invite actions at capacity
+- Extended `FacilityUsage` type with optional `limits`
+
+**Counting rules:**
+| Limit | Counts toward cap |
+|-------|-------------------|
+| Staff | Distinct staff with `active`/`on_leave` assignment + pending non-expired invitations for unassigned staff |
+| Departments | Active departments at facility |
+| Visits/month | All visits with `arrived_at` in current calendar month (new visit creation blocked; reuse of active visit allowed) |
+
+**Facility owners without active subscription:**
+- Context resolver returns `account`, `custocare_hub`, and **`administration`** (not only account/hub) so owners can manage plans and billing.
+- Portal selector: owner workspace card shows “Renew subscription” and routes to **Plans & Subscriptions**; regular staff get limited access toast and dashboard with account/hub only.
+- Invitation module picker uses owner administration fallback via `usePlanEntitlements` + `PlanLimitService::getAssignableModuleCodes(..., $inviterIsOwner)`.
+
+---
+
+## 2026-05-24: Restore Full Plan Modules After Subscription Approval
+
+**Context:** After platform admin approved payment, subscription status became `ACTIVE` but facility owners stayed on the 3-module restricted set (`account`, `custocare_hub`, `administration`). Staff invited during inactive subscription had truncated `facility_staff_roles.module_code` persisted in DB. Context resolution intersected stored modules with the plan, so access could never expand.
+
+**Decisions:**
+
+**Backend:**
+- `FacilityStaffRoleModuleSyncService` runs on `activateSubscription()` and `renewSubscription()` — owners get full plan modules; staff get `RoleModuleDefault` ∩ plan
+- `UserContextResolverService`: owners with active subscription receive full plan modules (no intersection with truncated DB row); staff with restricted-only stored modules fall back to role defaults at resolve time
+- `PlanFeatures::isRestrictedOnlyModuleSet()` detects inactive-subscription fallback module sets
+- Artisan repair: `php artisan billing:sync-facility-modules` (optional `--facility=`)
+
+**Frontend:**
+- `useSubscriptionAccessContextRefresh` in `Layout` re-fetches `/user/context/resolve` when live subscription reports `has_access` but Redux modules are still owner-restricted
+
+**Trade-offs:** Staff still receive role-scoped modules within the plan (not every plan module for every role). Re-run sync command once for facilities approved before this deploy.
+
+---
+
+## 2026-05-24: Plan-Scoped Assignable Modules for Invitations
+
+**Context:** Invitation module picker loaded all modules via `GET /modules` and filtered client-side with `usePlanEntitlements`, which could drift from backend `PlanLimitService` rules.
+
+**Decisions:**
+- **Backend:** `GET /api/facilities/{facility}/assignable-modules` via `AssignableModuleService` — uses `PlanLimitService::getAssignableModuleCodes()` (same source as invitation validation); excludes `account` and `platform_administration` from picker; returns plan name/slug
+- **Frontend:** `useGetFacilityAssignableModules` + `InvitationManager` uses backend list only; client validates selection ⊆ `allowed_module_codes`
+- **Edit Staff Permissions:** `StaffPermissionDrawer` uses the same assignable-modules endpoint; `FacilityStaffRoleService::updateAssignment` enforces plan limits using **editor** ownership (not target staff) so owners can grant `administration` to staff without making them facility owners
+
+---
+
+## 2026-05-24: Administration Route Constants & Context Navigation Parity
+
+**Context:** Plans/subscriptions URLs were duplicated and sometimes wrong (`available-plans`, `/payments` vs registered `/plans`, `/payment-methods`). Hardcoded paths appearedClass scattered across Portal Selector, Navbar, Sidebar, and Admin shell. Facility context switching did not consistently land owners without subscriptions on Plans & Subscriptions.
+
+**Decisions:**
+
+**Route constants (`administration.paths.ts`):**
+- Canonical `ADMINISTRATION_PLANS_SUBSCRIPTIONS_ROUTES` + `ADMINISTRATION_PLANS_SUBSCRIPTIONS_ROUTE_SEGMENTS` for nested `<Route>` paths
+- `ADMIN_ROUTES` plan/settings entries alias the canonical constants (no duplicate path strings)
+
+**Registered child routes (`plans-and-subscriptions.tsx`, `facility-settings.tsx`):**
+- Relative segments under parent shells; index redirects to `plans` / `identity`
+- Components: `AvailablePlans`, `FacilitySubscriptions`, `Payments`, `Invoices`; `FacilityIdentity`, `OperationalPolicy`
+- `BILLING_DETAILS` constant reserved — no route until a component exists
+
+**Navigation parity (`facilityContextNavigation.ts`):**
+- `resolveStaffFacilityLandingPath()` — restricted → dashboard; owner w/o sub → `AVAILABLE_PLANS`; staff w/o sub → dashboard
+- `mergeStaffFacilityContext()` merges Redux facility assignment with portal role flags (strict `=== true` checks; no `?? true` defaults)
+- Shared by **Navbar** context switcher, **Portal Selector** workspace cards, **Sidebar** admin landing href, **AdminModule** redirect guard, **AdministrationIndexRedirect**
+
+**Trade-offs:**
+- Admin child routes in `admin.routes.tsx` still use absolute paths (existing pattern); plans/settings use relative nested segments under `ProtectedRoutes`.
+
+---
+
 ## 2026-05-24: Subscription Invoices & Receipts Feature
 
 **Context:** The subscription billing system had Plans, Subscriptions, and Payments but no structured invoices or receipts for facilities. Facilities needed formal invoicing for their subscription fees (monthly renewals, onboarding fees) with printable receipt documents.

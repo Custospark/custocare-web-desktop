@@ -116,7 +116,7 @@ export const platformAdminRoutes = [
         path={PLATFORM_ADMIN_ROUTES.FACILITIES_SUBSCRIPTIONS}
         element={
           <SuspenseWrapper variant="table">
-            <WithAuthProp Component={FacilitySubscriptions} />
+            <WithThemeProp Component={FacilitySubscriptions} />
           </SuspenseWrapper>
         }
       />

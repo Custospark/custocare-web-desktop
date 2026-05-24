@@ -42,6 +42,7 @@ import {
   Trash2,
   AlertTriangle,
   ChevronUp,
+  type LucideProps,
 } from 'lucide-react';
 import { useSelector } from 'react-redux';
 import type { RootState } from '../../../../../app/store/rootReducer';
@@ -57,7 +58,8 @@ import {
 import { cn } from '../../../../../shared/utils/classNameUtils';
 import { useGetStaff } from '../../api/team-management/queries/useStaffQueries';
 import { useGetFacilityRoles } from '../../api/team-management/queries/useFacilityRoleQueries';
-import { useGetModules } from '../../api/team-management/queries/useModuleQueries';
+import { useGetFacilityAssignableModules } from '../../api/team-management/queries/useModuleQueries';
+import { usePlanEntitlements } from '../../../../../shared/entitlements/usePlanEntitlements';
 import { useGetDepartmentsByFacility } from '../../api/department-managment/useDepartmentQueries';
 import { useGetFacilitySpecificRoles } from '../../api/team-management/queries/useFacilityRoleQueries';
 import type { 
@@ -65,6 +67,7 @@ import type {
   StaffInvitation,
   CreateStaffInvitationRequest 
 } from '../../api/team-management/types/staffInvitationTypes';
+import type { Staff } from '../../api/team-management/types/staffTypes';
 import LoadingSkeleton from '../../../../../shared/components/Loading/LoadingSkeletons';
 import { useConfirm } from '../../../../../shared/components/Feedback/ConfirmDialog/ConfirmContext';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -199,7 +202,7 @@ function formatDate(dateString: string): string {
   });
 }
 
-function getStatusIcon(status: InvitationStatus, props?: any) {
+function getStatusIcon(status: InvitationStatus, props?: LucideProps) {
   const icons = {
     pending: <Clock {...props} />,
     accepted: <CheckCircle {...props} />,
@@ -241,7 +244,7 @@ export const InvitationManager: React.FC<InvitationManagerProps> = ({
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [staffLookupError, setStaffLookupError] = useState<string>('');
   const [staffLookupMode, setStaffLookupMode] = useState<'search' | 'select'>('search');
-  const [filteredStaff, setFilteredStaff] = useState<any[]>([]);
+  const [filteredStaff, setFilteredStaff] = useState<Staff[]>([]);
   const [showStaffDetails, setShowStaffDetails] = useState(false);
 
   const { confirm } = useConfirm();
@@ -277,10 +280,10 @@ export const InvitationManager: React.FC<InvitationManagerProps> = ({
     { enabled: showCreateModal }
   );
 
-  const { data: modulesResponse, isLoading: modulesLoading } = useGetModules(
-    { is_active: true },
-    { enabled: showCreateModal }
-  );
+  const { data: assignableModulesResponse, isLoading: modulesLoading } =
+    useGetFacilityAssignableModules(activeFacilityId, {
+      enabled: showCreateModal && !!activeFacilityId,
+    });
 
   const { data: departmentsResponse, isLoading: departmentsLoading } =
     useGetDepartmentsByFacility(
@@ -302,8 +305,17 @@ export const InvitationManager: React.FC<InvitationManagerProps> = ({
   }, [facilityRoles, rolesResponse?.data]);
 
   const allStaff = staffResponse?.data || [];
-  const modules = modulesResponse?.data || [];
+  const assignableModulesPayload = assignableModulesResponse?.data;
+  const planFilteredModules = assignableModulesPayload?.modules ?? [];
+  const assignablePlanName = assignableModulesPayload?.plan?.name ?? null;
   const departments = departmentsResponse?.data || [];
+
+  const {
+    staffLimitReached,
+    usage: facilityUsage,
+    limits: facilityLimits,
+    isLoading: planEntitlementsLoading,
+  } = usePlanEntitlements();
 
   /* -------------------------------------------------------------------------- */
   /*                              MUTATIONS                                     */
@@ -477,6 +489,15 @@ export const InvitationManager: React.FC<InvitationManagerProps> = ({
 
     if (formData.module_codes.length === 0) {
       errors.module_codes = 'Please select at least one module';
+    } else {
+      const allowedCodes = assignableModulesPayload?.allowed_module_codes ?? [];
+      const invalidSelection = formData.module_codes.filter(
+        (code) => !allowedCodes.includes(code),
+      );
+      if (invalidSelection.length > 0) {
+        errors.module_codes =
+          'One or more selected modules are not included in your subscription plan.';
+      }
     }
 
     setFormErrors(errors);
@@ -693,7 +714,7 @@ export const InvitationManager: React.FC<InvitationManagerProps> = ({
 
   const isLoading = invitationsLoading;
   const isFormLoading =
-    staffLoading || rolesLoading || modulesLoading || departmentsLoading;
+    staffLoading || rolesLoading || modulesLoading || departmentsLoading || planEntitlementsLoading;
 
   /* -------------------------------------------------------------------------- */
   /*                         EARLY RETURNS                                      */
@@ -798,7 +819,7 @@ export const InvitationManager: React.FC<InvitationManagerProps> = ({
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={() => setShowCreateModal(true)}
-              disabled={isAnyMutationPending}
+              disabled={isAnyMutationPending || staffLimitReached}
               className={cn(
                 'inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-medium',
                 'border-2 transition-all',
@@ -1358,7 +1379,7 @@ export const InvitationManager: React.FC<InvitationManagerProps> = ({
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={() => setShowCreateModal(true)}
-                disabled={isAnyMutationPending}
+                disabled={isAnyMutationPending || staffLimitReached}
                 className={cn(
                   'inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-medium cursor-pointer',
                   'border-2 transition-all',
@@ -2242,12 +2263,32 @@ export const InvitationManager: React.FC<InvitationManagerProps> = ({
     Permission Access *
   </label>
   <p className={`text-xs mb-3 ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
-    Grant permissions this staff can have.
+    {assignablePlanName
+      ? `Only modules included in your ${assignablePlanName} plan are shown.`
+      : 'Modules are scoped to your facility subscription plan.'}
   </p>
 
+  {staffLimitReached && (
+    <motion.div
+      className={cn(
+        'mb-3 p-3 rounded-lg border flex items-start gap-2 text-sm',
+        isDark
+          ? 'bg-amber-900/20 border-amber-700/40 text-amber-200'
+          : 'bg-amber-50 border-amber-200 text-amber-800',
+      )}
+    >
+      <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
+      <span>
+        Staff limit reached
+        {facilityLimits?.max_staff != null ? ` (${facilityUsage?.staff ?? 0}/${facilityLimits.max_staff})` : ''}.
+        Upgrade your plan or cancel pending invitations before sending new ones.
+      </span>
+    </motion.div>
+  )}
+
   <div className="space-y-2 max-h-60 overflow-y-auto">
-    {modules.filter(module => module.code !== 'account').length === 0 ? (
-      <div
+    {planFilteredModules.length === 0 ? (
+      <motion.div
         className={cn(
           'p-4 rounded-lg text-center border-2',
           isDark
@@ -2255,11 +2296,11 @@ export const InvitationManager: React.FC<InvitationManagerProps> = ({
             : 'bg-gray-50 text-gray-600 border-gray-200'
         )}
       >
-        No access available
-      </div>
+        No modules available on your current subscription plan
+        {assignablePlanName ? ` (${assignablePlanName})` : ''}
+      </motion.div>
     ) : (
-      modules
-        .filter(module => module.code !== 'account')
+      planFilteredModules
         .map((module) => (
           <motion.label
             key={module.id}
@@ -2368,14 +2409,14 @@ export const InvitationManager: React.FC<InvitationManagerProps> = ({
                   whileTap={{ scale: 0.95 }}
                   onClick={handleCreateInvitation}
                   disabled={
-                    createMutation.isPending || isFormLoading || !formData.staff_id
+                    createMutation.isPending || isFormLoading || !formData.staff_id || staffLimitReached
                   }
                   className={cn(
                     'px-6 py-2 rounded-lg font-medium inline-flex items-center gap-2',
                     'border-2 transition-all',
                     'bg-blue-600 hover:bg-blue-700 text-white border-blue-400',
                     'disabled:opacity-50',
-                    createMutation.isPending || isFormLoading || !formData.staff_id
+                    createMutation.isPending || isFormLoading || !formData.staff_id || staffLimitReached
                       ? 'cursor-not-allowed'
                       : 'cursor-pointer'
                   )}

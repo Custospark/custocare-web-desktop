@@ -167,6 +167,8 @@ export interface Payment {
   status_label: string;         // e.g. 'Pending Review'
   transaction_reference: string | null;
   receipt_url: string | null;   // Public URL to uploaded receipt (if any)
+  receipt_download_url?: string | null; // Auth-protected download endpoint
+  receipt_path?: string | null;
   receipt_notes: string | null;
   paid_at: string | null;       // ISO-8601 datetime
   approved_at: string | null;
@@ -630,10 +632,17 @@ export interface AdminCancelInvoiceParams {
 // USAGE TYPES
 // ============================================================================
 
+export interface FacilityUsageLimits {
+  max_staff: number | null;
+  max_departments: number | null;
+  max_patients_per_month: number | null;
+}
+
 export interface FacilityUsage {
   staff: number;
   departments: number;
   visits: number;
+  limits?: FacilityUsageLimits | null;
 }
 
 export interface UsageResponse {

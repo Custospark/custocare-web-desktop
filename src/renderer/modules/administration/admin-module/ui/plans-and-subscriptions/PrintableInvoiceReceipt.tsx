@@ -2,7 +2,7 @@ import React, { useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { X, Download, Printer } from 'lucide-react';
 import { cn } from '../../../../../shared/types/cn';
-import { InvoiceStatus, INVOICE_STATUS_LABELS, INVOICE_TYPE_LABELS, type Invoice } from '../../api/subscriptions/SubscriptionTypes';
+import { InvoiceStatus, InvoiceType, INVOICE_STATUS_LABELS, INVOICE_TYPE_LABELS, type Invoice, type InvoiceLineItem } from '../../api/subscriptions/SubscriptionTypes';
 
 interface PrintableInvoiceReceiptProps {
   invoice: Invoice;
@@ -36,7 +36,7 @@ const PrintableInvoiceReceipt: React.FC<PrintableInvoiceReceiptProps> = ({ invoi
           </tr>
         </thead>
         <tbody>
-          ${lines.map((item: any) => `
+          ${lines.map((item: InvoiceLineItem) => `
             <tr style="border-bottom: 1px solid #f3f4f6;">
               <td style="padding:8px 12px;">${item.description}</td>
               <td style="text-align:right; padding:8px 12px;">${item.quantity}</td>
@@ -91,7 +91,7 @@ const PrintableInvoiceReceipt: React.FC<PrintableInvoiceReceiptProps> = ({ invoi
           </div>
           <div class="info-box">
             <div class="label">Type</div>
-            <div class="value">${INVOICE_TYPE_LABELS[invoice.invoice_type as any] || invoice.invoice_type_label}</div>
+            <div class="value">${INVOICE_TYPE_LABELS[invoice.invoice_type as InvoiceType] || invoice.invoice_type_label}</div>
           </div>
           <div class="info-box">
             <div class="label">Amount</div>
@@ -165,14 +165,7 @@ const PrintableInvoiceReceipt: React.FC<PrintableInvoiceReceiptProps> = ({ invoi
     URL.revokeObjectURL(url);
   };
 
-  const statusBg = () => {
-    switch (invoice.status) {
-      case InvoiceStatus.PAID: return isDark ? 'bg-green-900/20 border-green-800' : 'bg-green-50 border-green-200';
-      case InvoiceStatus.OVERDUE: return isDark ? 'bg-red-900/20 border-red-800' : 'bg-red-50 border-red-200';
-      case InvoiceStatus.PARTIALLY_PAID: return isDark ? 'bg-blue-900/20 border-blue-800' : 'bg-blue-50 border-blue-200';
-      default: return isDark ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-200';
-    }
-  };
+
 
   return (
     <motion.div

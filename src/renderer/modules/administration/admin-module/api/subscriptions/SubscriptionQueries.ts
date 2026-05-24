@@ -128,7 +128,7 @@ export const subscriptionKeys = {
     // Facility-facing payment keys
     facility:    (facilityId: number)                          => [...subscriptionKeys.payments.all, 'facility', facilityId] as const,
     facilityList: (facilityId: number, filters?: FacilityPaymentFilters) => [...subscriptionKeys.payments.facility(facilityId), 'list', filters ?? {}] as const,
-    facilityDetail: (facilityId: number, paymentId: number)    => [...subscriptionKeys.payments.facility(facilityId), 'detail', paymentId] as const,
+    facilityDetail: (facilityId: number, paymentId: number | string) => [...subscriptionKeys.payments.facility(facilityId), 'detail', paymentId] as const,
 
     // Admin payment keys
     adminList:   (filters?: AdminPaymentFilters)    => [...subscriptionKeys.payments.all, 'admin', 'list', filters ?? {}] as const,
@@ -295,7 +295,8 @@ export const useCreateSubscription = (
   return useMutation<
     CreateSubscriptionResponse,
     AxiosError<ApiErrorResponse>,
-    CreateSubscriptionParams
+    CreateSubscriptionParams,
+    { snapshot: unknown } | undefined
   >({
     mutationFn: async ({ data }) => {
       if (!facilityId) throw new Error('No active facility selected.');
@@ -364,7 +365,8 @@ export const useCancelSubscription = (
   return useMutation<
     CancelSubscriptionResponse,
     AxiosError<ApiErrorResponse>,
-    CancelSubscriptionParams
+    CancelSubscriptionParams,
+    { snapshot: unknown } | undefined
   >({
     mutationFn: async ({ data = {} }) => {
       if (!facilityId) throw new Error('No active facility selected.');
@@ -562,7 +564,7 @@ export const useRecordPayment = (
       callbacks.onSuccess?.(data);
     },
 
-    onError: (error: any) => {
+    onError: (error: AxiosError<ApiErrorResponse>) => {
       const axiosErr = error as AxiosError<ApiErrorResponse>;
       const base     = extractErrorMessage(axiosErr, 'Failed to record payment.');
       const details  = formatValidationErrors(axiosErr.response?.data?.errors);
@@ -656,7 +658,7 @@ export const useAdminCreatePlan = (
       callbacks.onSuccess?.(data);
     },
 
-    onError: (error: any) => {
+    onError: (error: AxiosError<ApiErrorResponse>) => {
       const axiosErr = error as AxiosError<ApiErrorResponse>;
       const base     = extractErrorMessage(axiosErr, 'Failed to create plan.');
       const details  = formatValidationErrors(axiosErr.response?.data?.errors);
@@ -705,7 +707,7 @@ export const useAdminUpdatePlan = (
       callbacks.onSuccess?.(data);
     },
 
-    onError: (error: any) => {
+    onError: (error: AxiosError<ApiErrorResponse>) => {
       const axiosErr = error as AxiosError<ApiErrorResponse>;
       const base     = extractErrorMessage(axiosErr, 'Failed to update plan.');
       const details  = formatValidationErrors(axiosErr.response?.data?.errors);
@@ -756,7 +758,7 @@ export const useAdminDeletePlan = (
       callbacks.onSuccess?.(data);
     },
 
-    onError: (error: any) => {
+    onError: (error: AxiosError<ApiErrorResponse>) => {
       const axiosErr = error as AxiosError<ApiErrorResponse>;
       const base     = extractErrorMessage(axiosErr, 'Failed to delete plan.');
       const details  = formatValidationErrors(axiosErr.response?.data?.errors);
@@ -862,7 +864,7 @@ export const useAdminActivateSubscription = (
       callbacks.onSuccess?.(data);
     },
 
-    onError: (error: any) => {
+    onError: (error: AxiosError<ApiErrorResponse>) => {
       const axiosErr = error as AxiosError<ApiErrorResponse>;
       const base     = extractErrorMessage(axiosErr, 'Failed to activate subscription.');
       const details  = formatValidationErrors(axiosErr.response?.data?.errors);
@@ -908,7 +910,7 @@ export const useAdminSuspendSubscription = (
       callbacks.onSuccess?.(data);
     },
 
-    onError: (error: any) => {
+    onError: (error: AxiosError<ApiErrorResponse>) => {
       const axiosErr = error as AxiosError<ApiErrorResponse>;
       const base     = extractErrorMessage(axiosErr, 'Failed to suspend subscription.');
       const details  = formatValidationErrors(axiosErr.response?.data?.errors);
@@ -955,7 +957,7 @@ export const useAdminCancelSubscription = (
       callbacks.onSuccess?.(data);
     },
 
-    onError: (error: any) => {
+    onError: (error: AxiosError<ApiErrorResponse>) => {
       const axiosErr = error as AxiosError<ApiErrorResponse>;
       const base     = extractErrorMessage(axiosErr, 'Failed to cancel subscription.');
       const details  = formatValidationErrors(axiosErr.response?.data?.errors);
@@ -1080,7 +1082,7 @@ export const useAdminApprovePayment = (
       callbacks.onSuccess?.(data);
     },
 
-    onError: (error: any) => {
+    onError: (error: AxiosError<ApiErrorResponse>) => {
       const axiosErr = error as AxiosError<ApiErrorResponse>;
       const base     = extractErrorMessage(axiosErr, 'Failed to approve payment.');
       const details  = formatValidationErrors(axiosErr.response?.data?.errors);
@@ -1313,9 +1315,10 @@ export const useAdminCancelInvoice = (
  * GET /facilities/{facility}/usage
  *
  * Returns current usage counts for the active facility:
- * - staff (active + on_leave, distinct staff_id from facility_staff_roles)
+ * - staff (active + on_leave assignments + pending invitations)
  * - departments (active)
- * - visits (distinct patients in last 30 days)
+ * - visits (visits created in the current calendar month)
+ * - limits (from accessible subscription plan, when present)
  */
 export const useGetFacilityUsage = () => {
   const facilityId = useActiveFacilityId();

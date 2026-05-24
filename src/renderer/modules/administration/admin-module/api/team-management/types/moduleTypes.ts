@@ -129,6 +129,21 @@ export interface ApiErrorResponse {
  */
 export type GetModulesResponse = ApiSuccessResponse<Module[]>;
 
+/** Plan-scoped modules for invitations and staff assignments (GET /facilities/{id}/assignable-modules). */
+export interface FacilityAssignableModulesData {
+  modules: Module[];
+  allowed_module_codes: string[];
+  plan_enabled_module_codes: string[];
+  plan: {
+    slug: string | null;
+    name: string | null;
+  } | null;
+  /** True when the current user is a facility owner (can grant administration to staff). */
+  editor_is_facility_owner?: boolean;
+}
+
+export type GetFacilityAssignableModulesResponse = ApiSuccessResponse<FacilityAssignableModulesData>;
+
 /**
  * Response for single module operations (GET, POST, PUT).
  */

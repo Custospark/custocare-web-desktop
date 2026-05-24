@@ -61,7 +61,10 @@ import {
   AMBULANCE_ROUTES,
   REFERRAL_ROUTES,
 } from '../../app/routes/routeConstants';
-import { ADMIN_ROUTES } from '../../app/routes/constants/administration.paths';
+import {
+  ADMIN_ROUTES,
+  ADMINISTRATION_PLANS_SUBSCRIPTIONS_ROUTES,
+} from '../../app/routes/constants/administration.paths';
 import { PLATFORM_ADMIN_ROUTES } from '../../app/routes/constants/platform-administration.paths';
 import { CUSTOCARE_HUB_MODULE_OPERATIONS } from '../../modules/custocare-hub/config/hubConfig';
 
@@ -558,7 +561,7 @@ const ADMINISTRATION_NESTED_ROUTES: Record<string, string> = {
   inventory: ADMIN_ROUTES.INVENTORY,
   team: ADMIN_ROUTES.TEAM,
   'billing-cycle-management': ADMIN_ROUTES.BILLING_CYCLE,
-  'plans-subscriptions': ADMIN_ROUTES.PLANS_SUBSCRIPTIONS,
+  'plans-subscriptions': ADMINISTRATION_PLANS_SUBSCRIPTIONS_ROUTES.ROOT,
   settings: ADMIN_ROUTES.FACILITY_SETTINGS,
 };
 

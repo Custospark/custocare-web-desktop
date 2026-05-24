@@ -31,6 +31,10 @@ export interface StaffFacilityAssignment {
   facility_code: string;
   role_code: string;
   modules: BackendModule[];
+  is_facility_owner?: boolean;
+  has_subscription_access?: boolean;
+  subscription_status?: string | null;
+  is_restricted?: boolean;
   
   // Core Identity
   legal_entity_name?: string | null;
@@ -65,8 +69,8 @@ export interface StaffFacilityAssignment {
   website?: string | null;
   
   // Operations
-  operating_hours?: any;
-  emergency_services_hours?: any;
+  operating_hours?: Record<string, unknown>;
+  emergency_services_hours?: Record<string, unknown>;
   is_24_7?: boolean | null;
   operational_status?: OperationalStatus | null;
   average_wait_time_minutes?: number | null;
@@ -76,7 +80,7 @@ export interface StaffFacilityAssignment {
   license_number?: string | null;
   license_issuing_authority?: string | null;
   license_expiry_date?: string | null;
-  regulatory_identifiers?: any[];
+  regulatory_identifiers?: Record<string, unknown>[];
   participates_in_medicare?: boolean | null;
   participates_in_medicaid?: boolean | null;
   
@@ -188,9 +192,13 @@ export interface MinimalUser {
 export interface FacilityRole {
   facility_id: number;
   facility_name: string | null;
-  staff_id: number;
+  staff_id?: number;
   role_code: string;
   is_primary_facility: boolean;
+  is_facility_owner?: boolean;
+  has_subscription_access?: boolean;
+  subscription_status?: string | null;
+  is_restricted?: boolean;
 }
 
 /** Complete user context from backend */

@@ -38,6 +38,7 @@ import {
   isSearchModalOpen,
 } from './status-bar-components/search/hooks/useSearchKeyboard';
 import { isEditableEventTarget } from '../../keyboard/editableTarget';
+import { useSubscriptionAccessContextRefresh } from '../../entitlements/useSubscriptionAccessContextRefresh';
 
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -69,6 +70,8 @@ export const Layout: React.FC = () => {
   }));
 
   const { systemStatus, isOnline, latency, lastChecked, retryConnection } = useNetworkStatus();
+
+  useSubscriptionAccessContextRefresh();
 
   // ── Always-mounted search modal ───────────────────────────────────────────
   // Reads from the same singleton as SearchBar's trigger button.

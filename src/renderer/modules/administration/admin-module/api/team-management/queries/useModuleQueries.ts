@@ -17,7 +17,9 @@
 
 import { useMutation, useQuery, type UseQueryOptions } from '@tanstack/react-query';
 import type { AxiosError } from 'axios';
+import { useSelector } from 'react-redux';
 import { axiosInstance } from '../../../../../../app/api/axiosConfig';
+import { getActiveFacilityId } from '../../../../../../app/store/utils/contextSelectors';
 import { useToast } from '../../../../../../app/store/contexts/toast/useToast';
 import type {
   ApiErrorResponse,
@@ -26,6 +28,7 @@ import type {
   Module,
   ModuleId,
   GetModulesResponse,
+  GetFacilityAssignableModulesResponse,
   ModuleResponse,
   DeactivateModuleResponse,
   MutationCallbacks,
@@ -58,6 +61,7 @@ export const moduleKeys = {
   details: () => [...moduleKeys.all, 'detail'] as const,
   detail: (id: ModuleId) => [...moduleKeys.details(), id] as const,
   roleDefaults: () => [...moduleKeys.all, 'role-defaults'] as const,
+  assignable: (facilityId: number) => [...moduleKeys.all, 'assignable', facilityId] as const,
 };
 
 /* -------------------------------------------------------------------------- */
@@ -87,6 +91,34 @@ export const useGetModules = (
         params: filters,
       });
       console.log(response.data?.data)
+      return response.data;
+    },
+    ...options,
+  });
+};
+
+/**
+ * GET /facilities/{facility}/assignable-modules
+ *
+ * Modules scoped to the active facility's subscription plan tier (backend source of truth).
+ */
+export const useGetFacilityAssignableModules = (
+  facilityIdOverride?: number | null,
+  options?: Omit<
+    UseQueryOptions<GetFacilityAssignableModulesResponse, AxiosError<ApiErrorResponse>>,
+    'queryKey' | 'queryFn'
+  >,
+) => {
+  const activeFacilityId = useSelector(getActiveFacilityId);
+  const facilityId = facilityIdOverride ?? activeFacilityId;
+
+  return useQuery<GetFacilityAssignableModulesResponse, AxiosError<ApiErrorResponse>>({
+    queryKey: facilityId ? moduleKeys.assignable(facilityId) : [...moduleKeys.all, 'assignable', 'none'],
+    enabled: Boolean(facilityId) && (options?.enabled ?? true),
+    queryFn: async () => {
+      const response = await axiosInstance.get<GetFacilityAssignableModulesResponse>(
+        `/facilities/${facilityId}/assignable-modules`,
+      );
       return response.data;
     },
     ...options,

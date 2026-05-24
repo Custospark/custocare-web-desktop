@@ -14,7 +14,6 @@ import {
   Pause,
   X,
   FileText,
-  Download,
   Mail,
   Phone,
   TrendingUp,
@@ -22,6 +21,7 @@ import {
   EyeOff,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { ReceiptViewButton } from '../../../../../shared/components/billing/ReceiptViewButton';
 
 import {
   useGetFacilitySubscription,
@@ -196,11 +196,13 @@ const SubscriptionTimeline: React.FC<{
                   <div className={cn('mt-2 p-2 rounded-lg text-xs flex items-center gap-2', isDark ? 'bg-gray-800' : 'bg-gray-50')}>
                     <FileText className="w-3 h-3" />
                     <span>Ref: {payment.transaction_reference || 'N/A'}</span>
-                    {payment.receipt_url && (
-                      <a href={payment.receipt_url} target="_blank" rel="noopener noreferrer"
-                        className="text-blue-500 hover:underline inline-flex items-center gap-1">
-                        <Download className="w-3 h-3" /> Receipt
-                      </a>
+                    {(payment.receipt_download_url || payment.receipt_url) && (
+                      <ReceiptViewButton
+                        receiptDownloadUrl={payment.receipt_download_url}
+                        receiptUrl={payment.receipt_url}
+                        label="Receipt"
+                        className="text-blue-500"
+                      />
                     )}
                   </div>
                 )}
@@ -296,7 +298,7 @@ export const FacilitySubscriptions: React.FC<FacilitySubscriptionsProps> = ({
 
   const [showTimeline, setShowTimeline]     = useState(false);
 
-  const { data: subResp, isLoading: subLoading, error: subError } = useGetFacilitySubscription();
+  const { data: subResp, isLoading: subLoading, error: subError, refetch: refetchSub } = useGetFacilitySubscription();
   const { data: paymentsResp } = useGetFacilityPayments({ per_page: 20 });
   const { data: usageResp, refetch: refetchUsage } = useGetFacilityUsage();
 
@@ -324,7 +326,7 @@ export const FacilitySubscriptions: React.FC<FacilitySubscriptionsProps> = ({
         <p className={cn('mb-4', isDark ? 'text-gray-400' : 'text-gray-600')}>
           {subError.message || 'Unable to fetch subscription details. Please try again.'}
         </p>
-        <button onClick={() => refetch()}
+        <button onClick={() => refetchSub()}
           className="inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium bg-blue-600 hover:bg-blue-700 text-white">
           <RefreshCw className="w-4 h-4" /> Retry
         </button>

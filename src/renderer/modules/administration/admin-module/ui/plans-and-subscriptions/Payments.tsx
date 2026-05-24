@@ -2,17 +2,21 @@ import React, { useState } from 'react';
 import {
   Landmark, Smartphone, CheckCircle, Copy,
   CheckCheck, Upload, Loader2, FileText,
-  Building2, ArrowLeft, ExternalLink,
+  Building2, ArrowLeft,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
+import { axiosInstance } from '../../../../../app/api/axiosConfig';
 
-import { useAppSelector } from '../../../../../app/store/hooks/useApp';
+import { useAppDispatch, useAppSelector } from '../../../../../app/store/hooks/useApp';
 import { useGetFacilitySubscription, useRecordPayment } from '../../api/subscriptions/SubscriptionQueries';
 import { useGetFacilityPayments } from '../../api/subscriptions/SubscriptionQueries';
 import { PaymentStatus, PaymentMethod, PaymentType, type Payment } from '../../api/subscriptions/SubscriptionTypes';
 import { cn } from '../../../../../shared/types/cn';
+import { useToast } from '../../../../../app/store/contexts/toast/useToast';
+import { setUserContext, switchCapability, switchFacility } from '../../../../../app/store/slices/activeContextSlice';
 import { ADMINISTRATION_PLANS_SUBSCRIPTIONS_ROUTES } from '../../../../../app/routes/constants/administration.paths';
+import { ReceiptViewButton } from '../../../../../shared/components/billing/ReceiptViewButton';
 
 interface PaymentsProps {
   theme: 'light' | 'dark';
@@ -26,6 +30,9 @@ const BANK_DETAILS = {
 
 export const Payments: React.FC<PaymentsProps> = ({ theme }) => {
   const isDark = theme === 'dark';
+  const dispatch = useAppDispatch();
+  const { showToast } = useToast();
+  const activeFacilityId = useAppSelector((s) => s.activeContext.activeFacilityId);
   const planSelection = useAppSelector((s) => s.plan.selected);
   const [method, setMethod] = useState<'bank' | null>(null);
   const [file, setFile] = useState<File | null>(null);
@@ -35,20 +42,54 @@ export const Payments: React.FC<PaymentsProps> = ({ theme }) => {
   const [submitted, setSubmitted] = useState(false);
   const navigate = useNavigate();
 
-  const { data: subResp } = useGetFacilitySubscription();
+  const { data: subResp, refetch: refetchSubscription } = useGetFacilitySubscription();
   const { data: paymentsResp, refetch } = useGetFacilityPayments({ per_page: 100 });
+
+  const payments = paymentsResp?.data || [];
+  const pendingPayment = payments.find((p) => p.status === PaymentStatus.PENDING) ?? null;
+  const hasPendingProof = Boolean(pendingPayment);
+  const canSubmitProof = !hasPendingProof;
   const recordPayment = useRecordPayment({
-    onSuccess: () => { setSubmitted(true); refetch(); },
+    onSuccess: () => {
+      setSubmitted(true);
+      refetch();
+      refetchSubscription();
+      showToast('success', 'Proof of payment submitted successfully. Awaiting platform admin approval.', 5000);
+    },
   });
 
   const subscription = subResp?.data;
-  const payments = paymentsResp?.data || [];
   const plan = subscription?.plan;
   const price = plan?.pricing.usd || planSelection?.planPrice || 0;
   const planName = plan?.name || planSelection?.planName || '';
   const onboardingFee = plan?.onboarding_fee?.applicable ? (plan.onboarding_fee.usd || planSelection?.onboardingFee || 0) : 0;
   const total = price + onboardingFee;
   const noPlan = !planName && !planSelection && !subscription;
+
+  const approvedPayment = payments.find((p) => p.status === PaymentStatus.APPROVED) || null;
+
+  const handleRestoreFunctionality = async () => {
+    if (!activeFacilityId) return;
+
+    try {
+      await refetchSubscription();
+      await refetch();
+
+      const ctx = await axiosInstance.get('/user/context/resolve');
+      const userContext = ctx.data?.data;
+      if (!userContext) {
+        throw new Error('Failed to resolve user context.');
+      }
+
+      dispatch(setUserContext(userContext));
+      dispatch(switchCapability('staff'));
+      dispatch(switchFacility(activeFacilityId));
+
+      showToast('success', 'All functionalities restored for this facility.', 4500);
+    } catch {
+      showToast('error', 'Could not restore functionality yet. Please try again in a moment.', 5000);
+    }
+  };
 
   const copy = (val: string, key: string) => {
     navigator.clipboard.writeText(val).then(() => {
@@ -62,7 +103,7 @@ export const Payments: React.FC<PaymentsProps> = ({ theme }) => {
   };
 
   const handleSubmitPayment = () => {
-    if (!reference.trim()) return;
+    if (!reference.trim() || hasPendingProof) return;
     recordPayment.mutate({
       data: {
         amount: total,
@@ -207,13 +248,18 @@ export const Payments: React.FC<PaymentsProps> = ({ theme }) => {
             {/* Upload Proof of Payment */}
             <div className={cn('px-6 py-4 border-t', isDark ? 'border-gray-800' : 'border-gray-200')}>
               <h3 className={cn('font-semibold text-sm mb-3', isDark ? 'text-gray-200' : 'text-gray-800')}>Upload Proof of Payment</h3>
+              {hasPendingProof && (
+                <div className={cn('mb-3 rounded-lg border px-4 py-3 text-sm', isDark ? 'border-amber-800 bg-amber-900/20 text-amber-200' : 'border-amber-200 bg-amber-50 text-amber-900')}>
+                  A payment proof is already pending platform admin approval. You can submit again only after it is approved or rejected.
+                </div>
+              )}
               <div className="space-y-3">
                 <div className={cn(
                   'rounded-xl border-2 border-dashed p-6 text-center cursor-pointer transition-colors',
                   isDark ? 'border-gray-700 hover:border-blue-500 bg-gray-800/40' : 'border-gray-300 hover:border-blue-500 bg-gray-50'
                 )}>
-                  <input type="file" accept="image/*,.pdf" onChange={handleFileChange} className="hidden" id="receipt-upload" />
-                  <label htmlFor="receipt-upload" className="cursor-pointer block">
+                  <input type="file" accept="image/*,.pdf" onChange={handleFileChange} className="hidden" id="receipt-upload" disabled={!canSubmitProof} />
+                  <label htmlFor="receipt-upload" className={cn('block', canSubmitProof ? 'cursor-pointer' : 'cursor-not-allowed opacity-60')}>
                     {file ? (
                       <div className="flex items-center justify-center gap-2">
                         <CheckCircle className="w-5 h-5 text-green-500" />
@@ -234,10 +280,12 @@ export const Payments: React.FC<PaymentsProps> = ({ theme }) => {
                   placeholder="Transaction reference (e.g. STANBIC-12345)"
                   value={reference}
                   onChange={(e) => setReference(e.target.value)}
+                  disabled={!canSubmitProof}
                   className={cn(
                     'w-full px-4 py-2.5 rounded-lg border text-sm',
                     isDark ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-500' : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400',
                     'focus:outline-none focus:ring-2 focus:ring-blue-500',
+                    !canSubmitProof && 'opacity-60 cursor-not-allowed',
                   )}
                 />
 
@@ -245,26 +293,28 @@ export const Payments: React.FC<PaymentsProps> = ({ theme }) => {
                   placeholder="Additional notes (optional)"
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
+                  disabled={!canSubmitProof}
                   rows={2}
                   className={cn(
                     'w-full px-4 py-2.5 rounded-lg border text-sm',
                     isDark ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-500' : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400',
                     'focus:outline-none focus:ring-2 focus:ring-blue-500',
+                    !canSubmitProof && 'opacity-60 cursor-not-allowed',
                   )}
                 />
 
                 <button
                   onClick={handleSubmitPayment}
-                  disabled={!reference.trim() || recordPayment.isPending}
+                  disabled={!reference.trim() || recordPayment.isPending || !canSubmitProof}
                   className={cn(
                     'w-full py-3 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2',
                     'bg-gradient-to-r from-blue-600 to-emerald-600 text-white shadow-lg hover:shadow-xl hover:scale-[1.02]',
-                    (recordPayment.isPending) && 'opacity-60 cursor-wait',
+                    (recordPayment.isPending || !canSubmitProof) && 'opacity-60 cursor-not-allowed',
                   )}
                 >
                   {recordPayment.isPending ? (
                     <><Loader2 className="w-4 h-4 animate-spin" /> Submitting…</>
-                  ) : submitted ? (
+                  ) : hasPendingProof || submitted ? (
                     <><CheckCircle className="w-4 h-4" /> Payment Submitted</>
                   ) : (
                     'Submit Payment'
@@ -277,7 +327,7 @@ export const Payments: React.FC<PaymentsProps> = ({ theme }) => {
       </AnimatePresence>
 
       {/* Success Message */}
-      {submitted && (
+      {(submitted || hasPendingProof) && (
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -288,6 +338,29 @@ export const Payments: React.FC<PaymentsProps> = ({ theme }) => {
           <p className={cn('text-sm', isDark ? 'text-gray-400' : 'text-gray-600')}>
             Your payment is pending admin approval. You will be notified once it is confirmed.
           </p>
+        </motion.div>
+      )}
+
+      {!subscription?.has_access && approvedPayment && (
+        <motion.div
+          initial={{ opacity: 0, y: -8 }}
+          animate={{ opacity: 1, y: 0 }}
+          className={cn('rounded-xl p-4 border', isDark ? 'bg-blue-900/20 border-blue-800' : 'bg-blue-50 border-blue-200')}
+        >
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="font-semibold">Payment approved</p>
+              <p className={cn('text-sm', isDark ? 'text-gray-300' : 'text-gray-600')}>
+                Your payment has been approved. Click below to restore full module access for this facility.
+              </p>
+            </div>
+            <button
+              onClick={handleRestoreFunctionality}
+              className="px-4 py-2 rounded-lg font-semibold text-sm bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              Restore all functionalities
+            </button>
+          </div>
         </motion.div>
       )}
 
@@ -310,11 +383,13 @@ export const Payments: React.FC<PaymentsProps> = ({ theme }) => {
                     {p.transaction_reference && (
                       <span className={cn('text-xs font-mono', isDark ? 'text-gray-500' : 'text-gray-400')}>Ref: {p.transaction_reference}</span>
                     )}
-                    {p.receipt_url && (
-                      <a href={p.receipt_url} target="_blank" rel="noopener noreferrer"
-                        className={cn('text-xs flex items-center gap-0.5 underline', isDark ? 'text-blue-400' : 'text-blue-600')}>
-                        <ExternalLink className="w-3 h-3" /> Receipt
-                      </a>
+                    {(p.receipt_download_url || p.receipt_url) && (
+                      <ReceiptViewButton
+                        receiptDownloadUrl={p.receipt_download_url}
+                        receiptUrl={p.receipt_url}
+                        label="Receipt"
+                        className={isDark ? 'text-blue-400' : 'text-blue-600'}
+                      />
                     )}
                   </div>
                   <p className={cn('text-xs', isDark ? 'text-gray-500' : 'text-gray-400')}>

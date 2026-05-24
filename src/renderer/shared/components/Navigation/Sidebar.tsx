@@ -38,7 +38,10 @@ import {
   BILLING_ROUTES,
   CUSTOCARE_HUB_ROUTES,
 } from '../../../app/routes/routeConstants';
-import { ADMIN_ROUTES } from '../../../app/routes/constants/administration.paths';
+import {
+  ADMIN_ROUTES,
+  ADMINISTRATION_PLANS_SUBSCRIPTIONS_ROUTES,
+} from '../../../app/routes/constants/administration.paths';
 import {
   ACCOUNT_BASE_SIDEBAR_NESTED_OPERATIONS,
   ADMINISTRATION_SIDEBAR_NESTED_OPERATIONS,
@@ -72,6 +75,10 @@ import {
   getActiveFacilityId,
 } from '../../../app/store/utils/contextSelectors';
 import { selectUser } from '../../../app/store/slices/authSlice';
+import {
+  filterAdministrationSidebarOperations,
+  useAdministrationSubscriptionRestriction,
+} from '../../entitlements/useAdministrationSubscriptionRestriction';
 
 import SidebarHeader from './side-bar-components/SidebarHeader';
 import SidebarNavigation from './side-bar-components/SidebarNavigation';
@@ -159,6 +166,16 @@ export const Sidebar: React.FC<SidebarExtendedProps> = ({
     }
     return [];
   }, [inStaffMode, activeFacilityId, staffFacilities]);
+
+  const { restrictToPlansOnly } = useAdministrationSubscriptionRestriction();
+
+  const administrationLandingPath = useMemo(
+    () =>
+      restrictToPlansOnly
+        ? ADMINISTRATION_PLANS_SUBSCRIPTIONS_ROUTES.AVAILABLE_PLANS
+        : ADMIN_ROUTES.OVERVIEW,
+    [restrictToPlansOnly],
+  );
 
 const menuConfig: MenuItem[] = useMemo(
   () => [
@@ -365,10 +382,29 @@ const menuConfig: MenuItem[] = useMemo(
   [],
 );
 
+  const menuConfigWithRestrictions = useMemo(
+    () =>
+      menuConfig.map((item) => {
+        if (item.id === 'administration') {
+          return {
+            ...item,
+            href: administrationLandingPath,
+            operations: filterAdministrationSidebarOperations(
+              item.operations ?? ADMINISTRATION_SIDEBAR_NESTED_OPERATIONS,
+              restrictToPlansOnly,
+            ),
+          };
+        }
+
+        return item;
+      }),
+    [menuConfig, restrictToPlansOnly, administrationLandingPath],
+  );
+
   const currentMenuItems = useMemo(() => {
     if (!activeCapability) return [];
 
-    return menuConfig.filter((item) => {
+    return menuConfigWithRestrictions.filter((item) => {
       if (item.id === 'custocare-hub') {
         return item.allowedCapabilities.includes(activeCapability);
       }
@@ -387,7 +423,7 @@ const menuConfig: MenuItem[] = useMemo(
     });
   }, [
     activeCapability,
-    menuConfig,
+    menuConfigWithRestrictions,
     inStaffMode,
     activeFacilityId,
     currentFacilityModules,

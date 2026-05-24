@@ -29,7 +29,6 @@ import { ROUTES as ONBOARDING_ROUTES } from '../../../../modules/administration/
 import { logoutClientSession } from '../../../../app/store/utils/logoutClientSession';
 import { useAppDispatch, useAppSelector } from '../../../../app/store/hooks/useApp';
 import { useToast } from '../../../../app/store/contexts/toast/useToast';
-import { ADMINISTRATION_PLANS_SUBSCRIPTIONS_ROUTES } from '../../../../app/routes/constants/administration.paths';
 import {
   switchCapability,
   switchFacility,
@@ -37,6 +36,11 @@ import {
   selectStaffFacilities,
   getRoleDisplayName,
 } from '../../../../app/store/slices/activeContextSlice';
+import {
+  getStaffFacilitySwitchToast,
+  mergeStaffFacilityContext,
+  resolveStaffFacilityLandingPath,
+} from '../../../navigation/facilityContextNavigation';
 import LogoImage from '../../../assets/LogoImage';
 import { useSelector } from 'react-redux';
 import {
@@ -276,9 +280,30 @@ export const Navbar: React.FC<NavbarProps> = ({
           if (option.facilityId) {
             if (activeCapability !== 'staff') dispatch(switchCapability('staff'));
             dispatch(switchFacility(option.facilityId));
-            // ✅ Always navigate to dashboard after switching context
-            navigate(ROUTES.DASHBOARD);
-            showToast('success', `Switched to ${option.title} at ${option.facilityName}`, 3000);
+
+            const facility = mergeStaffFacilityContext(
+              staffFacilities.find(
+                (entry) => entry.facility_id === option.facilityId,
+              ),
+              {
+                facility_id: option.facilityId,
+                facility_name: option.facilityName ?? null,
+                role_code: option.roleCode ?? '',
+                is_primary_facility: false,
+              },
+            );
+
+            const landingPath = resolveStaffFacilityLandingPath(facility);
+            navigate(landingPath);
+
+            const toast = getStaffFacilitySwitchToast(
+              facility,
+              option.facilityName ?? 'facility',
+              option.title,
+            );
+            if (toast) {
+              showToast(toast.type, toast.message, toast.type === 'success' ? 3000 : 5000);
+            }
           }
           break;
 
@@ -367,12 +392,6 @@ export const Navbar: React.FC<NavbarProps> = ({
       <Subscription 
         isDark={isDark} 
         isMobile={isMobile}
-        onUpgradeClick={() => {
-          navigate(ADMINISTRATION_PLANS_SUBSCRIPTIONS_ROUTES.AVAILABLE_PLANS);
-        }}
-        onManageClick={() => {
-          navigate(ADMINISTRATION_PLANS_SUBSCRIPTIONS_ROUTES.PAYMENTS);
-        }}
       />
 
   {/* Context switcher */}

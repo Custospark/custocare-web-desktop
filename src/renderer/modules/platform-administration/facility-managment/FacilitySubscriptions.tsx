@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Search, CheckCircle, XCircle, Clock, CreditCard, RefreshCw, Loader2, AlertTriangle, ExternalLink, Filter, ChevronDown, ChevronUp } from 'lucide-react';
+import { Search, CheckCircle, XCircle, Clock, CreditCard, RefreshCw, Loader2, AlertTriangle, Filter, ChevronDown, ChevronUp } from 'lucide-react';
 import { cn } from '../../../shared/types/cn';
+import { ReceiptViewButton } from '../../../shared/components/billing/ReceiptViewButton';
 import { useGetAdminSubscriptions, useGetAdminPayments, useAdminApprovePayment, useAdminRejectPayment } from '../../administration/admin-module/api/subscriptions/SubscriptionQueries';
 import { SubscriptionStatus, PaymentStatus, type Subscription, type Payment } from '../../administration/admin-module/api/subscriptions/SubscriptionTypes';
 
@@ -220,11 +221,12 @@ const FacilitySubscriptions: React.FC<Props> = ({ theme }) => {
                         </span>
                       </td>
                       <td className="py-3 px-2 text-center">
-                        {p.receipt_url ? (
-                          <a href={p.receipt_url} target="_blank" rel="noopener noreferrer"
-                            className={cn('inline-flex items-center gap-0.5 text-xs underline', isDark ? 'text-blue-400' : 'text-blue-600')}>
-                            <ExternalLink className="w-3 h-3" /> View
-                          </a>
+                        {(p.receipt_download_url || p.receipt_url) ? (
+                          <ReceiptViewButton
+                            receiptDownloadUrl={p.receipt_download_url}
+                            receiptUrl={p.receipt_url}
+                            className={isDark ? 'text-blue-400' : 'text-blue-600'}
+                          />
                         ) : (
                           <span className={cn('text-xs', isDark ? 'text-gray-500' : 'text-gray-400')}>—</span>
                         )}

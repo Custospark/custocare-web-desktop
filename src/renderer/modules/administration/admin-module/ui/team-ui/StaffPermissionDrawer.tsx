@@ -27,7 +27,7 @@ import {
 import { useUpdateFacilityStaffRole } from '../../api/team-management/queries/facilityStaffRoleQueries';
 import { useGetDepartmentsByFacility } from '../../api/department-managment/useDepartmentQueries';
 import { useGetFacilityRoles, useGetFacilitySpecificRoles } from '../../api/team-management/queries/useFacilityRoleQueries';
-import { useGetModules } from '../../api/team-management/queries/useModuleQueries';
+import { useGetFacilityAssignableModules } from '../../api/team-management/queries/useModuleQueries';
 import type {
   AssignmentStatus,
   ShiftType,
@@ -124,11 +124,8 @@ export const StaffPermissionDrawer: React.FC<StaffPermissionDrawerProps> = ({
     { enabled: open && !!facilityId }
   );
 
-  // Fetch modules
-  const { data: modulesResponse, isLoading: modulesLoading } = useGetModules(
-    { is_active: true },
-    { enabled: open }
-  );
+  const { data: assignableModulesResponse, isLoading: modulesLoading } =
+    useGetFacilityAssignableModules(facilityId, { enabled: open && !!facilityId });
 
   // Combine roles (facility-specific roles first, then system roles)
   const roles = useMemo(() => {
@@ -147,15 +144,11 @@ export const StaffPermissionDrawer: React.FC<StaffPermissionDrawerProps> = ({
   }, [facilityRolesResponse, rolesResponse]);
 
   const departments = useMemo(() => departmentsResponse?.data || [], [departmentsResponse]);
-  const allModules = useMemo(() => modulesResponse?.data || [], [modulesResponse]);
-
-  // Filter out "account" module
-  const selectableModules = useMemo(() => {
-    return allModules.filter(module => {
-      const codeNormalized = module.code.toLowerCase();
-      return codeNormalized !== 'account' && codeNormalized !== 'accounts';
-    });
-  }, [allModules]);
+  const assignablePayload = assignableModulesResponse?.data;
+  const selectableModules = assignablePayload?.modules ?? [];
+  const allowedModuleCodes = assignablePayload?.allowed_module_codes ?? [];
+  const assignablePlanName = assignablePayload?.plan?.name ?? null;
+  const editorIsFacilityOwner = assignablePayload?.editor_is_facility_owner ?? false;
 
   // Update mutation
   const updateMutation = useUpdateFacilityStaffRole({
@@ -271,12 +264,20 @@ const hasAtLeastOneField =
       );
       if (invalidModules.length > 0) {
         errors.module_code = 'Invalid module codes detected';
+      } else {
+        const notOnPlan = formData.module_code.filter(
+          (code) => code !== 'account' && !allowedModuleCodes.includes(code),
+        );
+        if (notOnPlan.length > 0) {
+          errors.module_code =
+            'One or more selected modules are not included in your subscription plan.';
+        }
       }
     }
 
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
-  }, [formData]);
+  }, [formData, allowedModuleCodes]);
 
   // Handle submit with precise data structure
   const handleSubmit = useCallback(() => {
@@ -915,16 +916,25 @@ const updateData: UpdateFacilityStaffRoleRequest = {
                   Grant Access
                 </h4>
                 <p className={`text-xs mt-1 ${hintTheme}`}>
-                  Select the access level this staff member
+                  {assignablePlanName
+                    ? `Modules included in your ${assignablePlanName} plan. Granting Administration does not make someone a facility owner.`
+                    : 'Modules are scoped to your facility subscription plan.'}
                 </p>
               </div>
 
               <div className="p-4 space-y-2 max-h-80 overflow-y-auto">
+                {editorIsFacilityOwner && allowedModuleCodes.includes('administration') && (
+                  <p className={`text-xs mb-2 ${isDark ? 'text-blue-300' : 'text-blue-700'}`}>
+                    As facility owner, you may grant Administration access to staff for billing and
+                    team management without transferring ownership.
+                  </p>
+                )}
                 {selectableModules.length === 0 ? (
                   <div className={`p-4 rounded-lg text-center text-sm ${
                     isDark ? 'bg-gray-800 text-gray-400' : 'bg-gray-50 text-gray-600'
                   }`}>
-                    No modules available
+                    No modules available on your current subscription plan
+                    {assignablePlanName ? ` (${assignablePlanName})` : ''}
                   </div>
                 ) : (
                   selectableModules.map((module) => {
