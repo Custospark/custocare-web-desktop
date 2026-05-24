@@ -115,7 +115,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     enabled: subscriptionQueryEnabled,
   });
 
-  const { user, activeCapability, activeFacilityId, availableCapabilities } = useAppSelector(
+  const { user, activeCapability, availableCapabilities } = useAppSelector(
     (state) => state.activeContext
   );
 

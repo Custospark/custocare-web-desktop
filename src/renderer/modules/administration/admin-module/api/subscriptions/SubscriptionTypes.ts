@@ -128,7 +128,7 @@ export interface Plan {
   onboarding_fee: PlanOnboardingFee;
   trial_days: number;
   limits: PlanLimits;
-  /** Feature flags, e.g. { lab_integration: true, pharmacy_module: false } */
+  /** Module + addon flags aligned with `PlanFeatures` on the backend. */
   features: Record<string, boolean | unknown>;
   is_popular: boolean;
   is_active: boolean;
@@ -448,6 +448,7 @@ export interface AdminPlanFilters {
   is_active?: boolean;
   search?: string;
   per_page?: number;
+  page?: number;
 }
 
 /** Filters for GET /admin/billing/subscriptions */

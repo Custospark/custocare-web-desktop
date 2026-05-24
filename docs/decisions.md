@@ -2,6 +2,18 @@
 
 ---
 
+## 2026-05-24: Platform admin plan CRUD aligned with PlanFeatures
+
+**Context:** `FacilityPlans` used legacy feature keys (`lab_integration`, `pharmacy_module`, etc.) that fail backend validation (`PlanFeatures::ALL`). Pagination `page` was not sent; onboarding fee `0` was coerced to `null`; stats reflected the current page only.
+
+**Decisions:**
+- Added `shared/billing/planFeatureCatalog.ts` mirroring `PlanFeatures` module + addon keys (same set as `entitlements.ts` / BE).
+- Platform plan form sends `buildPlanFeaturesPayload()` only; removed custom feature keys.
+- `AdminPlanFilters.page` wired to list query; edit form hydrates from list row `PlanResource` (same shape as show endpoint).
+- `UpdatePlanRequest` accepts `billing_cycle`; plan search matches name or slug.
+
+---
+
 ## 2026-05-24: Facility-owner-only subscription UI and plans access
 
 **Context:** Navbar subscription widget and Plans & Subscriptions admin operations were visible to all staff. Non-owners could see “Choose a plan” CTAs and navigate to billing routes they cannot manage.

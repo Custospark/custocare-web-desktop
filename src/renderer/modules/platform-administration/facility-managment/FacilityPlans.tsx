@@ -29,7 +29,6 @@ import {
   Activity,
   Clock,
   CheckCircle,
-  XCircle,
   ChevronDown,
   ChevronUp,
   Zap,
@@ -49,6 +48,14 @@ import {
   useAdminUpdatePlan,
   useAdminDeletePlan,
 } from '../../administration/admin-module/api/subscriptions/SubscriptionQueries';
+import {
+  PLAN_FEATURE_CATALOG,
+  buildPlanFeaturesPayload,
+  countEnabledPlanFeatures,
+  createEmptyPlanFeaturesFormState,
+  planFeaturesToFormState,
+  type PlanFeatureDefinition,
+} from '../../../shared/billing/planFeatureCatalog';
 import {
   BillingCycle,
   type Plan,
@@ -88,20 +95,36 @@ interface PlanFormState {
 type DrawerMode = 'create' | 'edit';
 type ActiveFilter = 'all' | 'active' | 'inactive';
 
-const DEFAULT_FEATURES: { key: string; label: string; description: string }[] = [
-  { key: 'lab_integration',       label: 'Lab Integration',         description: 'Connect lab systems & results' },
-  { key: 'pharmacy_module',       label: 'Pharmacy Module',         description: 'Manage dispensing & inventory' },
-  { key: 'telemedicine',          label: 'Telemedicine',            description: 'Remote consultation support' },
-  { key: 'appointment_scheduling',label: 'Appointment Scheduling',  description: 'Online & in-person scheduling' },
-  { key: 'billing_module',        label: 'Billing Module',          description: 'Invoicing & payment tracking' },
-  { key: 'inventory_management',  label: 'Inventory Management',    description: 'Stock & supplies tracking' },
-  { key: 'patient_portal',        label: 'Patient Portal',          description: 'Self-service patient access' },
-  { key: 'custom_reports',        label: 'Custom Reports',          description: 'Advanced analytics & exports' },
-  { key: 'api_access',            label: 'API Access',              description: 'External system integrations' },
-  { key: 'staff_scheduling',      label: 'Staff Scheduling',        description: 'Shift & roster management' },
-  { key: 'audit_logs',            label: 'Audit Logs',              description: 'Full activity trail' },
-  { key: 'multi_department',      label: 'Multi-Department',        description: 'Manage multiple departments' },
-];
+const MODULE_FEATURES = PLAN_FEATURE_CATALOG.filter((f) => f.group === 'module');
+const ADDON_FEATURES = PLAN_FEATURE_CATALOG.filter((f) => f.group === 'addon');
+
+const parseOptionalFee = (value: string): number | null => {
+  const trimmed = value.trim();
+  if (trimmed === '') return null;
+  const n = Number(trimmed);
+  if (!Number.isFinite(n) || n < 0) return null;
+  return n;
+};
+
+const planToFormState = (plan: Plan): PlanFormState => ({
+  name: plan.name,
+  slug: plan.slug,
+  description: plan.description ?? '',
+  price_usd: String(plan.pricing.usd),
+  price_ugx: String(plan.pricing.ugx),
+  onboarding_fee_usd: String(plan.onboarding_fee.usd),
+  onboarding_fee_ugx: String(plan.onboarding_fee.ugx),
+  billing_cycle: (plan.pricing.billing_cycle as BillingCycle) ?? BillingCycle.MONTHLY,
+  trial_days: String(plan.trial_days),
+  is_popular: plan.is_popular,
+  is_active: plan.is_active,
+  sort_order: String(plan.sort_order),
+  max_staff: plan.limits.max_staff !== null ? String(plan.limits.max_staff) : '',
+  max_departments: plan.limits.max_departments !== null ? String(plan.limits.max_departments) : '',
+  max_patients_per_month:
+    plan.limits.max_patients_per_month !== null ? String(plan.limits.max_patients_per_month) : '',
+  features: planFeaturesToFormState(plan.features),
+});
 
 const emptyForm = (): PlanFormState => ({
   name: '',
@@ -119,7 +142,7 @@ const emptyForm = (): PlanFormState => ({
   max_staff: '',
   max_departments: '',
   max_patients_per_month: '',
-  features: Object.fromEntries(DEFAULT_FEATURES.map(f => [f.key, false])),
+  features: createEmptyPlanFeaturesFormState(),
 });
 
 const generateSlug = (name: string): string =>
@@ -157,16 +180,15 @@ const FacilityPlans: React.FC<FacilityPlansProps> = () => {
   const [formErrors,     setFormErrors]     = useState<Partial<Record<keyof PlanFormState, string>>>({});
   const [slugEdited,     setSlugEdited]     = useState(false);
   const [showFeatures,   setShowFeatures]   = useState(false);
-  const [customFeatKey,  setCustomFeatKey]  = useState('');
 
   /* ── Query Filters ────────────────────────────────────────────────────── */
   const queryFilters = useMemo((): AdminPlanFilters => {
-    const f: AdminPlanFilters = { per_page: 12 };
+    const f: AdminPlanFilters = { per_page: 12, page: currentPage };
     if (activeFilter === 'active')   f.is_active = true;
     if (activeFilter === 'inactive') f.is_active = false;
     if (searchTerm.trim()) f.search = searchTerm.trim();
     return f;
-  }, [activeFilter, searchTerm]);
+  }, [activeFilter, searchTerm, currentPage]);
 
   /* ── Data Fetching ────────────────────────────────────────────────────── */
   const {
@@ -174,18 +196,14 @@ const FacilityPlans: React.FC<FacilityPlansProps> = () => {
     isLoading,
     refetch,
     isRefetching,
-  } = useGetAdminPlans({ ...queryFilters, /* current_page */ }, {
-    keepPreviousData: true,
-  } as any);
+  } = useGetAdminPlans(queryFilters, {
+    placeholderData: (previousData) => previousData,
+  });
 
   const plans        = plansData?.data    ?? [];
   const meta         = plansData?.meta;
   const totalPlans   = meta?.total        ?? 0;
   const lastPage     = meta?.last_page    ?? 1;
-
-  const activePlansCount   = plans.filter(p => p.is_active).length;
-  const inactivePlansCount = plans.filter(p => !p.is_active).length;
-  const popularPlansCount  = plans.filter(p => p.is_popular).length;
 
   /* ── Mutations ────────────────────────────────────────────────────────── */
   const createMutation = useAdminCreatePlan({
@@ -211,44 +229,16 @@ const FacilityPlans: React.FC<FacilityPlansProps> = () => {
     setFormErrors({});
     setSlugEdited(false);
     setShowFeatures(false);
-    setCustomFeatKey('');
     setDrawerOpen(true);
   }, []);
 
   const openEditDrawer = useCallback((plan: Plan) => {
-    const existingFeatures: Record<string, boolean> = {};
-    DEFAULT_FEATURES.forEach(f => {
-      existingFeatures[f.key] = Boolean(plan.features?.[f.key]);
-    });
-    // Preserve any extra custom features from the plan
-    Object.entries(plan.features ?? {}).forEach(([k, v]) => {
-      if (!(k in existingFeatures)) existingFeatures[k] = Boolean(v);
-    });
-
     setDrawerMode('edit');
     setSelectedPlan(plan);
-    setFormState({
-      name:                   plan.name,
-      slug:                   plan.slug,
-      description:            plan.description ?? '',
-      price_usd:              String(plan.pricing.usd),
-      price_ugx:              String(plan.pricing.ugx),
-      onboarding_fee_usd:     String(plan.onboarding_fee.usd),
-      onboarding_fee_ugx:     String(plan.onboarding_fee.ugx),
-      billing_cycle:          (plan.pricing.billing_cycle as BillingCycle) ?? BillingCycle.MONTHLY,
-      trial_days:             String(plan.trial_days),
-      is_popular:             plan.is_popular,
-      is_active:              plan.is_active,
-      sort_order:             String(plan.sort_order),
-      max_staff:              plan.limits.max_staff !== null ? String(plan.limits.max_staff) : '',
-      max_departments:        plan.limits.max_departments !== null ? String(plan.limits.max_departments) : '',
-      max_patients_per_month: plan.limits.max_patients_per_month !== null ? String(plan.limits.max_patients_per_month) : '',
-      features:               existingFeatures,
-    });
+    setFormState(planToFormState(plan));
     setFormErrors({});
     setSlugEdited(true); // don't auto-update slug when editing
     setShowFeatures(false);
-    setCustomFeatKey('');
     setDrawerOpen(true);
   }, []);
 
@@ -257,7 +247,6 @@ const FacilityPlans: React.FC<FacilityPlansProps> = () => {
     setSelectedPlan(null);
     setFormState(emptyForm());
     setFormErrors({});
-    setCustomFeatKey('');
   }, []);
 
   /* ── Form Helpers ─────────────────────────────────────────────────────── */
@@ -280,20 +269,6 @@ const FacilityPlans: React.FC<FacilityPlansProps> = () => {
       ...prev,
       features: { ...prev.features, [key]: !prev.features[key] },
     }));
-  }, []);
-
-  const addCustomFeature = useCallback(() => {
-    const key = customFeatKey.trim().toLowerCase().replace(/\s+/g, '_');
-    if (!key) return;
-    setFormState(prev => ({ ...prev, features: { ...prev.features, [key]: true } }));
-    setCustomFeatKey('');
-  }, [customFeatKey]);
-
-  const removeFeature = useCallback((key: string) => {
-    setFormState(prev => {
-      const { [key]: _, ...rest } = prev.features;
-      return { ...prev, features: rest };
-    });
   }, []);
 
   /* ── Validation ───────────────────────────────────────────────────────── */
@@ -319,8 +294,8 @@ const FacilityPlans: React.FC<FacilityPlansProps> = () => {
       description:     formState.description.trim() || null,
       price_usd:       Number(formState.price_usd),
       price_ugx:       Number(formState.price_ugx),
-      onboarding_fee_usd:     formState.onboarding_fee_usd ? Number(formState.onboarding_fee_usd) : null,
-      onboarding_fee_ugx:     formState.onboarding_fee_ugx ? Number(formState.onboarding_fee_ugx) : null,
+      onboarding_fee_usd:     parseOptionalFee(formState.onboarding_fee_usd),
+      onboarding_fee_ugx:     parseOptionalFee(formState.onboarding_fee_ugx),
       billing_cycle:   formState.billing_cycle,
       trial_days:      formState.trial_days !== '' ? Number(formState.trial_days) : null,
       is_popular:      formState.is_popular,
@@ -329,7 +304,7 @@ const FacilityPlans: React.FC<FacilityPlansProps> = () => {
       max_staff:              formState.max_staff !== '' ? Number(formState.max_staff) : null,
       max_departments:        formState.max_departments !== '' ? Number(formState.max_departments) : null,
       max_patients_per_month: formState.max_patients_per_month !== '' ? Number(formState.max_patients_per_month) : null,
-      features:        formState.features,
+      features:        buildPlanFeaturesPayload(formState.features),
     };
 
     if (drawerMode === 'create') {
@@ -359,17 +334,15 @@ const FacilityPlans: React.FC<FacilityPlansProps> = () => {
   //     ? isDark ? 'text-green-400 bg-green-900/30 border-green-500/30' : 'text-green-700 bg-green-100 border-green-200'
   //     : isDark ? 'text-gray-400 bg-gray-800 border-gray-700'          : 'text-gray-600 bg-gray-200 border-gray-300';
 
-  const allFeatKeys = useMemo(
-    () => Array.from(new Set([...DEFAULT_FEATURES.map(f => f.key), ...Object.keys(formState.features)])),
-    [formState.features]
+  const enabledFeatureCount = useMemo(
+    () => Object.values(formState.features).filter(Boolean).length,
+    [formState.features],
   );
 
   /* ── Stats ────────────────────────────────────────────────────────────── */
   const statsCards = [
     { label: 'Total Plans',    value: totalPlans,        color: 'blue',   icon: <Package className="w-5 h-5" /> },
-    { label: 'Active',         value: activePlansCount,  color: 'green',  icon: <CheckCircle className="w-5 h-5" /> },
-    { label: 'Inactive',       value: inactivePlansCount,color: 'gray',   icon: <XCircle className="w-5 h-5" /> },
-    { label: 'Featured',       value: popularPlansCount, color: 'amber',  icon: <Star className="w-5 h-5" /> },
+    { label: 'On This Page',   value: plans.length,      color: 'green',  icon: <CheckCircle className="w-5 h-5" /> },
   ] as const;
 
   const colorMap = {
@@ -457,7 +430,7 @@ const FacilityPlans: React.FC<FacilityPlansProps> = () => {
           </div>
 
           {/* Stats */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 gap-3">
             {statsCards.map((s, i) => (
               <motion.div
                 key={s.label}
@@ -511,7 +484,7 @@ const FacilityPlans: React.FC<FacilityPlansProps> = () => {
                 type="text"
                 placeholder="Search plans by name, slug…"
                 value={searchTerm}
-                onChange={e => setSearchTerm(e.target.value)}
+                onChange={e => { setSearchTerm(e.target.value); setCurrentPage(1); }}
                 onFocus={() => setIsFocused(true)}
                 onBlur={() => setIsFocused(false)}
                 className={cn(
@@ -695,7 +668,6 @@ const FacilityPlans: React.FC<FacilityPlansProps> = () => {
 
               {/* Drawer Body */}
               <div className="flex-1 overflow-y-auto p-6 space-y-6">
-
                 {/* ── Section: Identity ── */}
                 <FormSection title="Plan Identity" icon={<Package className="w-4 h-4" />} isDark={isDark}>
                   <div className="space-y-4">
@@ -842,7 +814,7 @@ const FacilityPlans: React.FC<FacilityPlansProps> = () => {
 
                 {/* ── Section: Features ── */}
                 <FormSection
-                  title={`Features (${Object.values(formState.features).filter(Boolean).length} enabled)`}
+                  title={`Features (${enabledFeatureCount} enabled)`}
                   icon={<Zap className="w-4 h-4" />}
                   isDark={isDark}
                   collapsible
@@ -857,71 +829,33 @@ const FacilityPlans: React.FC<FacilityPlansProps> = () => {
                         exit={{ opacity: 0, height: 0 }}
                         className="space-y-3 overflow-hidden"
                       >
+                        <p className={cn('text-xs font-semibold uppercase tracking-wide', isDark ? 'text-gray-500' : 'text-gray-500')}>
+                          Workspace modules
+                        </p>
                         <div className="grid grid-cols-1 gap-2">
-                          {allFeatKeys.map(key => {
-                            const def = DEFAULT_FEATURES.find(f => f.key === key);
-                            const isDefault = !!def;
-                            const isEnabled = !!formState.features[key];
-                            return (
-                              <motion.div
-                                key={key}
-                                whileHover={{ x: 2 }}
-                                className={cn(
-                                  'flex items-center justify-between p-3 rounded-xl border-2 transition-all cursor-pointer',
-                                  isEnabled
-                                    ? isDark ? 'bg-blue-900/20 border-blue-500/40' : 'bg-blue-50 border-blue-300'
-                                    : isDark ? 'bg-gray-800 border-gray-700 hover:border-gray-600' : 'bg-gray-50 border-gray-200 hover:border-gray-300',
-                                )}
-                                onClick={() => toggleFeature(key)}
-                              >
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex items-center gap-2">
-                                    <span className={cn('text-sm font-medium', isDark ? 'text-gray-200' : 'text-gray-800')}>{def?.label ?? key}</span>
-                                    {!isDefault && (
-                                      <span className={cn('text-xs px-1.5 py-0.5 rounded border', isDark ? 'text-gray-500 border-gray-700' : 'text-gray-400 border-gray-200')}>custom</span>
-                                    )}
-                                  </div>
-                                  {def?.description && <p className={cn('text-xs mt-0.5', isDark ? 'text-gray-500' : 'text-gray-500')}>{def.description}</p>}
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  {!isDefault && (
-                                    <button
-                                      onClick={e => { e.stopPropagation(); removeFeature(key); }}
-                                      className={cn('p-1 rounded-full cursor-pointer', isDark ? 'text-gray-500 hover:text-red-400' : 'text-gray-400 hover:text-red-500')}
-                                    >
-                                      <X className="w-3 h-3" />
-                                    </button>
-                                  )}
-                                  {isEnabled
-                                    ? <ToggleRight className={cn('w-5 h-5', isDark ? 'text-blue-400' : 'text-blue-600')} />
-                                    : <ToggleLeft className={cn('w-5 h-5', isDark ? 'text-gray-600' : 'text-gray-400')} />}
-                                </div>
-                              </motion.div>
-                            );
-                          })}
-                        </div>
-
-                        {/* Custom feature adder */}
-                        <div className={cn('rounded-xl p-3 border-2 border-dashed', isDark ? 'border-gray-700' : 'border-gray-300')}>
-                          <p className={cn('text-xs font-medium mb-2', isDark ? 'text-gray-400' : 'text-gray-600')}>Add Custom Feature</p>
-                          <div className="flex gap-2">
-                            <input
-                              type="text"
-                              value={customFeatKey}
-                              onChange={e => setCustomFeatKey(e.target.value)}
-                              placeholder="feature_key"
-                              onKeyDown={e => e.key === 'Enter' && addCustomFeature()}
-                              className={cn(inputClass(isDark, false, false), 'text-xs flex-1')}
+                          {MODULE_FEATURES.map((def) => (
+                            <PlanFeatureToggleRow
+                              key={def.key}
+                              def={def}
+                              isEnabled={!!formState.features[def.key]}
+                              isDark={isDark}
+                              onToggle={() => toggleFeature(def.key)}
                             />
-                            <motion.button
-                              whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
-                              onClick={addCustomFeature}
-                              disabled={!customFeatKey.trim()}
-                              className={cn('px-3 py-2 rounded-lg text-xs font-medium border-2 transition-all cursor-pointer', isDark ? 'bg-blue-600 border-blue-500 text-white' : 'bg-blue-600 border-blue-400 text-white', 'disabled:opacity-50 disabled:cursor-not-allowed')}
-                            >
-                              <Plus className="w-3 h-3" />
-                            </motion.button>
-                          </div>
+                          ))}
+                        </div>
+                        <p className={cn('text-xs font-semibold uppercase tracking-wide pt-2', isDark ? 'text-gray-500' : 'text-gray-500')}>
+                          Add-on capabilities
+                        </p>
+                        <div className="grid grid-cols-1 gap-2">
+                          {ADDON_FEATURES.map((def) => (
+                            <PlanFeatureToggleRow
+                              key={def.key}
+                              def={def}
+                              isEnabled={!!formState.features[def.key]}
+                              isDark={isDark}
+                              onToggle={() => toggleFeature(def.key)}
+                            />
+                          ))}
                         </div>
                       </motion.div>
                     )}
@@ -988,7 +922,7 @@ interface PlanCardProps {
 }
 
 const PlanCard: React.FC<PlanCardProps> = ({ plan, index, isDark, isMutating, onEdit, onDelete }) => {
-  const enabledFeatures = Object.entries(plan.features ?? {}).filter(([, v]) => Boolean(v));
+  const enabledFeatureCount = countEnabledPlanFeatures(plan.features);
   const hasOnboarding   = plan.onboarding_fee.applicable;
 
   return (
@@ -1072,9 +1006,9 @@ const PlanCard: React.FC<PlanCardProps> = ({ plan, index, isDark, isMutating, on
           <span className={cn('inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium border', isDark ? 'bg-gray-800 text-gray-400 border-gray-700' : 'bg-gray-100 text-gray-600 border-gray-200')}>
             <Activity className="w-3 h-3" /> {plan.limits.max_patients_per_month !== null ? `${plan.limits.max_patients_per_month} pts/mo` : '∞ patients'}
           </span>
-          {enabledFeatures.length > 0 && (
+          {enabledFeatureCount > 0 && (
             <span className={cn('inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium border', isDark ? 'bg-blue-900/20 text-blue-400 border-blue-500/30' : 'bg-blue-50 text-blue-700 border-blue-200')}>
-              <Zap className="w-3 h-3" /> {enabledFeatures.length} features
+              <Zap className="w-3 h-3" /> {enabledFeatureCount} features
             </span>
           )}
         </div>
@@ -1114,6 +1048,39 @@ const PlanCard: React.FC<PlanCardProps> = ({ plan, index, isDark, isMutating, on
 /* -------------------------------------------------------------------------- */
 /*                          FORM HELPER COMPONENTS                            */
 /* -------------------------------------------------------------------------- */
+
+interface PlanFeatureToggleRowProps {
+  def: PlanFeatureDefinition;
+  isEnabled: boolean;
+  isDark: boolean;
+  onToggle: () => void;
+}
+
+const PlanFeatureToggleRow: React.FC<PlanFeatureToggleRowProps> = ({
+  def,
+  isEnabled,
+  isDark,
+  onToggle,
+}) => (
+  <motion.div
+    whileHover={{ x: 2 }}
+    className={cn(
+      'flex items-center justify-between p-3 rounded-xl border-2 transition-all cursor-pointer',
+      isEnabled
+        ? isDark ? 'bg-blue-900/20 border-blue-500/40' : 'bg-blue-50 border-blue-300'
+        : isDark ? 'bg-gray-800 border-gray-700 hover:border-gray-600' : 'bg-gray-50 border-gray-200 hover:border-gray-300',
+    )}
+    onClick={onToggle}
+  >
+    <div className="flex-1 min-w-0">
+      <span className={cn('text-sm font-medium', isDark ? 'text-gray-200' : 'text-gray-800')}>{def.label}</span>
+      <p className={cn('text-xs mt-0.5', isDark ? 'text-gray-500' : 'text-gray-500')}>{def.description}</p>
+    </div>
+    {isEnabled
+      ? <ToggleRight className={cn('w-5 h-5 shrink-0', isDark ? 'text-blue-400' : 'text-blue-600')} />
+      : <ToggleLeft className={cn('w-5 h-5 shrink-0', isDark ? 'text-gray-600' : 'text-gray-400')} />}
+  </motion.div>
+);
 
 const inputClass = (isDark: boolean, hasError: boolean, disabled: boolean) => cn(
   'w-full px-3 py-2.5 rounded-lg border-2 text-sm transition-all',
