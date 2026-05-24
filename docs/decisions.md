@@ -2,6 +2,19 @@
 
 ---
 
+## 2026-05-24: Facility-owner-only subscription UI and plans access
+
+**Context:** Navbar subscription widget and Plans & Subscriptions admin operations were visible to all staff. Non-owners could see “Choose a plan” CTAs and navigate to billing routes they cannot manage.
+
+**Decisions:**
+- **Navbar `Subscription` + brand plan badge:** Render only when `selectHasActiveStaffFacility` and `selectIsActiveFacilityOwner` (staff mode + active facility + owner).
+- **Administration module/sidebar:** `filterAdministrationModuleOperations` / `filterAdministrationSidebarOperations` hide `plans-subscriptions` unless `isFacilityOwner`; `restrictToPlansOnly` applies to owners only (inactive subscription).
+- **`ModuleAccessMiddleware`:** Denies `/administration/plans-subscriptions/*` for non-owners, patient mode, or staff without active facility.
+- **Search (`useSearchFilter`):** Scopes results by capability, staff facility context, `accessibleModuleCodes`, and optional `facilityOwnerOnly`; patient mode includes `custocare_hub`.
+- **Always-available modules:** `patient_dashboard` added alongside `account` and `custocare_hub` in FE `ALWAYS_AVAILABLE_MODULES` and BE `PlanFeatures::ALWAYS_AVAILABLE_MODULES`; assignable-modules API merges `patient_dashboard` + `custocare_hub` into allowed codes.
+
+---
+
 ## 2026-05-24: Plan-Based Module Resolution for Staff Context
 
 **Context:** Staff with facility assignments received modules solely from `facility_staff_roles.module_code`, ignoring the facility's subscription plan. The pricing strategy notebook (`Custocare_Pricing_Strategy.ipynb` §4) defines tier-gated module workspaces, but context resolution did not intersect role modules with plan features. Module/plan seed data was also out of sync (missing `patient_dashboard`, `custocare_hub`; Enterprise incorrectly included `platform_administration`).

@@ -9,19 +9,20 @@ import { useAdministrationSubscriptionRestriction } from '../../../../shared/ent
 
 /** Redirects `/administration` index based on subscription restriction state. */
 export const AdministrationIndexRedirect: React.FC = () => {
-  const { restrictToPlansOnly } = useAdministrationSubscriptionRestriction();
+  const { restrictToPlansOnly, isFacilityOwner } = useAdministrationSubscriptionRestriction();
+
+  const target =
+    restrictToPlansOnly && isFacilityOwner
+      ? ADMINISTRATION_PLANS_SUBSCRIPTIONS_ROUTES.AVAILABLE_PLANS
+      : ADMIN_ROUTES.OVERVIEW;
 
   return (
     <LoadingRedirect
-      to={
-        restrictToPlansOnly
-          ? ADMINISTRATION_PLANS_SUBSCRIPTIONS_ROUTES.AVAILABLE_PLANS
-          : ADMIN_ROUTES.OVERVIEW
-      }
+      to={target}
       replace
       variant="dashboard"
       message={
-        restrictToPlansOnly
+        restrictToPlansOnly && isFacilityOwner
           ? 'Loading Plans & Subscriptions...'
           : 'Loading Facility Intelligence...'
       }

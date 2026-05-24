@@ -253,19 +253,20 @@ export const useGetFacilitySubscription = (
   >,
 ) => {
   const facilityId = useActiveFacilityId();
+  const { enabled: enabledOption = true, ...restOptions } = options ?? {};
 
   return useQuery<GetSubscriptionResponse, AxiosError<ApiErrorResponse>>({
     queryKey: facilityId
       ? subscriptionKeys.subscriptions.facility(facilityId)
       : subscriptionKeys.subscriptions.all,
-    enabled: !!facilityId,
     queryFn: async () => {
       const res = await axiosInstance.get<GetSubscriptionResponse>(
         `/facilities/${facilityId}/subscription`,
       );
       return res.data;
     },
-    ...options,
+    ...restOptions,
+    enabled: Boolean(facilityId) && enabledOption,
   });
 };
 

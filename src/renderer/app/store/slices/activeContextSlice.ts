@@ -838,7 +838,7 @@ export interface RootState {
 
 const selectActiveCapability = (state: RootState) => state.activeContext.activeCapability;
 const selectCapabilities    = (state: RootState) => state.activeContext.capabilities;
-const selectActiveFacilityId = (state: RootState) => state.activeContext.activeFacilityId;
+export const selectActiveFacilityId = (state: RootState) => state.activeContext.activeFacilityId;
 const selectFacilityRoles   = (state: RootState) => state.activeContext.facilityRoles;
 
 // ============================================================================
@@ -1017,6 +1017,19 @@ export const selectActiveFacility = createSelector(
     if (!staffCapability) return null;
     return staffCapability.facilities.find(f => f.facility_id === activeFacilityId) ?? null;
   },
+);
+
+/** True when staff mode has a facility selected and the user is a facility owner. */
+export const selectIsActiveFacilityOwner = createSelector(
+  [selectActiveFacility],
+  (activeFacility): boolean => activeFacility?.is_facility_owner === true,
+);
+
+/** Staff mode with an active facility context (required for facility-scoped UI). */
+export const selectHasActiveStaffFacility = createSelector(
+  [selectIsStaffMode, selectActiveFacilityId],
+  (isStaffMode, activeFacilityId): boolean =>
+    isStaffMode && activeFacilityId != null,
 );
 
 /**

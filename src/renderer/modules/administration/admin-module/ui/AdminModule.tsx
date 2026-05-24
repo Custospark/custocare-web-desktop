@@ -18,11 +18,16 @@ const AdminModule: React.FC = () => {
   const currentTier: PlanTier = 'essential';
   const location = useLocation();
   const navigate = useNavigate();
-  const { restrictToPlansOnly } = useAdministrationSubscriptionRestriction();
+  const { restrictToPlansOnly, isFacilityOwner } = useAdministrationSubscriptionRestriction();
 
   const moduleOperations = useMemo(
-    () => filterAdministrationModuleOperations(ADMINISTRATION_MODULE_OPERATIONS, restrictToPlansOnly),
-    [restrictToPlansOnly],
+    () =>
+      filterAdministrationModuleOperations(
+        ADMINISTRATION_MODULE_OPERATIONS,
+        restrictToPlansOnly,
+        isFacilityOwner,
+      ),
+    [restrictToPlansOnly, isFacilityOwner],
   );
 
   const defaultPath = restrictToPlansOnly
@@ -30,12 +35,20 @@ const AdminModule: React.FC = () => {
     : ADMIN_ROUTES.OVERVIEW;
 
   useEffect(() => {
-    if (!restrictToPlansOnly) {
+    const path = location.pathname;
+    if (!path.startsWith(ROUTES.ADMINISTRATION)) {
       return;
     }
 
-    const path = location.pathname;
-    if (!path.startsWith(ROUTES.ADMINISTRATION)) {
+    if (
+      path.startsWith(ADMINISTRATION_PLANS_SUBSCRIPTIONS_ROUTES.ROOT) &&
+      !isFacilityOwner
+    ) {
+      navigate(ADMIN_ROUTES.OVERVIEW, { replace: true });
+      return;
+    }
+
+    if (!restrictToPlansOnly) {
       return;
     }
 
@@ -44,7 +57,7 @@ const AdminModule: React.FC = () => {
     }
 
     navigate(ADMINISTRATION_PLANS_SUBSCRIPTIONS_ROUTES.AVAILABLE_PLANS, { replace: true });
-  }, [restrictToPlansOnly, location.pathname, navigate]);
+  }, [restrictToPlansOnly, isFacilityOwner, location.pathname, navigate]);
 
   const onRequestUpgrade = useCallback((requiredTier: PlanTier) => {
     alert(`Upgrade required: ${requiredTier}`);

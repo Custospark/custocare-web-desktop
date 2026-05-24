@@ -167,7 +167,7 @@ export const Sidebar: React.FC<SidebarExtendedProps> = ({
     return [];
   }, [inStaffMode, activeFacilityId, staffFacilities]);
 
-  const { restrictToPlansOnly } = useAdministrationSubscriptionRestriction();
+  const { restrictToPlansOnly, isFacilityOwner } = useAdministrationSubscriptionRestriction();
 
   const administrationLandingPath = useMemo(
     () =>
@@ -392,13 +392,14 @@ const menuConfig: MenuItem[] = useMemo(
             operations: filterAdministrationSidebarOperations(
               item.operations ?? ADMINISTRATION_SIDEBAR_NESTED_OPERATIONS,
               restrictToPlansOnly,
+              isFacilityOwner,
             ),
           };
         }
 
         return item;
       }),
-    [menuConfig, restrictToPlansOnly, administrationLandingPath],
+    [menuConfig, restrictToPlansOnly, administrationLandingPath, isFacilityOwner],
   );
 
   const currentMenuItems = useMemo(() => {

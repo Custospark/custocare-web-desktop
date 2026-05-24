@@ -2,17 +2,28 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useSelector } from 'react-redux';
 import { useAppSelector } from '../../../../../../app/store/hooks/useApp';
-import { selectAccessibleModuleCodes } from '../../../../../../app/store/slices/activeContextSlice';
+import {
+  selectAccessibleModuleCodes,
+  selectActiveFacilityId,
+  selectIsActiveFacilityOwner,
+  selectIsStaffMode,
+} from '../../../../../../app/store/slices/activeContextSlice';
 import {
   isInPatientMode,
   getAvailableCapabilities,
-}  from '../../../../../../app/store/utils/contextSelectors';
+  getActiveCapability,
+} from '../../../../../../app/store/utils/contextSelectors';
+import { ALWAYS_AVAILABLE_MODULES } from '../../../../../../shared/entitlements/entitlements';
 import type { SearchableModule } from '../../StatusBarTypes';
 import { allModules } from '../searchModules';
 
-const PATIENT_MODULE_CODES = ['patient_dashboard', 'account'] as const;
+const PATIENT_MODULE_CODES = ['patient_dashboard', 'account', 'custocare_hub'] as const;
 const MAX_RESULTS = 8;
 const DEBOUNCE_MS = 150;
+
+function moduleIsAlwaysAvailable(moduleCode: string): boolean {
+  return (ALWAYS_AVAILABLE_MODULES as readonly string[]).includes(moduleCode);
+}
 
 /**
  * Returns:
@@ -22,33 +33,71 @@ const DEBOUNCE_MS = 150;
 export function useSearchFilter(query: string) {
   const [filteredResults, setFilteredResults] = useState<SearchableModule[]>([]);
 
-  // ── Redux ─────────────────────────────────────────────────────────────────
   const accessibleModuleCodes = useAppSelector(selectAccessibleModuleCodes);
-  const inPatientMode         = useSelector(isInPatientMode);
+  const inPatientMode = useSelector(isInPatientMode);
+  const inStaffMode = useAppSelector(selectIsStaffMode);
+  const activeFacilityId = useAppSelector(selectActiveFacilityId);
+  const isFacilityOwner = useAppSelector(selectIsActiveFacilityOwner);
   const availableCapabilities = useSelector(getAvailableCapabilities);
+  const activeCapability = useSelector(getActiveCapability);
 
-  // ── Permission-filtered modules (memoised) ────────────────────────────────
   const accessibleModules = useMemo<SearchableModule[]>(() => {
     if (inPatientMode) {
       return allModules.filter(
         (m) =>
-          m.moduleCode === 'account' ||
-          (PATIENT_MODULE_CODES as readonly string[]).includes(m.moduleCode)
+          (PATIENT_MODULE_CODES as readonly string[]).includes(m.moduleCode) &&
+          accessibleModuleCodes.includes(m.moduleCode),
       );
     }
+
     return allModules.filter((m) => {
-      if (m.moduleCode === 'account') return true;
+      if (m.facilityOwnerOnly) {
+        if (!isFacilityOwner || !inStaffMode || activeFacilityId == null) {
+          return false;
+        }
+        return accessibleModuleCodes.includes(m.moduleCode);
+      }
+
+      if (m.moduleCode === 'account') {
+        return accessibleModuleCodes.includes('account');
+      }
+
+      if (moduleIsAlwaysAvailable(m.moduleCode)) {
+        return accessibleModuleCodes.includes(m.moduleCode);
+      }
+
       if (m.requiredCapability) {
         return (
           availableCapabilities.includes(m.requiredCapability) &&
           accessibleModuleCodes.includes(m.moduleCode)
         );
       }
+
+      if (activeCapability === 'staff') {
+        if (!inStaffMode) {
+          return false;
+        }
+
+        if (!activeFacilityId) {
+          return (
+            m.moduleCode === 'staff_dashboard' &&
+            accessibleModuleCodes.includes(m.moduleCode)
+          );
+        }
+      }
+
       return accessibleModuleCodes.includes(m.moduleCode);
     });
-  }, [accessibleModuleCodes, availableCapabilities, inPatientMode]);
+  }, [
+    accessibleModuleCodes,
+    availableCapabilities,
+    inPatientMode,
+    inStaffMode,
+    activeFacilityId,
+    isFacilityOwner,
+    activeCapability,
+  ]);
 
-  // ── Debounced query filter ────────────────────────────────────────────────
   useEffect(() => {
     const timer = setTimeout(() => {
       const term = query.trim().toLowerCase();

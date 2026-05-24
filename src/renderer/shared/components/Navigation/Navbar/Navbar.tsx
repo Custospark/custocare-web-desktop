@@ -32,8 +32,10 @@ import { useToast } from '../../../../app/store/contexts/toast/useToast';
 import {
   switchCapability,
   switchFacility,
+  selectActiveFacilityId,
   selectCurrentCapabilityName,
   selectStaffFacilities,
+  selectHasActiveStaffFacility,
   getRoleDisplayName,
 } from '../../../../app/store/slices/activeContextSlice';
 import {
@@ -102,7 +104,16 @@ export const Navbar: React.FC<NavbarProps> = ({
   const navigate = useNavigate();
   const { showToast } = useToast();
 
-  const { data: subResp } = useGetFacilitySubscription();
+  const activeFacilityId = useAppSelector(selectActiveFacilityId);
+  const showStaffFacilityContext = useAppSelector((state) =>
+    selectHasActiveStaffFacility(state),
+  );
+  const subscriptionQueryEnabled =
+    showStaffFacilityContext && activeFacilityId != null;
+
+  const { data: subResp } = useGetFacilitySubscription({
+    enabled: subscriptionQueryEnabled,
+  });
 
   const { user, activeCapability, activeFacilityId, availableCapabilities } = useAppSelector(
     (state) => state.activeContext
@@ -342,10 +353,13 @@ export const Navbar: React.FC<NavbarProps> = ({
     <div className="hidden lg:block">
       <div className="flex items-center gap-2">
       <BrandName />
-        {(() => {
+        {subscriptionQueryEnabled && (() => {
           const plan = subResp?.data?.plan;
           const slug = plan?.slug || '';
           const name = plan?.name?.slice(0, 3) || '';
+          if (!name) {
+            return null;
+          }
           const icon =
             slug === 'essential' ? <Crown className="w-3 h-3 inline mr-1" /> :
             slug === 'professional' ? <Sparkles className="w-3 h-3 inline mr-1" /> :
@@ -355,11 +369,11 @@ export const Navbar: React.FC<NavbarProps> = ({
             : slug === 'professional'
             ? { light: 'bg-blue-100 text-blue-700 border-blue-300', dark: 'bg-blue-500/20 text-cyan-300 border-cyan-500/30' }
             : { light: 'bg-purple-100 text-purple-700 border-purple-300', dark: 'bg-purple-500/20 text-purple-300 border-purple-500/30' };
-          return name ? (
+          return (
             <span className={cn('px-2 py-0.5 text-xs font-bold rounded-full border whitespace-nowrap', isDark ? colors.dark : colors.light)}>
               {icon}{name}
             </span>
-          ) : null;
+          );
         })()}
       </div>
 
@@ -389,10 +403,9 @@ export const Navbar: React.FC<NavbarProps> = ({
   >
     <Menu className="w-5 h-5" />
   </button>
-      <Subscription 
-        isDark={isDark} 
-        isMobile={isMobile}
-      />
+      {subscriptionQueryEnabled && (
+        <Subscription isDark={isDark} isMobile={isMobile} />
+      )}
 
   {/* Context switcher */}
   {allContextOptions.length > 0 && (

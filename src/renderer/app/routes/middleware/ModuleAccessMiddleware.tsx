@@ -25,8 +25,18 @@ import { useSelector } from 'react-redux';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { AlertTriangle, Home, Lock } from 'lucide-react';
 import type { RootState } from '../../store/store';
-import { selectAccessibleModuleCodes } from '../../store/slices/activeContextSlice';
+import {
+  selectAccessibleModuleCodes,
+  selectActiveFacility,
+  selectActiveFacilityId,
+  selectIsActiveFacilityOwner,
+  selectIsStaffMode,
+} from '../../store/slices/activeContextSlice';
 import { ROUTES } from './../routeConstants';
+import { ADMINISTRATION_PLANS_SUBSCRIPTIONS_ROUTES } from '../constants/administration.paths';
+import { useGetFacilitySubscription } from '../../../modules/administration/admin-module/api/subscriptions/SubscriptionQueries';
+import { ALWAYS_AVAILABLE_MODULES } from '../../../shared/entitlements/entitlements';
+import { resolveFacilitySubscriptionAccess } from '../../../shared/entitlements/resolveFacilitySubscriptionAccess';
 import { PLATFORM_ADMIN_ROUTES } from './../constants/platform-administration.paths';
 import LoadingSkeleton from '../../../shared/components/Loading/LoadingSkeletons';
 import { isInPatientMode } from '../../store/utils/contextSelectors';
@@ -272,6 +282,51 @@ const isUnrestrictedRoute = (pathname: string): boolean => {
  * @param pathname - The pathname to check
  * @returns True if the route is whitelisted for patient access
  */
+const isFacilitySubscriptionManagementRoute = (pathname: string): boolean => {
+  const normalized = normalizePath(pathname);
+  const plansRoot = normalizePath(ADMINISTRATION_PLANS_SUBSCRIPTIONS_ROUTES.ROOT);
+  return normalized === plansRoot || normalized.startsWith(`${plansRoot}/`);
+};
+
+const ALWAYS_AVAILABLE_MODULE_SET = new Set<string>(ALWAYS_AVAILABLE_MODULES);
+
+/**
+ * Routes reachable without an active/trial subscription (staff facility context).
+ */
+const isSubscriptionExemptRoute = (
+  pathname: string,
+  isFacilityOwner: boolean,
+): boolean => {
+  const normalized = normalizePath(pathname);
+
+  if (shouldBypassMiddleware(normalized) || isUnrestrictedRoute(normalized)) {
+    return true;
+  }
+
+  if (isPatientAccessibleRoute(normalized)) {
+    return true;
+  }
+
+  if (isFacilityOwner && isFacilitySubscriptionManagementRoute(normalized)) {
+    return true;
+  }
+
+  const requiredModuleCode = getRequiredModuleCode(normalized);
+  if (requiredModuleCode && ALWAYS_AVAILABLE_MODULE_SET.has(requiredModuleCode)) {
+    return true;
+  }
+
+  const focusAccess = getFocusRouteAccess(normalized);
+  if (
+    focusAccess &&
+    focusAccess.moduleCodes.every((code) => ALWAYS_AVAILABLE_MODULE_SET.has(code))
+  ) {
+    return true;
+  }
+
+  return false;
+};
+
 const isPatientAccessibleRoute = (pathname: string): boolean => {
   const normalized = normalizePath(pathname);
   
@@ -614,7 +669,29 @@ export const ModuleAccessMiddleware: React.FC = () => {
   const theme = useSelector((state: RootState) => state.ui.theme);
   const accessibleModuleCodes = useSelector(selectAccessibleModuleCodes);
   const isPatientMode = useSelector(isInPatientMode);
-  
+  const isStaffMode = useSelector(selectIsStaffMode);
+  const activeFacilityId = useSelector(selectActiveFacilityId);
+  const isFacilityOwner = useSelector(selectIsActiveFacilityOwner);
+  const activeFacility = useSelector(selectActiveFacility);
+
+  const { data: subscriptionResponse, isFetched: subscriptionFetched } =
+    useGetFacilitySubscription({
+      enabled: isStaffMode && activeFacilityId != null,
+    });
+
+  const hasFacilitySubscriptionAccess = useMemo(
+    () =>
+      resolveFacilitySubscriptionAccess(
+        subscriptionFetched ? subscriptionResponse?.data?.has_access : undefined,
+        activeFacility?.has_subscription_access,
+      ),
+    [
+      subscriptionFetched,
+      subscriptionResponse?.data?.has_access,
+      activeFacility?.has_subscription_access,
+    ],
+  );
+
   // Local state
   const [accessState, setAccessState] = useState<AccessState>({ status: 'checking' });
   
@@ -634,6 +711,8 @@ export const ModuleAccessMiddleware: React.FC = () => {
     [currentPath]
   );
   
+  const accessibleModuleCodesKey = accessibleModuleCodes.join('|');
+
   const hasModuleAccess = useMemo(() => {
     if (!routeAnalysis.requiresValidation || routeAnalysis.requiredModuleCodes.length === 0) {
       return true;
@@ -643,7 +722,7 @@ export const ModuleAccessMiddleware: React.FC = () => {
       routeAnalysis.requiredModuleCodes,
       routeAnalysis.isPlatformAdminRoute,
     );
-  }, [routeAnalysis, accessibleModuleCodes]);
+  }, [routeAnalysis, accessibleModuleCodes, accessibleModuleCodesKey]);
   
   // Check if this route should bypass middleware entirely
   const shouldBypass = useMemo(() => {
@@ -666,6 +745,57 @@ export const ModuleAccessMiddleware: React.FC = () => {
     // Update ref without causing re-render
     lastCheckedPathRef.current = currentPath;
     
+    if (
+      isFacilitySubscriptionManagementRoute(currentPath) &&
+      (!isStaffMode || activeFacilityId == null || !isFacilityOwner)
+    ) {
+      setAccessState({
+        status: 'denied',
+        message: 'Facility subscription management is only available to facility owners.',
+      });
+      return;
+    }
+
+    if (
+      isStaffMode &&
+      activeFacilityId != null &&
+      subscriptionFetched &&
+      !hasFacilitySubscriptionAccess
+    ) {
+      if (isSubscriptionExemptRoute(currentPath, isFacilityOwner)) {
+        // Continue to standard module validation below.
+      } else if (isFacilityOwner && !isRedirectingRef.current) {
+        isRedirectingRef.current = true;
+        setAccessState({
+          status: 'redirecting',
+          message: 'Subscription inactive — redirecting to Plans & Subscriptions...',
+          redirectTo: ADMINISTRATION_PLANS_SUBSCRIPTIONS_ROUTES.AVAILABLE_PLANS,
+        });
+        navigate(ADMINISTRATION_PLANS_SUBSCRIPTIONS_ROUTES.AVAILABLE_PLANS, {
+          replace: true,
+        });
+        if (timeoutRef.current) {
+          clearTimeout(timeoutRef.current);
+        }
+        timeoutRef.current = setTimeout(() => {
+          isRedirectingRef.current = false;
+        }, 300);
+        return;
+      } else if (routeAnalysis.requiresValidation) {
+        const requiresPaidModule = routeAnalysis.requiredModuleCodes.some(
+          (code) => !ALWAYS_AVAILABLE_MODULE_SET.has(code),
+        );
+        if (requiresPaidModule) {
+          setAccessState({
+            status: 'denied',
+            message:
+              'This facility does not have an active subscription. Contact your facility owner.',
+          });
+          return;
+        }
+      }
+    }
+
     // Check for patient mode redirection
     if (isPatientMode && !isPatientAccessibleRoute(currentPath) && !isRedirectingRef.current) {
       console.log('[ModuleAccess] Patient mode - redirecting to patient dashboard');
@@ -712,9 +842,23 @@ export const ModuleAccessMiddleware: React.FC = () => {
   }, [
     currentPath,
     isPatientMode,
+    isStaffMode,
+    activeFacilityId,
+    isFacilityOwner,
+    subscriptionFetched,
+    hasFacilitySubscriptionAccess,
     routeAnalysis,
     hasModuleAccess,
     navigate,
+  ]);
+
+  useEffect(() => {
+    lastCheckedPathRef.current = '';
+  }, [
+    hasFacilitySubscriptionAccess,
+    accessibleModuleCodesKey,
+    isFacilityOwner,
+    activeFacilityId,
   ]);
   
   // Effect to trigger access check when path changes

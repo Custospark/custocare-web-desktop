@@ -31,10 +31,11 @@ export type SubscriptionModuleCode =
   | 'referrals'
   | 'ambulance';
 
-/** Modules available on every tier (no subscription gate). */
+/** Modules available on every tier (no subscription gate), including patient portal. */
 export const ALWAYS_AVAILABLE_MODULES: readonly SubscriptionModuleCode[] = [
   'account',
   'custocare_hub',
+  'patient_dashboard',
 ] as const;
 
 /** Modules for facility owners when subscription is inactive (manage billing & team). */

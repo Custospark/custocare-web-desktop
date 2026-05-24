@@ -15,8 +15,9 @@ export interface SearchableModule {
   moduleCode: string;
   keywords: string[];
   category: string;
-  requiredCapability?:string;
-
+  requiredCapability?: string;
+  /** When true, only facility owners may see this entry (e.g. plans & billing). */
+  facilityOwnerOnly?: boolean;
 }
 
 // In your StatusBar component file
