@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, CheckCircle, XCircle, Clock, CreditCard, RefreshCw, Loader2, AlertTriangle, Building2, ExternalLink, Filter, ChevronDown, ChevronUp } from 'lucide-react';
+import { Search, CheckCircle, XCircle, Clock, CreditCard, RefreshCw, Loader2, AlertTriangle, ExternalLink, Filter, ChevronDown, ChevronUp } from 'lucide-react';
 import { cn } from '../../../shared/types/cn';
 import { useGetAdminSubscriptions, useGetAdminPayments, useAdminApprovePayment, useAdminRejectPayment } from '../../administration/admin-module/api/subscriptions/SubscriptionQueries';
 import { SubscriptionStatus, PaymentStatus, type Subscription, type Payment } from '../../administration/admin-module/api/subscriptions/SubscriptionTypes';
@@ -107,51 +107,6 @@ const FacilitySubscriptions: React.FC<Props> = ({ theme }) => {
           </>
         )}
       </div>
-
-      {/* Pending Payments Banner */}
-      {pendingPays.length > 0 && (
-        <div className={cn('rounded-xl border-2 p-4', isDark ? 'bg-amber-900/20 border-amber-700/50' : 'bg-amber-50 border-amber-200')}>
-          <div className="flex items-center gap-2 mb-3">
-            <Clock className="w-5 h-5 text-amber-500" />
-            <span className="font-bold text-sm">{pendingPays.length} pending payment{pendingPays.length !== 1 ? 's' : ''} require review</span>
-          </div>
-          <div className="space-y-2">
-            {pendingPays.slice(0, 5).map((p: Payment) => (
-              <div key={p.id} className="flex items-center justify-between gap-4 flex-wrap">
-                <div className="flex items-center gap-3 min-w-0">
-                  <Building2 className={cn('w-4 h-4 shrink-0', isDark ? 'text-gray-400' : 'text-gray-500')} />
-                  <span className="text-sm font-medium">Payment #{p.id}</span>
-                  <span className={cn('text-xs', isDark ? 'text-gray-400' : 'text-gray-500')}>${p.amount} {p.currency}</span>
-                  {p.transaction_reference && <span className={cn('text-xs font-mono', isDark ? 'text-gray-500' : 'text-gray-400')}>Ref: {p.transaction_reference}</span>}
-                  {p.paid_at && <span className={cn('text-xs', isDark ? 'text-gray-500' : 'text-gray-400')}>{new Date(p.paid_at).toLocaleDateString()}</span>}
-                  {p.receipt_url && (
-                    <a href={p.receipt_url} target="_blank" rel="noopener noreferrer"
-                      className={cn('text-xs flex items-center gap-0.5 underline', isDark ? 'text-blue-400' : 'text-blue-600')}>
-                      <ExternalLink className="w-3 h-3" /> Receipt
-                    </a>
-                  )}
-                </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <button onClick={() => approvePay.mutate({ paymentId: p.id })}
-                    disabled={approvePay.isPending}
-                    className={cn('px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all bg-emerald-600 hover:bg-emerald-700 text-white',
-                      approvePay.isPending && 'opacity-60 cursor-wait')}>
-                    {approvePay.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <CheckCircle className="w-3 h-3" />} Approve
-                  </button>
-                  <button onClick={() => setRejectTarget({ paymentId: p.id, facility: `Payment #${p.id}` })}
-                    className={cn('px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 border',
-                      isDark ? 'border-red-800 text-red-300 hover:bg-red-900/30' : 'border-red-200 text-red-700 hover:bg-red-50')}>
-                    <XCircle className="w-3 h-3" /> Reject
-                  </button>
-                </div>
-              </div>
-            ))}
-            {pendingPays.length > 5 && (
-              <p className={cn('text-xs', isDark ? 'text-gray-400' : 'text-gray-500')}>+{pendingPays.length - 5} more pending payments</p>
-            )}
-          </div>
-        </div>
-      )}
 
       {/* Subscriptions Table */}
       {tab === 'subscriptions' && (
