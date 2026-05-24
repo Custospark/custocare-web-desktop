@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import {
   Landmark, Smartphone, CheckCircle, Copy,
   CheckCheck, Upload, Loader2, FileText,
-  Building2,
+  Building2, ArrowLeft, ExternalLink,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
@@ -12,6 +12,7 @@ import { useGetFacilitySubscription, useRecordPayment } from '../../api/subscrip
 import { useGetFacilityPayments } from '../../api/subscriptions/SubscriptionQueries';
 import { PaymentStatus, PaymentMethod, PaymentType, type Payment } from '../../api/subscriptions/SubscriptionTypes';
 import { cn } from '../../../../../shared/types/cn';
+import { ADMINISTRATION_PLANS_SUBSCRIPTIONS_ROUTES } from '../../../../../app/routes/constants/administration.paths';
 
 interface PaymentsProps {
   theme: 'light' | 'dark';
@@ -75,8 +76,6 @@ export const Payments: React.FC<PaymentsProps> = ({ theme }) => {
       receipt: file,
     });
   };
-
-  const recentPayments = payments.slice(0, 5);
 
   if (noPlan) {
     return (
@@ -292,21 +291,43 @@ export const Payments: React.FC<PaymentsProps> = ({ theme }) => {
         </motion.div>
       )}
 
-      {/* Recent Payments */}
-      {recentPayments.length > 0 && !submitted && (
+      {/* Payment History */}
+      {payments.length > 0 && (
         <div className={cn('rounded-2xl border overflow-hidden', isDark ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200')}>
-          <div className={cn('p-4 border-b font-semibold', isDark ? 'border-gray-800' : 'border-gray-200')}>Recent Payments</div>
+          <div className={cn('p-4 border-b font-semibold flex items-center justify-between', isDark ? 'border-gray-800' : 'border-gray-200')}>
+            <span>Payment History</span>
+            <span className={cn('text-xs font-normal', isDark ? 'text-gray-400' : 'text-gray-500')}>
+              {payments.filter(p => p.status === PaymentStatus.APPROVED).length} approved · {payments.filter(p => p.status === PaymentStatus.PENDING).length} pending
+            </span>
+          </div>
           <div className="divide-y" style={{ borderColor: isDark ? '#1f2a37' : '#e5e7eb' }}>
-            {recentPayments.map((p: Payment) => (
+            {payments.map((p: Payment) => (
               <div key={p.id} className="p-4 flex items-center justify-between">
-                <div>
+                <div className="min-w-0">
                   <p className="font-medium">${p.amount} {p.currency}</p>
-                  <p className={cn('text-xs', isDark ? 'text-gray-400' : 'text-gray-500')}>{p.payment_type_label} · {p.method_label}</p>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className={cn('text-xs', isDark ? 'text-gray-400' : 'text-gray-500')}>{p.payment_type_label} · {p.method_label}</span>
+                    {p.transaction_reference && (
+                      <span className={cn('text-xs font-mono', isDark ? 'text-gray-500' : 'text-gray-400')}>Ref: {p.transaction_reference}</span>
+                    )}
+                    {p.receipt_url && (
+                      <a href={p.receipt_url} target="_blank" rel="noopener noreferrer"
+                        className={cn('text-xs flex items-center gap-0.5 underline', isDark ? 'text-blue-400' : 'text-blue-600')}>
+                        <ExternalLink className="w-3 h-3" /> Receipt
+                      </a>
+                    )}
+                  </div>
+                  <p className={cn('text-xs', isDark ? 'text-gray-500' : 'text-gray-400')}>
+                    {p.paid_at ? new Date(p.paid_at).toLocaleDateString() : ''}
+                  </p>
                 </div>
                 <span className={cn(
-                  'text-sm font-medium',
-                  p.status === PaymentStatus.APPROVED ? 'text-green-500' :
-                  p.status === PaymentStatus.PENDING ? 'text-yellow-500' : 'text-red-500'
+                  'shrink-0 px-2 py-0.5 rounded-full text-xs font-bold',
+                  p.status === PaymentStatus.APPROVED
+                    ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300'
+                    : p.status === PaymentStatus.PENDING
+                    ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300'
+                    : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300'
                 )}>
                   {p.status_label}
                 </span>
