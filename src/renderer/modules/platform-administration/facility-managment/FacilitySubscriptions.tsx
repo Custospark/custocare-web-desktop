@@ -8,7 +8,7 @@ interface Props { theme: 'light' | 'dark' }
 
 const statusCfg = (s: string, d: boolean) => {
   if (s === SubscriptionStatus.TRIAL) return { bg: d ? 'bg-blue-900/30' : 'bg-blue-100', text: d ? 'text-blue-300' : 'text-blue-700' };
-  if (s === SubscriptionStatus.ACTIVE) return { bg: d ? 'bg-emerald-900/30' : 'bg-emerald-100', text: d ? 'text-emerald-300' : 'text-emerald-700' };
+  if (s === SubscriptionStatus.ACTIVE) return { bg: d ? 'bg-emerald-900/50' : 'bg-emerald-200', text: d ? 'text-emerald-200' : 'text-emerald-900' };
   if (s === SubscriptionStatus.PAST_DUE) return { bg: d ? 'bg-amber-900/30' : 'bg-amber-100', text: d ? 'text-amber-300' : 'text-amber-700' };
   if (s === SubscriptionStatus.SUSPENDED) return { bg: d ? 'bg-red-900/30' : 'bg-red-100', text: d ? 'text-red-300' : 'text-red-700' };
   return { bg: d ? 'bg-gray-800' : 'bg-gray-100', text: d ? 'text-gray-400' : 'text-gray-600' };
@@ -147,11 +147,11 @@ const FacilitySubscriptions: React.FC<Props> = ({ theme }) => {
                         <span className={cn('inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold', sc.bg, sc.text)}>{s.status_label}</span>
                       </td>
                       <td className="py-3 px-2 text-center">
-                        {s.onboarding_fee_paid ? <span className="text-emerald-500 font-medium">Paid</span> : <span className={cn('text-xs', isDark ? 'text-gray-500' : 'text-gray-400')}>Pending</span>}
+                        {s.onboarding_fee_paid ? <span className="font-medium text-emerald-700 dark:text-emerald-300">Paid</span> : <span className={cn('text-xs', isDark ? 'text-gray-500' : 'text-gray-400')}>Pending</span>}
                       </td>
                       <td className="py-3 px-2 text-center">
                         <div className="flex items-center justify-center gap-2">
-                          {appr.length > 0 && <span className="flex items-center gap-1 text-xs text-emerald-500"><CheckCircle className="w-3 h-3" /> {appr.length}</span>}
+                          {appr.length > 0 && <span className="flex items-center gap-1 text-xs text-emerald-700 dark:text-emerald-300"><CheckCircle className="w-3 h-3" /> {appr.length}</span>}
                           {pend.length > 0 && <span className="flex items-center gap-1 text-xs text-amber-500"><Clock className="w-3 h-3" /> {pend.length}</span>}
                           {s.payments && s.payments.length === 0 && <span className={cn('text-xs', isDark ? 'text-gray-500' : 'text-gray-400')}>—</span>}
                         </div>
@@ -208,8 +208,8 @@ const FacilitySubscriptions: React.FC<Props> = ({ theme }) => {
                       </td>
                       <td className="py-3 px-2 text-center">
                         <span className={cn('inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold',
-                          p.status === PaymentStatus.APPROVED ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300' :
-                          p.status === PaymentStatus.PENDING ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300' :
+                          p.status === PaymentStatus.APPROVED ? 'bg-emerald-200 dark:bg-emerald-800 text-emerald-900 dark:text-emerald-100' :
+                          p.status === PaymentStatus.PENDING ? 'bg-amber-200 dark:bg-amber-800 text-amber-900 dark:text-amber-100' :
                           'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300')}>
                           {p.status_label}
                         </span>

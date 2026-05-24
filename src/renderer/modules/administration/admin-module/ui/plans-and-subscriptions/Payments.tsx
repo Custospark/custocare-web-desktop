@@ -324,10 +324,10 @@ export const Payments: React.FC<PaymentsProps> = ({ theme }) => {
                 <span className={cn(
                   'shrink-0 px-2 py-0.5 rounded-full text-xs font-bold',
                   p.status === PaymentStatus.APPROVED
-                    ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300'
+                    ? 'bg-emerald-200 dark:bg-emerald-800 text-emerald-900 dark:text-emerald-100'
                     : p.status === PaymentStatus.PENDING
-                    ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300'
-                    : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300'
+                    ? 'bg-amber-200 dark:bg-amber-800 text-amber-900 dark:text-amber-100'
+                    : 'bg-red-200 dark:bg-red-800 text-red-900 dark:text-red-100'
                 )}>
                   {p.status_label}
                 </span>
