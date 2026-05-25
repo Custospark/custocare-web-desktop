@@ -20,6 +20,14 @@ import {
 import type { Recipient, StoredContact } from './composeTypes';
 import { cn } from '../../../../../shared/types/cn';
 import { loadStoredContacts } from './useComposeState';
+import { PhoneInputWithCountryCode } from '../../../../../shared/components/Forms/PhoneInputWithCountryCode';
+import {
+  isValidInternationalPhone,
+  looksLikeEmailInput,
+  looksLikePhoneInput,
+  normalizePhoneInput,
+  validateEmail,
+} from '../../../../../shared/utils/phoneNumber';
 
 /* ── helpers ────────────────────────────────────────────────────── */
 
@@ -159,17 +167,21 @@ interface RecipientRowProps {
   rightSlot?: React.ReactNode;
 }
 
+type RecipientInputMode = 'email' | 'phone';
+
 const RecipientRow: React.FC<RecipientRowProps> = ({
   type, label, recipients, isDark, onAdd, onRemove, error, rightSlot,
 }) => {
+  const [inputMode, setInputMode] = useState<RecipientInputMode>('email');
   const [inputValue, setInputValue] = useState('');
+  const [phoneValue, setPhoneValue] = useState('');
   const [suggestions, setSuggestions] = useState<StoredContact[]>([]);
   const [highlightIdx, setHighlightIdx] = useState(-1);
   const [showSuggest, setShowSuggest] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const contacts = useMemo(() => loadStoredContacts(), []);
 
-  const commit = useCallback(
+  const commitEmail = useCallback(
     (value: string, name?: string) => {
       const parts = value.split(/[,;]/).map(p => p.trim()).filter(Boolean);
       parts.forEach(p => onAdd(type, p, name));
@@ -180,8 +192,45 @@ const RecipientRow: React.FC<RecipientRowProps> = ({
     [type, onAdd],
   );
 
-  const handleChange = (v: string) => {
+  const commitPhone = useCallback(
+    (name?: string) => {
+      const normalized = normalizePhoneInput(phoneValue);
+      if (!isValidInternationalPhone(normalized)) return;
+      onAdd(type, normalized, name);
+      setPhoneValue('');
+      setSuggestions([]);
+      setShowSuggest(false);
+    },
+    [type, onAdd, phoneValue],
+  );
+
+  const selectSuggestion = useCallback(
+    (contact: StoredContact) => {
+      if (contact.email && validateEmail(contact.email)) {
+        setInputMode('email');
+        commitEmail(contact.email, contact.name);
+        return;
+      }
+      if (contact.phone) {
+        setInputMode('phone');
+        setPhoneValue(normalizePhoneInput(contact.phone));
+        onAdd(type, normalizePhoneInput(contact.phone), contact.name);
+        setPhoneValue('');
+        setShowSuggest(false);
+        return;
+      }
+    },
+    [commitEmail, onAdd, type],
+  );
+
+  const handleEmailChange = (v: string) => {
     setInputValue(v);
+    if (looksLikePhoneInput(v) && !looksLikeEmailInput(v)) {
+      setInputMode('phone');
+      setPhoneValue(normalizePhoneInput(v));
+      setInputValue('');
+      return;
+    }
     if (v.length > 0) {
       const found = filterContacts(v, contacts);
       setSuggestions(found);
@@ -193,7 +242,7 @@ const RecipientRow: React.FC<RecipientRowProps> = ({
     }
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+  const handleEmailKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (showSuggest) {
       if (e.key === 'ArrowDown') {
         e.preventDefault();
@@ -211,31 +260,45 @@ const RecipientRow: React.FC<RecipientRowProps> = ({
       }
       if ((e.key === 'Enter' || e.key === 'Tab') && highlightIdx >= 0) {
         e.preventDefault();
-        const s = suggestions[highlightIdx];
-        commit(s.email || s.phone || '', s.name);
+        selectSuggestion(suggestions[highlightIdx]);
         return;
       }
     }
 
     if (e.key === 'Enter' || e.key === ',' || e.key === ';') {
       e.preventDefault();
-      if (inputValue.trim()) commit(inputValue);
+      if (inputValue.trim()) commitEmail(inputValue);
     }
     if (e.key === 'Backspace' && !inputValue && recipients.length > 0) {
       onRemove(type, recipients[recipients.length - 1].id);
     }
   };
 
-  const handleBlur = () => {
+  const handlePhoneKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' || e.key === ',' || e.key === ';') {
+      e.preventDefault();
+      commitPhone();
+    }
+    if (e.key === 'Backspace' && !phoneValue && recipients.length > 0) {
+      onRemove(type, recipients[recipients.length - 1].id);
+    }
+  };
+
+  const handleEmailBlur = () => {
     setTimeout(() => {
-      if (inputValue.trim()) commit(inputValue);
+      if (inputMode === 'email' && inputValue.trim()) commitEmail(inputValue);
       setShowSuggest(false);
     }, 150);
   };
 
-  const placeholder = recipients.length === 0
-    ? `Add ${label} — email or phone`
-    : '';
+  const handlePhoneBlur = () => {
+    setTimeout(() => {
+      if (inputMode === 'phone' && phoneValue.trim()) commitPhone();
+    }, 150);
+  };
+
+  const emailPlaceholder = recipients.length === 0 ? `Add ${label} — email address` : '';
+  const phonePlaceholder = recipients.length === 0 ? 'Local number' : '';
 
   return (
     <div
@@ -266,58 +329,111 @@ const RecipientRow: React.FC<RecipientRowProps> = ({
           />
         ))}
 
-        <div className="relative flex items-center flex-1 min-w-[180px]">
-          <Mail
-            className={cn(
-              'mr-1 w-4 h-4 shrink-0',
-              isDark ? 'text-blue-400' : 'text-blue-500',
-            )}
-          />
-
-          <input
-            ref={inputRef}
-            type="text"
-            inputMode="text"
-            autoComplete="off"
-            value={inputValue}
-            onChange={e => handleChange(e.target.value)}
-            onKeyDown={handleKeyDown}
-            onFocus={() => inputValue && setShowSuggest(suggestions.length > 0)}
-            onBlur={handleBlur}
-            placeholder={placeholder}
-            className={cn(
-              'flex-1 py-1 bg-transparent outline-none text-sm min-w-[120px]',
-              isDark ? 'text-white placeholder-gray-500' : 'text-gray-900 placeholder-gray-400',
-            )}
-          />
-
-          {/* Suggestion dropdown */}
-          {showSuggest && (
-            <div
+        <div className="flex flex-1 min-w-[200px] flex-col gap-1.5">
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              title="Add by email"
+              onClick={() => setInputMode('email')}
               className={cn(
-                'absolute top-full left-0 z-50 w-72 rounded-xl border shadow-xl overflow-hidden mt-1',
-                isDark ? 'bg-gray-800 border-gray-600' : 'bg-white border-gray-200',
+                'inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-xs font-medium transition-colors cursor-pointer',
+                inputMode === 'email'
+                  ? isDark
+                    ? 'border-blue-500/50 bg-blue-600/30 text-blue-200'
+                    : 'border-blue-300 bg-blue-50 text-blue-700'
+                  : isDark
+                    ? 'border-gray-700 text-gray-400 hover:bg-gray-700'
+                    : 'border-gray-200 text-gray-500 hover:bg-gray-100',
               )}
             >
+              <Mail className="w-3 h-3" /> Email
+            </button>
+            <button
+              type="button"
+              title="Add by phone"
+              onClick={() => setInputMode('phone')}
+              className={cn(
+                'inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-xs font-medium transition-colors cursor-pointer',
+                inputMode === 'phone'
+                  ? isDark
+                    ? 'border-blue-500/50 bg-blue-600/30 text-blue-200'
+                    : 'border-blue-300 bg-blue-50 text-blue-700'
+                  : isDark
+                    ? 'border-gray-700 text-gray-400 hover:bg-gray-700'
+                    : 'border-gray-200 text-gray-500 hover:bg-gray-100',
+              )}
+            >
+              <Phone className="w-3 h-3" /> Phone
+            </button>
+          </div>
+
+          <div className="relative flex min-w-0 flex-1 items-center">
+            {inputMode === 'email' ? (
+              <>
+                <Mail
+                  className={cn(
+                    'mr-1 w-4 h-4 shrink-0',
+                    isDark ? 'text-blue-400' : 'text-blue-500',
+                  )}
+                />
+                <input
+                  ref={inputRef}
+                  type="email"
+                  inputMode="email"
+                  autoComplete="off"
+                  value={inputValue}
+                  onChange={e => handleEmailChange(e.target.value)}
+                  onKeyDown={handleEmailKeyDown}
+                  onFocus={() => inputValue && setShowSuggest(suggestions.length > 0)}
+                  onBlur={handleEmailBlur}
+                  placeholder={emailPlaceholder}
+                  className={cn(
+                    'min-w-[120px] flex-1 bg-transparent py-1 text-sm outline-none',
+                    isDark ? 'text-white placeholder-gray-500' : 'text-gray-900 placeholder-gray-400',
+                  )}
+                />
+              </>
+            ) : (
+              <PhoneInputWithCountryCode
+                theme={isDark ? 'dark' : 'light'}
+                compact
+                value={phoneValue}
+                onChange={setPhoneValue}
+                onKeyDown={handlePhoneKeyDown}
+                onBlur={handlePhoneBlur}
+                placeholder={phonePlaceholder}
+                showPreview={false}
+                className="w-full"
+              />
+            )}
+
+            {inputMode === 'email' && showSuggest && (
               <div
                 className={cn(
-                  'flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold border-b',
-                  isDark ? 'text-gray-400 border-gray-700' : 'text-gray-500 border-gray-100',
+                  'absolute top-full left-0 z-50 mt-1 w-72 overflow-hidden rounded-xl border shadow-xl',
+                  isDark ? 'border-gray-600 bg-gray-800' : 'border-gray-200 bg-white',
                 )}
               >
-                <Mail className="w-3 h-3" /> Suggestions
+                <div
+                  className={cn(
+                    'flex items-center gap-1.5 border-b px-3 py-1.5 text-xs font-semibold',
+                    isDark ? 'border-gray-700 text-gray-400' : 'border-gray-100 text-gray-500',
+                  )}
+                >
+                  <Mail className="w-3 h-3" /> Suggestions
+                </div>
+                {suggestions.map((s, i) => (
+                  <SuggestionItem
+                    key={s.id}
+                    contact={s}
+                    isDark={isDark}
+                    isHighlighted={i === highlightIdx}
+                    onSelect={() => selectSuggestion(s)}
+                  />
+                ))}
               </div>
-              {suggestions.map((s, i) => (
-                <SuggestionItem
-                  key={s.id}
-                  contact={s}
-                  isDark={isDark}
-                  isHighlighted={i === highlightIdx}
-                  onSelect={() => commit(s.email || s.phone || '', s.name)}
-                />
-              ))}
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
 
@@ -429,8 +545,11 @@ export const ComposeRecipients: React.FC<ComposeRecipientsProps> = ({
 
       {/* Validation note */}
       <div className="mt-2 px-1">
+        <p className={cn('text-xs', isDark ? 'text-gray-500' : 'text-gray-500')}>
+          Use Email or Phone per recipient. Phone numbers use country dial code (same as signup), e.g. +256701234567.
+        </p>
         {hasInvalidRecipients && (
-          <div className="flex items-center gap-1.5 text-xs text-red-500 mt-1">
+          <div className="mt-1 flex items-center gap-1.5 text-xs text-red-500">
             <AlertCircle className="w-3 h-3" />
             Some recipients look invalid. Please review highlighted chips before sending.
           </div>

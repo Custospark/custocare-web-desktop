@@ -68,14 +68,13 @@ const formatFileSize = (bytes: number): string => {
   return (bytes / 1048576).toFixed(1) + ' MB';
 };
 
-const validateEmail = (email: string) =>
-  /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+import {
+  isValidInternationalPhone,
+  normalizePhoneInput,
+  validateEmail,
+} from '../../../../../shared/utils/phoneNumber';
 
-/** Matches backend {@link PatientController} / MessageService phone normalization for hashing. */
-export const normalizePhoneInput = (raw: string): string => {
-  const trimmed = raw.trim();
-  return trimmed.replace(/(?!^\+)[^\d]/g, '');
-};
+export { normalizePhoneInput } from '../../../../../shared/utils/phoneNumber';
 
 /**
  * htmlToPlainText
@@ -314,7 +313,7 @@ export const useComposeState = ({
   const mapRecipientForApi = useCallback((r: Recipient): RecipientInput | null => {
     if (r.contactType === 'phone' && r.phone) {
       const normalized = normalizePhoneInput(r.phone);
-      if (normalized.length < 7) return null;
+      if (!isValidInternationalPhone(normalized)) return null;
       return { name: r.name || null, phone: normalized };
     }
     if (r.email && validateEmail(r.email)) {
@@ -370,8 +369,9 @@ export const useComposeState = ({
       errors.recipients = 'Add at least one recipient';
     allRecipients.forEach(r => {
       if (r.contactType === 'phone') {
-        const digits = normalizePhoneInput(r.phone || '');
-        if (digits.length < 7) errors[`phone_${r.id}`] = 'Enter a valid phone number';
+        if (!isValidInternationalPhone(r.phone || '')) {
+          errors[`phone_${r.id}`] = 'Enter a valid phone with country code (e.g. +256701234567)';
+        }
       } else if (!validateEmail(r.email)) {
         errors[`email_${r.id}`] = 'Invalid email';
       }
@@ -481,16 +481,16 @@ export const useComposeState = ({
 
       const asEmail = validateEmail(trimmed);
       const normalizedPhone = normalizePhoneInput(trimmed);
-      const isPhone = !asEmail && normalizedPhone.length >= 7;
+      const isPhone = !asEmail && isValidInternationalPhone(normalizedPhone);
 
       const newR: Recipient = isPhone
         ? {
             id: `r_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
             name: name || trimmed,
             email: '',
-            phone: trimmed,
+            phone: normalizedPhone,
             contactType: 'phone',
-            isValid: normalizedPhone.length >= 7,
+            isValid: isValidInternationalPhone(normalizedPhone),
           }
         : {
             id: `r_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,

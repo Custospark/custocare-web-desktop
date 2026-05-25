@@ -2,6 +2,17 @@
 
 ---
 
+## 2026-05-25: Compose recipients — email or international phone
+
+**Context:** Account Message Center compose allowed free-text “email or phone” without dial-code UI. Phone values often did not match signup format (`+{dial}{digits}`), so `MessageService` could not resolve `users.phone_hash`.
+
+**Decisions:**
+- Shared `phoneNumber.ts` + `PhoneInputWithCountryCode` (same `countryCodes` as SignUp).
+- `ComposeRecipients`: per-row Email / Phone toggle; phone path uses dial picker + local digits → full international string.
+- API payload sends normalized `+…` phone only (XOR with email per recipient); backend unchanged (`MessageController` + `MessageService` hash lookup).
+
+---
+
 ## 2026-05-24: Platform admin plan CRUD aligned with PlanFeatures
 
 **Context:** `FacilityPlans` used legacy feature keys (`lab_integration`, `pharmacy_module`, etc.) that fail backend validation (`PlanFeatures::ALL`). Pagination `page` was not sent; onboarding fee `0` was coerced to `null`; stats reflected the current page only.
