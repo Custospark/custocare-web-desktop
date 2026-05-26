@@ -185,20 +185,26 @@ export const PlanSelectionStep: React.FC<PlanSelectionStepProps> = ({
 
                 <div className="mb-3">
                   {(() => {
-                    const dp = annual
-                      ? (plan.pricing.annual_usd ?? Math.round(plan.pricing.usd * 10))
-                      : plan.pricing.usd;
+                    const monthly = plan.pricing.usd;
+                    const annualMonthly = plan.pricing.annual_monthly_usd ?? Math.round(monthly * 10 / 12);
+                    const annualTotal = plan.pricing.annual_usd ?? Math.round(monthly * 10);
+                    const displayPrice = annual ? annualMonthly : monthly;
                     return (
                       <>
                         <span className={cn("text-2xl font-extrabold", theme === 'dark' ? "text-white" : "text-gray-900")}>
-                          ${dp}
+                          ${displayPrice}
                         </span>
                         <span className={cn("text-sm ml-1", theme === 'dark' ? "text-gray-400" : "text-gray-500")}>
-                          {annual ? '/yr' : '/month'}
+                          /mo
                         </span>
+                        {annual && (
+                          <p className={cn("text-[10px] mt-0.5", theme === 'dark' ? "text-emerald-400" : "text-emerald-600")}>
+                            ${annualTotal}/yr — save ${monthly * 12 - annualTotal}/yr
+                          </p>
+                        )}
                         {displayCurrency !== 'USD' && exchangeRate !== null && (
                           <p className={cn("text-xs mt-0.5", theme === 'dark' ? "text-gray-500" : "text-gray-400")}>
-                            ≈ {formatCurrencyWithCustomCurrency(convertPrice(dp), displayCurrency)}
+                            ≈ {formatCurrencyWithCustomCurrency(convertPrice(displayPrice), displayCurrency)}
                           </p>
                         )}
                       </>

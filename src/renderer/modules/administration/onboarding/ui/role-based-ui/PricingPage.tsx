@@ -38,7 +38,7 @@ const buildTiers = (plans: Plan[]): DisplayTier[] => {
         name: plan.name,
         slug: plan.slug,
         monthlyPrice: plan.pricing.usd,
-        annualPrice: plan.pricing.annual_usd ?? Math.round(plan.pricing.usd * 10 / 12),
+        annualPrice: plan.pricing.annual_monthly_usd ?? Math.round(plan.pricing.usd * 10 / 12),
         description: plan.description || '',
         features: display.features,
         limits: [
@@ -205,9 +205,14 @@ export const PricingPage: React.FC = () => {
                         /mo
                       </span>
                       {annual && (
-                        <span className={cn("text-xs ml-2", theme === 'dark' ? "text-emerald-400" : "text-emerald-600")}>
-                          (billed annually)
-                        </span>
+                        <>
+                          <span className={cn("text-xs ml-2", theme === 'dark' ? "text-emerald-400" : "text-emerald-600")}>
+                            (billed annually)
+                          </span>
+                          <p className={cn("text-[10px] mt-1", theme === 'dark' ? "text-emerald-400/80" : "text-emerald-600/80")}>
+                            ${tier.annualPrice * 12}/yr — save ${tier.monthlyPrice * 12 - tier.annualPrice * 12}/yr
+                          </p>
+                        </>
                       )}
                       {displayCurrency !== 'USD' && exchangeRate !== null && (
                         <p className={cn("text-xs mt-1", theme === 'dark' ? "text-slate-500" : "text-slate-400")}>

@@ -99,6 +99,8 @@ export interface PlanPricing {
   billing_cycle: BillingCycle | string;
   annual_usd?: number;
   annual_ugx?: number;
+  annual_monthly_usd?: number;
+  annual_monthly_ugx?: number;
 }
 
 /** Onboarding-fee block within PlanResource. */

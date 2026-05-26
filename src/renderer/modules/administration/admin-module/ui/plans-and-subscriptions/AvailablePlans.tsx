@@ -492,18 +492,23 @@ export const AvailablePlans: React.FC<AvailablePlansProps> = ({ theme }) => {
 
               <div className="mb-3">
                 {(() => {
-                  const displayPrice = annual
-                    ? (plan.pricing.annual_usd ?? Math.round(plan.pricing.usd * 10))
-                    : plan.pricing.usd;
-                  const periodLabel = annual ? '/yr' : '/month';
+                  const monthlyPrice = plan.pricing.usd;
+                  const annualMonthly = plan.pricing.annual_monthly_usd ?? Math.round(monthlyPrice * 10 / 12);
+                  const annualTotal = plan.pricing.annual_usd ?? Math.round(monthlyPrice * 10);
+                  const displayPrice = annual ? annualMonthly : monthlyPrice;
                   return (
                     <>
                       <span className={cn("text-2xl font-extrabold", theme === 'dark' ? "text-white" : "text-gray-900")}>
                         ${displayPrice}
                       </span>
                       <span className={cn("text-sm ml-1", theme === 'dark' ? "text-gray-400" : "text-gray-500")}>
-                        {periodLabel}
+                        /mo
                       </span>
+                      {annual && (
+                        <p className={cn("text-[10px] mt-0.5", theme === 'dark' ? "text-emerald-400" : "text-emerald-600")}>
+                          ${annualTotal}/yr — save ${monthlyPrice * 12 - annualTotal}/yr
+                        </p>
+                      )}
                       {displayCurrency !== 'USD' && convertPrice(displayPrice) !== null && (
                         <p className={cn("text-xs mt-0.5", theme === 'dark' ? "text-gray-500" : "text-gray-400")}>
                           ≈ {formatCurrencyWithCustomCurrency(convertPrice(displayPrice), displayCurrency)}
