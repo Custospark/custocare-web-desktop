@@ -17,6 +17,8 @@ import { useCurrencyConvert } from '../../../../admin-module/api/subscriptions/C
 interface PlanPricing {
   usd: number;
   billing_cycle: string;
+  annual_monthly_usd?: number;
+  annual_usd?: number;
 }
 
 interface PlanLimits {

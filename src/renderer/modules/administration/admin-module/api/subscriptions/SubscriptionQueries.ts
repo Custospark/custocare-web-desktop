@@ -1284,8 +1284,8 @@ export const useAdminApprovePayment = (
     onError: (error: AxiosError<ApiErrorResponse>, _vars, context) => {
       if (context?.snapshot) {
         const snap = context.snapshot as { payments: [unknown, unknown][]; subscriptions: [unknown, unknown][] };
-        snap.payments.forEach(([key, data]) => queryClient.setQueryData(key, data));
-        snap.subscriptions.forEach(([key, data]) => queryClient.setQueryData(key, data));
+        snap.payments.forEach(([key, data]) => queryClient.setQueryData(key as readonly unknown[], data));
+        snap.subscriptions.forEach(([key, data]) => queryClient.setQueryData(key as readonly unknown[], data));
       }
       const axiosErr = error as AxiosError<ApiErrorResponse>;
       const base     = extractErrorMessage(axiosErr, 'Failed to approve payment.');
@@ -1360,7 +1360,7 @@ export const useAdminRejectPayment = (
     onError: (error: AxiosError<ApiErrorResponse>, _vars, context) => {
       if (context?.snapshot) {
         const snap = context.snapshot as [unknown, unknown][];
-        snap.forEach(([key, data]) => queryClient.setQueryData(key, data));
+        snap.forEach(([key, data]) => queryClient.setQueryData(key as readonly unknown[], data));
       }
       const base     = extractErrorMessage(error, 'Failed to reject payment.');
       const details  = formatValidationErrors(error.response?.data?.errors);

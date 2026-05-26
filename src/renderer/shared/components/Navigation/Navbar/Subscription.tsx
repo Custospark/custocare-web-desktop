@@ -26,7 +26,7 @@ import {
   SubscriptionStatus,
   type ApiErrorResponse,
   type Plan,
-  type Subscription,
+  type Subscription as BillingSubscription,
 } from '../../../../modules/administration/admin-module/api/subscriptions/SubscriptionTypes';
 import { ADMINISTRATION_PLANS_SUBSCRIPTIONS_ROUTES } from '../../../../app/routes/constants/administration.paths';
 import {
@@ -107,7 +107,7 @@ interface SubscriptionDisplay {
   subtitle: string;
 }
 
-const getSubscriptionDisplay = (sub: Subscription | undefined): SubscriptionDisplay => {
+const getSubscriptionDisplay = (sub: BillingSubscription | undefined): SubscriptionDisplay => {
   if (!sub) {
     return { badge: '', badgeKind: 'active', subtitle: '' };
   }
@@ -282,7 +282,7 @@ interface SubscriptionDropdownProps {
   isDark: boolean;
   isMobile: boolean;
   isInteractive: boolean;
-  subscription: Subscription;
+  subscription: BillingSubscription;
   current: Plan;
   display: SubscriptionDisplay;
   otherPlans: Array<{

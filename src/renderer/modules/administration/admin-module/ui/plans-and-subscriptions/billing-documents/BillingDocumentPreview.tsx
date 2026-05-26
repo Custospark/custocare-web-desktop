@@ -1,4 +1,4 @@
-import React, { forwardRef } from 'react';
+import { forwardRef } from 'react';
 import { Building2, Globe, Mail, Phone, MapPin } from 'lucide-react';
 
 import type { BillingDocument } from '../../../api/subscriptions/SubscriptionTypes';
