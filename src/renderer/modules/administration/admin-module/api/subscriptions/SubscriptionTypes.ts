@@ -434,6 +434,7 @@ export type AdminPaymentResponse = ApiSuccessResponse<Payment>;
 export interface StoreSubscriptionRequest {
   /** ID of an active plan from GET /billing/plans */
   plan_id: number;
+  billing_cycle?: 'monthly' | 'yearly';
   notes?: string | null;
 }
 

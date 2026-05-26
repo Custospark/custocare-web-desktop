@@ -63,7 +63,7 @@ const faqItems = [
 
 export const PricingPage: React.FC = () => {
   const theme = useAppSelector((state) => state.ui.theme);
-  const [annual, setAnnual] = useState(false);
+  const [annual, setAnnual] = useState(true);
   const [displayCurrency, setDisplayCurrency] = useState('USD');
   const { data: plansResponse, isLoading, error } = useGetPlans();
   const { data: rateData } = useCurrencyConvert(1, 'USD', displayCurrency);

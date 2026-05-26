@@ -120,7 +120,7 @@ export const AvailablePlans: React.FC<AvailablePlansProps> = ({ theme }) => {
   const currentPlanDetails = currentPlan
     ? sorted.find((p) => p.id === currentPlan.id) ?? currentPlan
     : null;
-  const [annual, setAnnual] = useState(false);
+  const [annual, setAnnual] = useState(true);
   const currentPlanTrialDays = currentPlanDetails?.trial_days ?? subscription?.plan?.trial_days ?? 0;
   const daysOnTrial = getDaysOnTrial(subscription);
   const canSwitchDuringTrial = canSwitchPlansDuringTrial(subscription, currentPlanTrialDays);
@@ -165,7 +165,7 @@ export const AvailablePlans: React.FC<AvailablePlansProps> = ({ theme }) => {
         theme,
       });
       if (!confirmed) return;
-      createSubscription.mutate({ data: { plan_id: planId } });
+      createSubscription.mutate({ data: { plan_id: planId, billing_cycle: annual ? 'yearly' : 'monthly' } });
       navigate(ADMINISTRATION_PLANS_SUBSCRIPTIONS_ROUTES.PAYMENTS);
       return;
     }
@@ -198,7 +198,7 @@ export const AvailablePlans: React.FC<AvailablePlansProps> = ({ theme }) => {
       theme,
     });
     if (!confirmed) return;
-    createSubscription.mutate({ data: { plan_id: planId } });
+    createSubscription.mutate({ data: { plan_id: planId, billing_cycle: annual ? 'yearly' : 'monthly' } });
     navigate(ADMINISTRATION_PLANS_SUBSCRIPTIONS_ROUTES.PAYMENTS);
   };
 
