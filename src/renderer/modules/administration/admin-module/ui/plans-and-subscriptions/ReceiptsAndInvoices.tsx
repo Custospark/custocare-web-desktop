@@ -131,7 +131,7 @@ const ReceiptsAndInvoices: React.FC<ReceiptsAndInvoicesProps> = ({ theme }) => {
         <div>
           <h1 className="text-2xl font-bold mb-1">Receipts &amp; Invoices</h1>
           <p className={cn('text-sm', isDark ? 'text-gray-400' : 'text-gray-600')}>
-            Invoices show amounts due for Custocare. Receipts are issued when platform admin approves your payment.
+            Invoices show amounts due for Custocare. Receipts are issued once your payment is approved.
           </p>
         </div>
         <button

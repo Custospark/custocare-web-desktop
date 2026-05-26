@@ -274,7 +274,7 @@ export const Payments: React.FC<PaymentsProps> = ({ theme }) => {
         >
           <CreditCard className={cn('w-5 h-5 shrink-0', isDark ? 'text-blue-400' : 'text-blue-600')} />
           <p className={cn('text-sm', isDark ? 'text-blue-100' : 'text-blue-900')}>
-            {paymentAction?.message ?? 'Your payment proof is pending platform admin approval.'}
+            {paymentAction?.message ?? 'Your payment proof is pending review by our accountants.'}
           </p>
         </motion.div>
       )}
@@ -427,7 +427,7 @@ export const Payments: React.FC<PaymentsProps> = ({ theme }) => {
               <h3 className={cn('font-semibold text-sm mb-3', isDark ? 'text-gray-200' : 'text-gray-800')}>Upload Proof of Payment</h3>
               {hasPendingProof && (
                 <div className={cn('mb-3 rounded-lg border px-4 py-3 text-sm', isDark ? 'border-amber-800 bg-amber-900/20 text-amber-200' : 'border-amber-200 bg-amber-50 text-amber-900')}>
-                  A payment proof is already pending platform admin approval. You can submit again only after it is approved or rejected.
+                  A payment proof is already pending review. You can submit again only after it is approved or rejected.
                 </div>
               )}
               <div className="space-y-3">

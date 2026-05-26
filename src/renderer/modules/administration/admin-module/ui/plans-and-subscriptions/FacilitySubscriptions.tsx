@@ -453,7 +453,7 @@ export const FacilitySubscriptions: React.FC<FacilitySubscriptionsProps> = ({
         )}>
           <Clock className={cn('w-5 h-5 shrink-0 mt-0.5', isDark ? 'text-blue-400' : 'text-blue-600')} />
           <p className={cn('text-sm', isDark ? 'text-blue-100' : 'text-blue-900')}>
-            {paymentAction?.message ?? 'Your payment proof is pending platform admin approval.'}
+            {paymentAction?.message ?? 'Your payment proof is pending review by our accountants.'}
           </p>
         </div>
       )}
