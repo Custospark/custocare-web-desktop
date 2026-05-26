@@ -540,9 +540,17 @@ export const FacilitySubscriptions: React.FC<FacilitySubscriptionsProps> = ({
                         <div>
                           <p className={cn('text-sm', isDark ? 'text-gray-400' : 'text-gray-600')}>Price</p>
                           <p className="font-medium">
-                            ${subscription.plan?.pricing.usd} USD /{' '}
-                            {subscription.plan?.pricing.billing_cycle}
+                            ${(() => {
+                              const isYearly = subscription.billing_cycle === 'yearly';
+                              const basePrice = subscription.plan?.pricing.usd ?? 0;
+                              return isYearly ? Math.round(basePrice * 10 / 12) : basePrice;
+                            })()} USD / {subscription.billing_cycle ?? 'monthly'}
                           </p>
+                          {subscription.billing_cycle === 'yearly' && (
+                            <p className={cn('text-xs mt-0.5', isDark ? 'text-emerald-400' : 'text-emerald-600')}>
+                              ${Math.round((subscription.plan?.pricing.usd ?? 0) * 10)}/yr — save ${Math.round((subscription.plan?.pricing.usd ?? 0) * 2)}/yr
+                            </p>
+                          )}
                         </div>
                       </div>
 
