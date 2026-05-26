@@ -348,7 +348,7 @@ const FacilitySubscriptions: React.FC<Props> = ({ theme }) => {
                           <td className="py-3 px-2">
                             <p className="font-medium">{s.plan?.name || '—'}</p>
                             <p className={cn('text-xs', isDark ? 'text-gray-500' : 'text-gray-400')}>
-                              ${s.plan?.pricing?.usd ?? 0}/mo
+                              ${s.plan?.pricing?.usd ?? 0}/{s.billing_cycle === 'yearly' ? 'yr' : 'mo'}
                             </p>
                           </td>
                           <td className="py-3 px-2 text-center">
