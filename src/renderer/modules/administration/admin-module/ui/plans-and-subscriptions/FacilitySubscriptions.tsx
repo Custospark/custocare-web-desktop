@@ -43,6 +43,9 @@ import {
   subscriptionHasPendingPaymentApproval,
   subscriptionNeedsPayment,
 } from '../../utils/subscriptionPaymentUtils';
+import { RestoreFacilityFunctionalityBanner } from '../../../../../shared/components/billing/RestoreFacilityFunctionalityBanner';
+import { useRestoreFacilityFunctionality } from '../../../../../shared/entitlements/useRestoreFacilityFunctionality';
+import { useToast } from '../../../../../app/store/contexts/toast/useToast';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface FacilitySubscriptionsProps {
@@ -306,6 +309,7 @@ export const FacilitySubscriptions: React.FC<FacilitySubscriptionsProps> = ({
 }) => {
   const isDark = theme === 'dark';
   const navigate = useNavigate();
+  const { showToast } = useToast();
 
   const [showTimeline, setShowTimeline]     = useState(false);
 
@@ -316,6 +320,22 @@ export const FacilitySubscriptions: React.FC<FacilitySubscriptionsProps> = ({
   const subscription = subResp?.data;
   const payments     = paymentsResp?.data || [];
   const usage        = usageResp?.data;
+
+  const {
+    restore: restoreFunctionality,
+    isRestoring,
+    showRestoreOption,
+  } = useRestoreFacilityFunctionality(subscription);
+
+  const handleRestoreFunctionality = async () => {
+    const ok = await restoreFunctionality();
+    if (ok) {
+      showToast('success', 'All functionalities restored for this facility.', 4500);
+      await refetchSub();
+      return;
+    }
+    showToast('error', 'Could not restore functionality yet. Please try again in a moment.', 5000);
+  };
 
   // ── Loading ──────────────────────────────────────────────────────────────────
   if (subLoading) {
@@ -392,8 +412,20 @@ export const FacilitySubscriptions: React.FC<FacilitySubscriptionsProps> = ({
   const needsPayment = subscriptionNeedsPayment(subscription);
   const pendingPaymentApproval = subscriptionHasPendingPaymentApproval(subscription);
 
+  const restoreBannerVariant =
+    subscription.status === SubscriptionStatus.TRIAL ? 'trial' : 'active';
+
   return (
     <div className="space-y-6">
+      {showRestoreOption && (
+        <RestoreFacilityFunctionalityBanner
+          theme={theme}
+          variant={restoreBannerVariant}
+          onRestore={handleRestoreFunctionality}
+          isRestoring={isRestoring}
+        />
+      )}
+
       {needsPayment && paymentAction?.message && (
         <div className={cn(
           'rounded-xl border-2 p-4 flex flex-col sm:flex-row sm:items-center gap-3',
@@ -602,7 +634,9 @@ export const FacilitySubscriptions: React.FC<FacilitySubscriptionsProps> = ({
 
                     {subscription.days_remaining > 0 && (
                       <div className="flex items-center justify-between py-2">
-                        <span className={isDark ? 'text-gray-400' : 'text-gray-600'}>Days Remaining</span>
+                        <span className={isDark ? 'text-gray-400' : 'text-gray-600'}>
+                          {isTrial ? 'Trial days remaining' : 'Days until renewal'}
+                        </span>
                         <span className="font-medium">{subscription.days_remaining} days</span>
                       </div>
                     )}

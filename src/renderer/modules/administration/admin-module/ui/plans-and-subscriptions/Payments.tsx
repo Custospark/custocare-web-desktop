@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   Landmark, Smartphone, CheckCircle, Copy,
   CheckCheck, Upload, Loader2, FileText,
@@ -6,9 +6,6 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { axiosInstance } from '../../../../../app/api/axiosConfig';
-
-import { useAppDispatch, useAppSelector } from '../../../../../app/store/hooks/useApp';
 import {
   useGetFacilitySubscription,
   useGetFacilityPayments,
@@ -26,9 +23,10 @@ import {
 } from '../../api/subscriptions/SubscriptionTypes';
 import { cn } from '../../../../../shared/types/cn';
 import { useToast } from '../../../../../app/store/contexts/toast/useToast';
-import { setUserContext, switchCapability, switchFacility } from '../../../../../app/store/slices/activeContextSlice';
 import { ADMINISTRATION_PLANS_SUBSCRIPTIONS_ROUTES } from '../../../../../app/routes/constants/administration.paths';
 import { ReceiptViewButton } from '../../../../../shared/components/billing/ReceiptViewButton';
+import { RestoreFacilityFunctionalityBanner } from '../../../../../shared/components/billing/RestoreFacilityFunctionalityBanner';
+import { useRestoreFacilityFunctionality } from '../../../../../shared/entitlements/useRestoreFacilityFunctionality';
 import {
   getSubscriptionPaymentAction,
   resolvePaymentQuoteParams,
@@ -48,9 +46,7 @@ const BANK_DETAILS = {
 
 export const Payments: React.FC<PaymentsProps> = ({ theme }) => {
   const isDark = theme === 'dark';
-  const dispatch = useAppDispatch();
   const { showToast } = useToast();
-  const activeFacilityId = useAppSelector((s) => s.activeContext.activeFacilityId);
   const [method, setMethod] = useState<'bank' | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [reference, setReference] = useState('');
@@ -113,39 +109,38 @@ export const Payments: React.FC<PaymentsProps> = ({ theme }) => {
 
   const quoteRequiresPayment = !quoteLoading && quote != null && total > 0.01;
 
-  const showRestoreAccessBanner = Boolean(
-    subscription &&
-    !subscription.has_access &&
-    !hasPendingProof &&
-    !quoteRequiresPayment &&
-    !needsPayment &&
-    subscription.status !== SubscriptionStatus.TRIAL &&
-    subscription.status !== SubscriptionStatus.CANCELLED &&
-    payments.some((p) => p.status === PaymentStatus.APPROVED),
+  const restorePaymentContext = useMemo(
+    () => ({
+      hasPendingProof,
+      needsPayment,
+      quoteRequiresPayment,
+      payments,
+    }),
+    [hasPendingProof, needsPayment, quoteRequiresPayment, payments],
   );
 
+  const {
+    restore: restoreFunctionality,
+    isRestoring,
+    showRestoreOption,
+    restoreAfterApprovedPayment,
+  } = useRestoreFacilityFunctionality(subscription, restorePaymentContext);
+
   const handleRestoreFunctionality = async () => {
-    if (!activeFacilityId) return;
-
-    try {
-      await refetchSubscription();
+    const ok = await restoreFunctionality();
+    if (ok) {
       await refetch();
-
-      const ctx = await axiosInstance.get('/user/context/resolve');
-      const userContext = ctx.data?.data;
-      if (!userContext) {
-        throw new Error('Failed to resolve user context.');
-      }
-
-      dispatch(setUserContext(userContext));
-      dispatch(switchCapability('staff'));
-      dispatch(switchFacility(activeFacilityId));
-
       showToast('success', 'All functionalities restored for this facility.', 4500);
-    } catch {
-      showToast('error', 'Could not restore functionality yet. Please try again in a moment.', 5000);
+      return;
     }
+    showToast('error', 'Could not restore functionality yet. Please try again in a moment.', 5000);
   };
+
+  const restoreBannerVariant = restoreAfterApprovedPayment
+    ? 'payment_approved'
+    : subscription?.status === SubscriptionStatus.TRIAL
+      ? 'trial'
+      : 'active';
 
   const copy = (val: string, key: string) => {
     navigator.clipboard.writeText(val).then(() => {
@@ -485,28 +480,13 @@ export const Payments: React.FC<PaymentsProps> = ({ theme }) => {
         </motion.div>
       )}
 
-      {showRestoreAccessBanner && (
-        <motion.div
-          initial={{ opacity: 0, y: -8 }}
-          animate={{ opacity: 1, y: 0 }}
-          className={cn('rounded-xl p-4 border', isDark ? 'bg-blue-900/20 border-blue-800' : 'bg-blue-50 border-blue-200')}
-        >
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="font-semibold">Payment approved</p>
-              <p className={cn('text-sm', isDark ? 'text-gray-300' : 'text-gray-600')}>
-                Your payment has been approved. Click below to restore full module access for this facility.
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={handleRestoreFunctionality}
-              className="px-4 py-2 rounded-lg font-semibold text-sm bg-blue-600 hover:bg-blue-700 text-white"
-            >
-              Restore all functionalities
-            </button>
-          </div>
-        </motion.div>
+      {showRestoreOption && (
+        <RestoreFacilityFunctionalityBanner
+          theme={theme}
+          variant={restoreBannerVariant}
+          onRestore={handleRestoreFunctionality}
+          isRestoring={isRestoring}
+        />
       )}
 
       {payments.length > 0 && (

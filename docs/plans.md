@@ -172,8 +172,10 @@ Until applied cancel row fires:
 ### Proration (upgrade now)
 
 ```
-days_remaining  = max(0, days between now and ends_at)
-days_in_period  = max(1, days between starts_at and ends_at)
+days_remaining  = calendar days until trial_ends_at (trial) or next_billing_date (active)
+days_in_period  = max(1, calendar days between starts_at and period end)
+old_price_usd   = subscription.metadata.billing_period_price_usd (locked at activation/renewal)
+new_price_usd   = target plan catalog price at quote time (upgrade now)
 credit_unused   = old_price_usd * (days_remaining / days_in_period)
 charge_new      = new_price_usd * (days_remaining / days_in_period)
 proration_due   = round(max(0, charge_new - credit_unused), 2)

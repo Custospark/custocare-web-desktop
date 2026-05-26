@@ -21,6 +21,8 @@ import {
   useUpgradeNow,
 } from '../../api/subscriptions/SubscriptionQueries';
 import { useConfirm } from '../../../../../shared/components/Feedback/ConfirmDialog/ConfirmContext';
+import { useToast } from '../../../../../app/store/contexts/toast/useToast';
+import { useRestoreFacilityFunctionality } from '../../../../../shared/entitlements/useRestoreFacilityFunctionality';
 import { ADMINISTRATION_PLANS_SUBSCRIPTIONS_ROUTES } from '../../../../../app/routes/constants/administration.paths';
 import {
   canSwitchPlansDuringTrial,
@@ -70,6 +72,7 @@ export const AvailablePlans: React.FC<AvailablePlansProps> = ({ theme }) => {
   const navigate = useNavigate();
   const activeFacilityId = useAppSelector((s) => s.activeContext.activeFacilityId);
   const { confirm } = useConfirm();
+  const { showToast } = useToast();
   const [detailPlan, setDetailPlan] = useState<Plan | null>(null);
 
   const { data: plansResponse, isLoading: plansLoading, refetch: refetchPlans } = useGetPlans();
@@ -79,18 +82,30 @@ export const AvailablePlans: React.FC<AvailablePlansProps> = ({ theme }) => {
     isLoading: subLoading,
   } = useGetFacilitySubscription();
 
-  const createSubscription = useCreateSubscription({
-    onSuccess: () => {
-      navigate(ADMINISTRATION_PLANS_SUBSCRIPTIONS_ROUTES.SUBSCRIPTIONS);
-    },
-  });
-
   const scheduleChange = useScheduleSubscriptionChange();
   const upgradeNow = useUpgradeNow();
 
   const isLoading = plansLoading || subLoading;
   const plans = plansResponse?.data || [];
   const subscription = subscriptionResponse?.data;
+
+  const { restore: restoreFacilityFunctionality } = useRestoreFacilityFunctionality(
+    subscription,
+  );
+
+  const createSubscription = useCreateSubscription({
+    onSuccess: async () => {
+      const restored = await restoreFacilityFunctionality();
+      if (restored) {
+        showToast(
+          'success',
+          'Trial started — all functionalities restored from the server.',
+          5000,
+        );
+      }
+      navigate(ADMINISTRATION_PLANS_SUBSCRIPTIONS_ROUTES.SUBSCRIPTIONS);
+    },
+  });
   const currentPlan = subscription?.effective_plan ?? subscription?.plan;
   const hasActiveSubscription = subscription?.has_access || false;
   const isInTrial = subscription?.status === SubscriptionStatus.TRIAL;

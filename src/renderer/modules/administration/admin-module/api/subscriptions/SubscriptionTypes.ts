@@ -157,6 +157,8 @@ export interface PaymentApprovedBy {
 export interface Payment {
   id: number;
   facility_id: number;
+  facility?: BillingFacilitySummary | null;
+  plan_name?: string | null;
   subscription_id: number;
   amount: number;
   currency: string;             // ISO-4217, e.g. 'UGX'
@@ -238,12 +240,23 @@ export interface PaymentQuote {
 // SUBSCRIPTION RESOURCE SHAPE  (mirror SubscriptionResource.php)
 // ============================================================================
 
-/** Facility summary embedded inside SubscriptionResource. */
-export interface SubscriptionFacilityInfo {
+/** Facility summary for billing tables and platform admin modals. */
+export interface BillingFacilitySummary {
   id: number;
   facility_name: string | null;
   facility_code: string | null;
+  location_label?: string;
+  phone?: string | null;
+  email?: string | null;
+  owner?: {
+    name: string | null;
+    email: string | null;
+    phone: string | null;
+  } | null;
 }
+
+/** Facility summary embedded inside SubscriptionResource. */
+export type SubscriptionFacilityInfo = BillingFacilitySummary;
 
 /**
  * Full subscription shape as returned by SubscriptionResource.
@@ -283,6 +296,8 @@ export interface Subscription {
   onboarding_fee_paid: boolean;
   /** Payments loaded only when the relationship is eager-loaded. */
   payments: Payment[];
+  pending_payments_count?: number;
+  approved_payments_count?: number;
   notes: string | null;
   created_at: string | null;
   updated_at: string | null;

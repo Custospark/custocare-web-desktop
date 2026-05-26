@@ -1,24 +1,17 @@
 import { useEffect, useRef } from 'react';
 
-import { axiosInstance } from '../../app/api/axiosConfig';
 import { useAppDispatch, useAppSelector } from '../../app/store/hooks/useApp';
-import {
-  selectActiveFacility,
-  setUserContext,
-} from '../../app/store/slices/activeContextSlice';
+import { selectActiveFacility } from '../../app/store/slices/activeContextSlice';
 import { getActiveFacilityId } from '../../app/store/utils/contextSelectors';
 import { useGetFacilitySubscription } from '../../modules/administration/admin-module/api/subscriptions/SubscriptionQueries';
 import { OWNER_RESTRICTED_MODULES } from '../../shared/entitlements/entitlements';
+import {
+  facilityContextNeedsRestore,
+  getActiveModuleCodes,
+  modulesAreOwnerRestrictedOnly,
+  restoreFacilityFunctionalityFromBackend,
+} from './facilityContextRestore';
 import { resolveFacilitySubscriptionAccess } from './resolveFacilitySubscriptionAccess';
-
-function modulesAreOwnerRestrictedOnly(moduleCodes: string[]): boolean {
-  return (
-    moduleCodes.length > 0 &&
-    moduleCodes.every((code) =>
-      (OWNER_RESTRICTED_MODULES as readonly string[]).includes(code),
-    )
-  );
-}
 
 /** Re-fetch `/user/context/resolve` when live subscription access and Redux context are out of sync. */
 export function useSubscriptionAccessContextRefresh(): void {
@@ -33,6 +26,7 @@ export function useSubscriptionAccessContextRefresh(): void {
 
   const refreshInFlight = useRef(false);
   const lastSyncedLiveAccess = useRef<boolean | null>(null);
+  const lastExplicitRestoreKey = useRef<string | null>(null);
 
   useEffect(() => {
     if (!activeFacilityId || !subscriptionFetched) {
@@ -46,11 +40,12 @@ export function useSubscriptionAccessContextRefresh(): void {
       cachedHasAccess,
     );
 
-    const activeModuleCodes = (activeFacility?.modules ?? [])
-      .filter((module) => module.is_active)
-      .map((module) => module.code);
-
+    const activeModuleCodes = getActiveModuleCodes(activeFacility);
     const modulesStillOwnerRestricted = modulesAreOwnerRestrictedOnly(activeModuleCodes);
+    const needsExplicitRestore = facilityContextNeedsRestore(
+      subscriptionResponse?.data,
+      activeFacility,
+    );
     const modulesStillFullWhileInactive =
       !resolvedAccess &&
       activeModuleCodes.some(
@@ -65,11 +60,19 @@ export function useSubscriptionAccessContextRefresh(): void {
       (resolvedAccess && modulesStillOwnerRestricted) ||
       (!resolvedAccess && modulesStillFullWhileInactive);
 
-    const shouldRefresh =
+    const explicitRestoreKey = needsExplicitRestore
+      ? `${activeFacilityId}:${subscriptionResponse?.data?.id ?? 'none'}`
+      : null;
+
+    const accessTransitionMismatch =
       (accessMismatch || accessRevokedMismatch || modulesMismatch) &&
       lastSyncedLiveAccess.current !== liveHasAccess;
 
-    if (!shouldRefresh || refreshInFlight.current) {
+    const shouldRefresh =
+      Boolean(explicitRestoreKey && lastExplicitRestoreKey.current !== explicitRestoreKey) ||
+      accessTransitionMismatch;
+
+    if (!shouldRefresh || refreshInFlight.current || !activeFacilityId) {
       if (liveHasAccess !== undefined) {
         lastSyncedLiveAccess.current = liveHasAccess;
       }
@@ -78,16 +81,13 @@ export function useSubscriptionAccessContextRefresh(): void {
 
     refreshInFlight.current = true;
 
-    axiosInstance
-      .get('/user/context/resolve')
-      .then((response) => {
-        const userContext = response.data?.data;
-        if (userContext) {
-          dispatch(setUserContext(userContext));
-        }
-      })
+    restoreFacilityFunctionalityFromBackend(dispatch, activeFacilityId)
+      .catch(() => undefined)
       .finally(() => {
         refreshInFlight.current = false;
+        if (explicitRestoreKey) {
+          lastExplicitRestoreKey.current = explicitRestoreKey;
+        }
         if (liveHasAccess !== undefined) {
           lastSyncedLiveAccess.current = liveHasAccess;
         }
@@ -95,9 +95,8 @@ export function useSubscriptionAccessContextRefresh(): void {
   }, [
     activeFacilityId,
     subscriptionFetched,
-    activeFacility?.has_subscription_access,
-    activeFacility?.modules,
-    subscriptionResponse?.data?.has_access,
+    activeFacility,
+    subscriptionResponse?.data,
     dispatch,
   ]);
 }

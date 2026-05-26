@@ -2,6 +2,30 @@
 
 ---
 
+## 2026-05-26: Restore facility functionalities (backend context resolve)
+
+**Context:** After trial start or payment approval, Redux often still had owner-restricted modules while the subscription API reported `has_access`. Users needed an explicit, reliable way to reload module access from the server.
+
+**Decisions:**
+- **`GET /user/context/resolve`** is the single source of truth for module lists (`UserContextResolverService` uses subscription + plan features).
+- **`restoreFacilityFunctionalityFromBackend`** — refetch subscription, resolve context, `setUserContext` + `switchCapability('staff')` + `switchFacility`.
+- **`useRestoreFacilityFunctionality`** — detects stale Redux via `facilityContextNeedsRestore` (live access + owner-only modules) and optional approved-payment edge case.
+- **UI:** `RestoreFacilityFunctionalityBanner` on Subscriptions and Payments; auto-restore after **Start Free Trial**; Layout hook still auto-syncs once per mismatch.
+- **Backend:** `createSubscription` calls `moduleSyncService->syncForSubscription` when `hasAccess()` (trial) so DB role modules align before context resolve.
+
+---
+
+## 2026-05-26: Billing period dates, days remaining, and plan pricing context
+
+**Context:** After payment approval, `activateSubscription()` called `$now->addMonth()` twice on the same Carbon instance, pushing `next_billing_date` ~2 months out and inflating `days_remaining`. Quotes/proration always read live `plans.price_usd`, which breaks when catalog prices change mid-period.
+
+**Decisions:**
+- **Activation:** one `$periodEnd = $now->copy()->addMonth()`; `starts_at`, `ends_at`, and `next_billing_date` each use explicit copies.
+- **`days_remaining`:** calendar days until `trial_ends_at` (trial) or `next_billing_date` (else `ends_at`).
+- **`metadata.billing_period_price_usd`:** locked on activation/renewal (from quote monthly line or catalog); used as **old** price in proration. **Renewal quotes** use current catalog price. **Upgrade-now** charges target plan catalog price for the remainder. **First activation** quotes use catalog at quote time.
+
+---
+
 ## 2026-05-26: Subscription `payment_action` (backend source of truth)
 
 **Context:** FE inferred "payment required" from plan slice, trial status, metadata, and payment list. Navbar already showed payment state from subscription; plan cards and Payments duplicated fragile client logic.
