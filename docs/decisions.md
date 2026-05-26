@@ -2,6 +2,19 @@
 
 ---
 
+## 2026-05-26: Facility Receipts & Invoices (billing documents)
+
+**Context:** Facilities need formal invoices (amount due) and receipts (proof after admin approval), issued by Custospark Company Ltd for the Custocare product.
+
+**Decisions:**
+- **Issuer:** `BillingIssuer` constant — Custospark Company Ltd, Kampala, Uganda, www.custospark.com; Custocare is a product of Custospark.
+- **Invoice:** Created when facility submits payment (`recordPayment`); line items from `latest_quote` metadata; status unpaid until approved.
+- **Receipt:** `receipt_number` (RCP-YYYY-####) assigned on admin `approvePayment`; linked invoice marked paid.
+- **API:** `GET .../billing-documents/invoices`, `.../invoices/{id}`, `.../receipts`, `.../receipts/{payment}` return list + full `document` payload for preview/print/download.
+- **FE:** Plans & Subscriptions operation renamed **Receipts & Invoices**; tabbed UI (like platform admin Subscriptions/Payments); `BillingDocumentPreview` clinical-style layout.
+
+---
+
 ## 2026-05-26: Restore facility functionalities (backend context resolve)
 
 **Context:** After trial start or payment approval, Redux often still had owner-restricted modules while the subscription API reported `has_access`. Users needed an explicit, reliable way to reload module access from the server.
@@ -954,3 +967,123 @@ Separately, inventory ledger entries for refund/void stock restorations used the
 **Trade-offs:**
 - Users can rapid-click sidebar links again, which risks the original crash scenario (competing lazy chunk loads). The per-route `ErrorBoundary` (Layer 2) still provides protection — a crash in one module won't take down the whole app.
 - No query cancellation before navigation — in-flight API requests from unmounting routes may still fire and update stale closures. This is the original behavior before the three-layer system.
+
+---
+
+## 2026-05-26: AvailablePlans — Responsive "Your plan — trial day X of Y" text
+
+**Context:** The "Your plan — trial day X of Y" badge text in the plan card's action area overflowed on mobile, causing text to overlap with adjacent UI elements.
+
+**Decision:**
+- Wrapped the text in a responsive `<span>` that breaks into two lines on mobile (`<sm`): "Your plan" on one line, "trial day X of Y" below — keeps as one line on desktop (`sm+`).
+- Added `shrink-0` on the `CheckCircle2` icon to prevent compression.
+- Added `leading-tight` for tighter line height on multi-line layout.
+- Added `px-2` padding so text doesn't touch the card border.
+
+**Files changed (FE — 1 file):**
+- `AvailablePlans.tsx` — lines 484-489: replaced single `<span>` with nested `<span>` + responsive block/inline behavior
+
+**Trade-offs:**
+- The `block sm:inline` pattern is simple CSS and doesn't require media query hooks or breakpoint constants. Works with existing Tailwind responsive prefix system.
+- Two-line text on mobile increases badge height slightly but trial badges already have `py-2.5` for vertical padding, so the visual impact is minimal.
+
+---
+
+## 2026-05-26: Backend PDF Generation for Billing Receipts & Invoices
+
+**Context:** The Download button on billing documents was previously saving `.html` files instead of proper PDFs. Facilities need professional, downloadable PDF invoices and receipts for their records.
+
+**Decisions:**
+
+**Backend (Laravel):**
+- Installed `barryvdh/laravel-dompdf` (^3.1) for server-side PDF rendering — no client-side PDF libraries
+- Created `SubscriptionBillingPdfServiceInterface` / `SubscriptionBillingPdfService` — new SOLID pair injected via constructor into `BillingDocumentController`
+- `downloadInvoicePdf(Invoice $invoice)` and `downloadReceiptPdf(Payment $payment)` each use `Pdf::loadView()` with the appropriate Blade template and reuse existing `SubscriptionBillingDocumentServiceInterface::buildInvoiceDocument()`/`buildReceiptDocument()` data arrays
+- Two new Blade templates under `resources/views/pdf/billing/`:
+  - `invoice.blade.php` — Blue header banner, bill-to section, line items table, totals with balance due, footer
+  - `receipt.blade.php` — Emerald header banner, received-from section, payment details box, totals, footer
+- Both templates use dompdf-compatible CSS (DejaVu Sans font, no flexbox fallbacks, `@page` margins)
+- New routes: `GET /invoices/{invoice}/pdf` and `GET /receipts/{payment}/pdf` — both validate facility ownership; receipt additionally checks `approved` status
+- Binding added to `BillingServiceProvider`: `SubscriptionBillingPdfServiceInterface::class => SubscriptionBillingPdfService::class`
+
+**Frontend (React/TypeScript):**
+- `BillingDocumentPreviewModal.handleDownload` now fetches the PDF as a blob from the backend endpoint using `axiosInstance`, creates a download link with `.pdf` extension
+- Falls back to HTML download if the PDF endpoint fails
+- `handlePrint` still uses existing HTML print (works great for browser print dialog)
+- Removed the `downloadBillingDocumentHtml` import (replaced by PDF download)
+
+**Trade-offs:**
+- Server-side PDF generation adds load to the web server for each download. For facility-facing billing (low frequency), dompdf's overhead is negligible.
+- dompdf supports only CSS 2.1 with selected CSS 3 properties — the Blade templates avoid flexbox, floats are used instead for layout. This limits visual design but guarantees consistent output.
+- The HTML fallback on the FE ensures the download still works if the PDF endpoint is unreachable (e.g., dompdf dependency issue during deploy).
+- Font is DejaVu Sans (bundled with dompdf) rather than the app's Inter font — close enough for a downloadable document.
+
+**Files changed (BE):** `composer.json`, `SubscriptionBillingPdfServiceInterface.php` (new), `SubscriptionBillingPdfService.php` (new), `invoice.blade.php` (new), `receipt.blade.php` (new), `BillingDocumentController.php`, `routes/api_v1/facilitySubscriptions/_index.php`, `app/Providers/BillingServiceProvider.php`
+
+**Files changed (FE):** `BillingDocumentPreviewModal.tsx`
+
+---
+
+## 2026-05-26: AvailablePlans — Description layout, cyan contrast, responsive trial text
+
+**Context:** Three visual issues in the AvailablePlans plan cards:
+1. The description `<p>` used `flex-1` in a flex column, making it grow unpredictably and push/overlap the limits grid below.
+2. The limit pill badges used cyan-tinted gradient/text on light mode, where cyan on white/light-blue backgrounds had poor contrast.
+3. The "Your plan — trial day X of Y" text (previous fix) needed responsive wrapping for mobile.
+
+**Decisions:**
+
+**Fix 1 — Description `flex-1` → `min-h-[2.5rem]`** (line 451)
+- Replaced `flex-1` with `min-h-[2.5rem]` so the description has a fixed minimum height (~2 lines of `text-xs`) instead of growing in the flex column and disturbing the grid below.
+
+**Fix 2 — Cyan contrast on light mode badges** (lines 478, 489)
+- Split the gradient/tint classes per theme:
+  - **Light:** `from-blue-600/15 to-blue-500/15 text-blue-700 border-blue-300/40` — clean blue tones, no cyan.
+  - **Dark:** `from-blue-600/15 to-cyan-500/15 text-cyan-300 border-cyan-500/30` — cyan preserved where it pops well.
+
+**Fix 3 — Responsive trial text wrapping** (line 487)
+- `block sm:inline` on the trial portion so "trial day X of Y" drops to a second line on mobile.
+- `leading-tight` for tighter multi-line spacing.
+
+**Files changed (FE — 1 file):**
+- `AvailablePlans.tsx` — 4 class-string edits, plus responsive `span` nesting
+
+**Trade-offs:**
+- `min-h-[2.5rem]` is an arbitrary value that fits ~2 lines at `text-xs`; if font size or line-height changes, this breakpoint would need adjustment.
+- Splitting gradient classes means two separate class strings — no runtime switching, just Tailwind's `dark:` prefix. Simple and static.
+- The responsive wrapping already existed from the previous fix but was refined to use `block sm:inline` + `leading-tight` for better mobile layout.
+
+---
+
+## 2026-05-26: Subscription Approval/Rejection — Optimistic Updates, Confirm Dialog, Spinning Refresh
+
+**Context:** Three UX gaps in the subscription payments workflow:
+
+1. **No optimistic feedback on approval/rejection** — Admin clicking Approve or Reject on a payment saw no UI change until the API responded. On slow networks the button appeared unresponsive.
+2. **No confirmation on approval** — Approving a payment activates the facility's subscription (a consequential action), but there was no "Are you sure?" step before sending the mutation.
+3. **Refresh button had no loading state** — The manual refresh button on `FacilitySubscriptions` silently clicked with no visual feedback while refetching.
+
+**Decisions:**
+
+**1. Optimistic updates in `useAdminApprovePayment` / `useAdminRejectPayment`**
+- Both hooks now have `onMutate`: cancels in-flight queries, snapshots current payments cache (and subscriptions for approve), then optimistically updates all cached payment lists to mark the payment as `approved`/`rejected` instantly.
+- `onError`: restores the cache snapshot from `onMutate` if the API call fails (rollback).
+- React Query context type bumped to `{ snapshot: unknown } | undefined` 4th generic for snapshot/rollback typing.
+
+**2. `useConfirm` dialog before approve**
+- `FacilitySubscriptions.tsx`: The Approve button now triggers a `useConfirm` dialog: *"Approve this payment and activate the subscription for this facility?"* with Approve/Cancel buttons.
+- Proceeds to `approvePay.mutate(...)` only if confirmed.
+
+**3. Spinning refresh button**
+- Added `refreshing` boolean state to `FacilitySubscriptions`.
+- Refresh handler awaits `Promise.all([refetchSubs(), refetchPays()])` then clears `refreshing`.
+- While `refreshing`: `RefreshCw` icon gets `animate-spin`, button is `disabled`.
+
+**Files changed (FE — 2 files):**
+- `SubscriptionQueries.ts` — `useAdminApprovePayment` and `useAdminRejectPayment`: `onMutate`/`onError`/`onSettled` with snapshot/rollback (4 changes: 2 hooks × 2 methods each)
+- `FacilitySubscriptions.tsx` — `useConfirm` dialog wired to approve button, `refreshing` state + spinning icon on refresh button
+
+**Trade-offs:**
+- Optimistic updates assume the mutation will succeed. On server failure, the UI briefly shows the approved/rejected state then reverts — the toast error notification helps users understand the rollback.
+- The confirm dialog adds one extra click to approval. Given the consequence (activating a paid subscription for a facility), the guard is warranted.
+- `refreshing` state is local to the component; if multiple callers need refresh status, it would need lifting. Single-caller pattern keeps it simple.

@@ -83,6 +83,10 @@ import type {
   FacilityPaymentFilters,
   GetAdminInvoicesResponse,
   GetFacilityInvoicesResponse,
+  GetFacilityBillingInvoicesResponse,
+  GetFacilityReceiptsResponse,
+  GetBillingInvoiceDocumentResponse,
+  GetBillingReceiptDocumentResponse,
   GetInvoiceResponse,
   GetPaymentResponse,
   GetPlanResponse,
@@ -154,6 +158,19 @@ export const subscriptionKeys = {
 
     adminList:     (filters?: AdminInvoiceFilters)                 => [...subscriptionKeys.invoices.all, 'admin', 'list', filters ?? {}] as const,
     adminDetail:   (invoiceId: number | string)                    => [...subscriptionKeys.invoices.all, 'admin', 'detail', invoiceId] as const,
+  },
+
+  billingDocuments: {
+    all: ['billing-documents'] as const,
+    facility: (facilityId: number) => [...subscriptionKeys.billingDocuments.all, facilityId] as const,
+    invoices: (facilityId: number, filters?: FacilityInvoiceFilters) =>
+      [...subscriptionKeys.billingDocuments.facility(facilityId), 'invoices', filters ?? {}] as const,
+    invoiceDoc: (facilityId: number, invoiceId: number) =>
+      [...subscriptionKeys.billingDocuments.facility(facilityId), 'invoice-doc', invoiceId] as const,
+    receipts: (facilityId: number, filters?: Record<string, unknown>) =>
+      [...subscriptionKeys.billingDocuments.facility(facilityId), 'receipts', filters ?? {}] as const,
+    receiptDoc: (facilityId: number, paymentId: number) =>
+      [...subscriptionKeys.billingDocuments.facility(facilityId), 'receipt-doc', paymentId] as const,
   },
 };
 
@@ -716,6 +733,10 @@ export const useRecordPayment = (
         queryClient.invalidateQueries({
           queryKey: subscriptionKeys.subscriptions.facility(facilityId),
         });
+        // Refresh invoice list — new invoice was created
+        queryClient.invalidateQueries({
+          queryKey: subscriptionKeys.billingDocuments.facility(facilityId),
+        });
       }
 
       callbacks.onSuccess?.(data);
@@ -1210,7 +1231,8 @@ export const useAdminApprovePayment = (
   return useMutation<
     AdminPaymentResponse,
     AxiosError<ApiErrorResponse>,
-    AdminApprovePaymentParams
+    AdminApprovePaymentParams,
+    { snapshot: unknown } | undefined
   >({
     mutationFn: async ({ paymentId, data = {} }) => {
       const res = await axiosInstance.post<AdminPaymentResponse>(
@@ -1220,6 +1242,30 @@ export const useAdminApprovePayment = (
       return res.data;
     },
 
+    onMutate: async (vars) => {
+      await queryClient.cancelQueries({ queryKey: subscriptionKeys.payments.all });
+      await queryClient.cancelQueries({ queryKey: subscriptionKeys.subscriptions.all });
+
+      const snapshot = {
+        payments: queryClient.getQueriesData({ queryKey: subscriptionKeys.payments.all }),
+        subscriptions: queryClient.getQueriesData({ queryKey: subscriptionKeys.subscriptions.all }),
+      };
+
+      queryClient.setQueriesData({ queryKey: subscriptionKeys.payments.all }, (old: unknown) => {
+        if (!old || typeof old !== 'object' || !('data' in (old as Record<string, unknown>))) return old;
+        const data = (old as Record<string, unknown>).data;
+        if (!Array.isArray(data)) return old;
+        return {
+          ...(old as Record<string, unknown>),
+          data: data.map((p: Record<string, unknown>) =>
+            p.id === vars.paymentId ? { ...p, status: 'approved', status_label: 'Approved' } : p
+          ),
+        };
+      });
+
+      return { snapshot };
+    },
+
     onSuccess: (data, vars) => {
       showToast(
         'success',
@@ -1227,19 +1273,20 @@ export const useAdminApprovePayment = (
         7000,
       );
 
-      // Patch the payment record in cache immediately
       queryClient.setQueryData(subscriptionKeys.payments.adminDetail(vars.paymentId), data);
-
-      // Invalidate all payment lists (pending count drops)
       queryClient.invalidateQueries({ queryKey: subscriptionKeys.payments.all });
-
-      // Invalidate all subscription caches (status changes to active)
       queryClient.invalidateQueries({ queryKey: subscriptionKeys.subscriptions.all });
+      queryClient.invalidateQueries({ queryKey: subscriptionKeys.billingDocuments.all });
 
       callbacks.onSuccess?.(data);
     },
 
-    onError: (error: AxiosError<ApiErrorResponse>) => {
+    onError: (error: AxiosError<ApiErrorResponse>, _vars, context) => {
+      if (context?.snapshot) {
+        const snap = context.snapshot as { payments: [unknown, unknown][]; subscriptions: [unknown, unknown][] };
+        snap.payments.forEach(([key, data]) => queryClient.setQueryData(key, data));
+        snap.subscriptions.forEach(([key, data]) => queryClient.setQueryData(key, data));
+      }
       const axiosErr = error as AxiosError<ApiErrorResponse>;
       const base     = extractErrorMessage(axiosErr, 'Failed to approve payment.');
       const details  = formatValidationErrors(axiosErr.response?.data?.errors);
@@ -1272,7 +1319,8 @@ export const useAdminRejectPayment = (
   return useMutation<
     AdminPaymentResponse,
     AxiosError<ApiErrorResponse>,
-    AdminRejectPaymentParams
+    AdminRejectPaymentParams,
+    { snapshot: unknown } | undefined
   >({
     mutationFn: async ({ paymentId, data }) => {
       const res = await axiosInstance.post<AdminPaymentResponse>(
@@ -1282,19 +1330,38 @@ export const useAdminRejectPayment = (
       return res.data;
     },
 
+    onMutate: async (vars) => {
+      await queryClient.cancelQueries({ queryKey: subscriptionKeys.payments.all });
+      const snapshot = queryClient.getQueriesData({ queryKey: subscriptionKeys.payments.all });
+
+      queryClient.setQueriesData({ queryKey: subscriptionKeys.payments.all }, (old: unknown) => {
+        if (!old || typeof old !== 'object' || !('data' in (old as Record<string, unknown>))) return old;
+        const data = (old as Record<string, unknown>).data;
+        if (!Array.isArray(data)) return old;
+        return {
+          ...(old as Record<string, unknown>),
+          data: data.map((p: Record<string, unknown>) =>
+            p.id === vars.paymentId ? { ...p, status: 'rejected', status_label: 'Rejected' } : p
+          ),
+        };
+      });
+
+      return { snapshot };
+    },
+
     onSuccess: (data, vars) => {
       showToast('success', data.message || 'Payment rejected. Facility has been notified.', 6000);
-
-      // Patch payment record in cache
       queryClient.setQueryData(subscriptionKeys.payments.adminDetail(vars.paymentId), data);
-
-      // Invalidate all payment lists (pending count drops)
       queryClient.invalidateQueries({ queryKey: subscriptionKeys.payments.all });
-
+      queryClient.invalidateQueries({ queryKey: subscriptionKeys.billingDocuments.all });
       callbacks.onSuccess?.(data);
     },
 
-    onError: (error: AxiosError<ApiErrorResponse>) => {
+    onError: (error: AxiosError<ApiErrorResponse>, _vars, context) => {
+      if (context?.snapshot) {
+        const snap = context.snapshot as [unknown, unknown][];
+        snap.forEach(([key, data]) => queryClient.setQueryData(key, data));
+      }
       const base     = extractErrorMessage(error, 'Failed to reject payment.');
       const details  = formatValidationErrors(error.response?.data?.errors);
       showToast('error', details ? `${base} (${details})` : base, 9000);
@@ -1461,6 +1528,72 @@ export const useAdminCancelInvoice = (
       showToast('error', details ? `${base} (${details})` : base, 9000);
       callbacks.onError?.(error);
     },
+  });
+};
+
+/* ========================================================================== */
+/*                    BILLING DOCUMENT QUERIES                                */
+/* ========================================================================== */
+
+export const useGetFacilityBillingInvoices = (filters?: FacilityInvoiceFilters) => {
+  const facilityId = useActiveFacilityId();
+
+  return useQuery<GetFacilityBillingInvoicesResponse, AxiosError<ApiErrorResponse>>({
+    queryKey: subscriptionKeys.billingDocuments.invoices(facilityId!, filters),
+    queryFn: async () => {
+      const res = await axiosInstance.get<GetFacilityBillingInvoicesResponse>(
+        `/facilities/${facilityId}/billing-documents/invoices`,
+        { params: { ...filters, payable_only: true } },
+      );
+      return res.data;
+    },
+    enabled: !!facilityId,
+  });
+};
+
+export const useGetBillingInvoiceDocument = (invoiceId: number | null) => {
+  const facilityId = useActiveFacilityId();
+
+  return useQuery<GetBillingInvoiceDocumentResponse, AxiosError<ApiErrorResponse>>({
+    queryKey: subscriptionKeys.billingDocuments.invoiceDoc(facilityId!, invoiceId ?? 0),
+    queryFn: async () => {
+      const res = await axiosInstance.get<GetBillingInvoiceDocumentResponse>(
+        `/facilities/${facilityId}/billing-documents/invoices/${invoiceId}`,
+      );
+      return res.data;
+    },
+    enabled: !!facilityId && !!invoiceId,
+  });
+};
+
+export const useGetFacilityReceipts = (filters?: { per_page?: number }) => {
+  const facilityId = useActiveFacilityId();
+
+  return useQuery<GetFacilityReceiptsResponse, AxiosError<ApiErrorResponse>>({
+    queryKey: subscriptionKeys.billingDocuments.receipts(facilityId!, filters),
+    queryFn: async () => {
+      const res = await axiosInstance.get<GetFacilityReceiptsResponse>(
+        `/facilities/${facilityId}/billing-documents/receipts`,
+        { params: filters },
+      );
+      return res.data;
+    },
+    enabled: !!facilityId,
+  });
+};
+
+export const useGetBillingReceiptDocument = (paymentId: number | null) => {
+  const facilityId = useActiveFacilityId();
+
+  return useQuery<GetBillingReceiptDocumentResponse, AxiosError<ApiErrorResponse>>({
+    queryKey: subscriptionKeys.billingDocuments.receiptDoc(facilityId!, paymentId ?? 0),
+    queryFn: async () => {
+      const res = await axiosInstance.get<GetBillingReceiptDocumentResponse>(
+        `/facilities/${facilityId}/billing-documents/receipts/${paymentId}`,
+      );
+      return res.data;
+    },
+    enabled: !!facilityId && !!paymentId,
   });
 };
 

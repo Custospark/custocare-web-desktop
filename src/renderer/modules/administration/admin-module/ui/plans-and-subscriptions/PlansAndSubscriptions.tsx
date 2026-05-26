@@ -44,7 +44,7 @@ const PlansAndSubscriptions: React.FC<PlansAndSubscriptionsProps> = ({ theme }) 
         },
         { 
           key: 'invoices', 
-          label: 'Invoices', 
+          label: 'Receipts & Invoices', 
           icon: <FileText className="w-4 h-4" />, 
           to: ADMINISTRATION_PLANS_SUBSCRIPTIONS_ROUTES.INVOICES 
         },

@@ -81,9 +81,23 @@ const formatShortDate = (iso: string | null | undefined): string => {
   return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 };
 
-/** Navbar subtitle — max two words (limited horizontal space). */
+/** Compact date for navbar, e.g. "16 Jul". */
+const formatNavbarDate = (iso: string | null | undefined): string => {
+  if (!iso) return '';
+  return new Date(iso).toLocaleDateString(undefined, {
+    day: 'numeric',
+    month: 'short',
+  });
+};
+
+const navbarDatePhrase = (prefix: string, iso: string | null | undefined): string => {
+  const date = formatNavbarDate(iso);
+  return date ? `${prefix} ${date}` : '';
+};
+
+/** Short static copy when space is tight (payment states, etc.). */
 const navbarSubtitle = (text: string): string =>
-  text.trim().split(/\s+/).filter(Boolean).slice(0, 2).join(' ');
+  text.trim().split(/\s+/).filter(Boolean).slice(0, 3).join(' ');
 
 type StatusBadgeKind = 'trial' | 'active' | 'ending' | 'past_due' | 'scheduled' | 'suspended' | 'cancelled';
 
@@ -134,9 +148,7 @@ const getSubscriptionDisplay = (sub: Subscription | undefined): SubscriptionDisp
     return {
       badge: 'Trial',
       badgeKind: 'trial',
-      subtitle: sub.trial_ends_at
-        ? navbarSubtitle(formatShortDate(sub.trial_ends_at))
-        : '',
+      subtitle: navbarDatePhrase('Trial till', sub.trial_ends_at),
     };
   }
 
@@ -144,9 +156,7 @@ const getSubscriptionDisplay = (sub: Subscription | undefined): SubscriptionDisp
     return {
       badge: 'Ending',
       badgeKind: 'ending',
-      subtitle: sub.access_ends_at
-        ? navbarSubtitle(formatShortDate(sub.access_ends_at))
-        : navbarSubtitle('Ends soon'),
+      subtitle: navbarDatePhrase('Ends', sub.access_ends_at) || navbarSubtitle('Ends soon'),
     };
   }
 
@@ -154,9 +164,8 @@ const getSubscriptionDisplay = (sub: Subscription | undefined): SubscriptionDisp
     return {
       badge: 'Scheduled',
       badgeKind: 'scheduled',
-      subtitle: sub.scheduled_change.effective_at
-        ? navbarSubtitle(formatShortDate(sub.scheduled_change.effective_at))
-        : navbarSubtitle('Change pending'),
+      subtitle: navbarDatePhrase('From', sub.scheduled_change.effective_at)
+        || navbarSubtitle('Change pending'),
     };
   }
 
@@ -165,7 +174,7 @@ const getSubscriptionDisplay = (sub: Subscription | undefined): SubscriptionDisp
       badge: 'Past due',
       badgeKind: 'past_due',
       subtitle: sub.grace_period_ends_at
-        ? navbarSubtitle(formatShortDate(sub.grace_period_ends_at))
+        ? navbarDatePhrase('Grace till', sub.grace_period_ends_at)
         : navbarSubtitle('Payment due'),
     };
   }
@@ -186,12 +195,12 @@ const getSubscriptionDisplay = (sub: Subscription | undefined): SubscriptionDisp
     };
   }
 
+  const periodEnd = sub.next_billing_date ?? sub.ends_at;
+
   return {
     badge: 'Active',
     badgeKind: 'active',
-    subtitle: sub.next_billing_date
-      ? navbarSubtitle(formatShortDate(sub.next_billing_date))
-      : '',
+    subtitle: navbarDatePhrase('Active till', periodEnd),
   };
 };
 

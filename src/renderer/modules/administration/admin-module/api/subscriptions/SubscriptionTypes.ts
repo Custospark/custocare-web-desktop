@@ -169,6 +169,8 @@ export interface Payment {
   status: PaymentStatus | string;
   status_label: string;         // e.g. 'Pending Review'
   transaction_reference: string | null;
+  receipt_number?: string | null;
+  invoice_id?: number | null;
   receipt_url: string | null;   // Public URL to uploaded receipt (if any)
   receipt_download_url?: string | null; // Auth-protected download endpoint
   receipt_path?: string | null;
@@ -667,6 +669,7 @@ export interface Invoice {
   id: number;
   facility_id: number;
   subscription_id: number;
+  payment_id?: number | null;
   invoice_number: string;
   invoice_type: InvoiceType | string;
   invoice_type_label: string;
@@ -703,6 +706,107 @@ export type GetAdminInvoicesResponse = PaginatedResponse<Invoice>;
 
 /** GET /facilities/{facility}/invoices/{invoice} */
 export type GetInvoiceResponse = ApiSuccessResponse<Invoice>;
+
+// ============================================================================
+// BILLING DOCUMENTS (invoices & receipts from backend)
+// ============================================================================
+
+export interface BillingDocumentIssuer {
+  legal_name: string;
+  product_name: string;
+  product_tagline: string;
+  address_line: string;
+  city: string;
+  country: string;
+  website: string;
+  website_label: string;
+  product_of: string;
+}
+
+export interface BillingDocumentLineItem {
+  description: string;
+  quantity: number;
+  unit_price: number;
+  total: number;
+}
+
+export interface BillingDocument {
+  document_type: 'invoice' | 'receipt';
+  document_type_label: string;
+  document_number: string;
+  issuer: BillingDocumentIssuer;
+  bill_to: {
+    facility_id?: number | null;
+    facility_name?: string | null;
+    facility_code?: string | null;
+    email?: string | null;
+    phone?: string | null;
+    address?: string | null;
+  };
+  product: {
+    name: string;
+    description: string;
+    plan_name?: string | null;
+    plan_slug?: string | null;
+    billing_cycle?: string | null;
+  };
+  line_items: BillingDocumentLineItem[];
+  subtotal: number;
+  total: number;
+  paid_amount: number;
+  balance_due: number;
+  currency: string;
+  status: string;
+  status_label: string;
+  issued_at?: string | null;
+  due_at?: string | null;
+  paid_at?: string | null;
+  payment?: {
+    id: number;
+    amount: number;
+    currency: string;
+    method: string;
+    method_label: string;
+    payment_type: string;
+    payment_type_label: string;
+    transaction_reference?: string | null;
+    receipt_number?: string | null;
+    approved_at?: string | null;
+  } | null;
+  invoice_id?: number | null;
+  payment_id?: number | null;
+  notes?: string | null;
+}
+
+export interface SubscriptionReceipt {
+  id: number;
+  receipt_number: string | null;
+  facility_id: number;
+  subscription_id: number;
+  invoice_id?: number | null;
+  amount: number;
+  currency: string;
+  payment_type: string;
+  payment_type_label: string;
+  method_label: string;
+  transaction_reference?: string | null;
+  approved_at?: string | null;
+  paid_at?: string | null;
+  plan_name?: string | null;
+}
+
+export type GetFacilityBillingInvoicesResponse = PaginatedResponse<Invoice>;
+export type GetFacilityReceiptsResponse = PaginatedResponse<SubscriptionReceipt>;
+
+export type GetBillingInvoiceDocumentResponse = ApiSuccessResponse<{
+  invoice: Invoice;
+  document: BillingDocument;
+}>;
+
+export type GetBillingReceiptDocumentResponse = ApiSuccessResponse<{
+  receipt: SubscriptionReceipt;
+  document: BillingDocument;
+}>;
 
 /** Filters for GET /facilities/{facility}/invoices */
 export interface FacilityInvoiceFilters {

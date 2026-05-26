@@ -18,6 +18,7 @@ import {
 import { cn } from '../../../shared/types/cn';
 import { ReceiptViewButton } from '../../../shared/components/billing/ReceiptViewButton';
 import { useClientPagination } from '../../../shared/hooks/useClientPagination';
+import { useConfirm } from '../../../shared/components/Feedback/ConfirmDialog/ConfirmContext';
 import {
   useGetAdminSubscriptions,
   useGetAdminPayments,
@@ -143,6 +144,8 @@ const FacilitySubscriptions: React.FC<Props> = ({ theme }) => {
   const [rejectTarget, setRejectTarget] = useState<{ paymentId: number; label: string } | null>(null);
   const [rejectReason, setRejectReason] = useState('');
   const [facilityModal, setFacilityModal] = useState<BillingFacilitySummary | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const { confirm } = useConfirm();
 
   const { data: subsRes, isLoading: subsLoading, refetch: refetchSubs } = useGetAdminSubscriptions({ per_page: 500 });
   const { data: paysRes, isLoading: paysLoading, refetch: refetchPays } = useGetAdminPayments({ per_page: 500 });
@@ -211,11 +214,16 @@ const FacilitySubscriptions: React.FC<Props> = ({ theme }) => {
         </div>
         <button
           type="button"
-          onClick={() => { refetchSubs(); refetchPays(); }}
+          onClick={async () => {
+            setRefreshing(true);
+            await Promise.all([refetchSubs(), refetchPays()]);
+            setRefreshing(false);
+          }}
+          disabled={refreshing}
           className={cn('p-2 rounded-lg', isDark ? 'hover:bg-gray-800' : 'hover:bg-gray-100')}
           aria-label="Refresh"
         >
-          <RefreshCw className="w-5 h-5" />
+          <RefreshCw className={cn('w-5 h-5', refreshing && 'animate-spin')} />
         </button>
       </div>
 
@@ -466,7 +474,18 @@ const FacilitySubscriptions: React.FC<Props> = ({ theme }) => {
                             <div className="flex items-center justify-center gap-1">
                               <button
                                 type="button"
-                                onClick={() => approvePay.mutate({ paymentId: p.id })}
+                                onClick={async () => {
+                                  const confirmed = await confirm({
+                                    title: 'Approve Payment',
+                                    message: 'Approve this payment and activate the subscription for this facility?',
+                                    confirmText: 'Approve',
+                                    cancelText: 'Cancel',
+                                    variant: 'info',
+                                    theme,
+                                  });
+                                  if (!confirmed) return;
+                                  approvePay.mutate({ paymentId: p.id });
+                                }}
                                 disabled={approvePay.isPending}
                                 className={cn('p-1.5 rounded-md', isDark ? 'hover:bg-emerald-900/30 text-emerald-400' : 'hover:bg-emerald-100 text-emerald-600')}
                                 title="Approve"

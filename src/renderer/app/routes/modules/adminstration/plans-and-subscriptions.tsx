@@ -13,8 +13,8 @@ const AvailablePlans = React.lazy(
 const Payments = React.lazy(
   () => import('../../../../modules/administration/admin-module/ui/plans-and-subscriptions/Payments'),
 );
-const Invoices = React.lazy(
-  () => import('../../../../modules/administration/admin-module/ui/plans-and-subscriptions/Invoices'),
+const ReceiptsAndInvoices = React.lazy(
+  () => import('../../../../modules/administration/admin-module/ui/plans-and-subscriptions/ReceiptsAndInvoices'),
 );
 
 export const plansSubscriptionsRoutes = [
@@ -59,7 +59,7 @@ export const plansSubscriptionsRoutes = [
     path={ADMINISTRATION_PLANS_SUBSCRIPTIONS_ROUTE_SEGMENTS.INVOICES}
     element={
       <SuspenseWrapper variant="table">
-        <WithThemeProp Component={Invoices} />
+        <WithThemeProp Component={ReceiptsAndInvoices} />
       </SuspenseWrapper>
     }
   />,

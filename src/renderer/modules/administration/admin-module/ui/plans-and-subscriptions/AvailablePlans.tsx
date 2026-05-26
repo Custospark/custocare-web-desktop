@@ -448,7 +448,7 @@ export const AvailablePlans: React.FC<AvailablePlansProps> = ({ theme }) => {
                 </span>
               </div>
 
-              <p className={cn("text-xs mb-3 leading-relaxed line-clamp-2 flex-1", theme === 'dark' ? "text-gray-400" : "text-gray-600")}>
+              <p className={cn("text-xs mb-3 leading-relaxed line-clamp-2 min-h-[2.5rem]", theme === 'dark' ? "text-gray-400" : "text-gray-600")}>
                 {plan.description}
               </p>
 
@@ -475,16 +475,27 @@ export const AvailablePlans: React.FC<AvailablePlansProps> = ({ theme }) => {
               {/* Action Buttons */}
               <div className="space-y-2 mt-auto">
                 {isCurrentPlan && !paymentRequired && !isInTrial && (
-                  <span className="w-full py-2.5 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 bg-gradient-to-r from-blue-600/15 to-cyan-500/15 text-blue-700 dark:text-cyan-300 border border-blue-300/40 dark:border-cyan-500/30">
+                  <span className={cn("w-full py-2.5 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 border",
+                    theme === 'dark'
+                      ? "bg-gradient-to-r from-blue-600/15 to-cyan-500/15 text-cyan-300 border-cyan-500/30"
+                      : "bg-gradient-to-r from-blue-600/15 to-blue-500/15 text-blue-700 border-blue-300/40"
+                  )}>
                     <CheckCircle2 className="w-3.5 h-3.5" />
                     Your plan
                   </span>
                 )}
 
                 {isCurrentPlan && isInTrial && !paymentRequired && (
-                  <span className="w-full py-2.5 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 bg-gradient-to-r from-blue-600/15 to-cyan-500/15 text-blue-700 dark:text-cyan-300 border border-blue-300/40 dark:border-cyan-500/30">
-                    <CheckCircle2 className="w-3.5 h-3.5" />
-                    Your plan — trial day {daysOnTrial} of {currentPlanTrialDays}
+                  <span className={cn("w-full py-2.5 px-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 border",
+                    theme === 'dark'
+                      ? "bg-gradient-to-r from-blue-600/15 to-cyan-500/15 text-cyan-300 border-cyan-500/30"
+                      : "bg-gradient-to-r from-blue-600/15 to-blue-500/15 text-blue-700 border-blue-300/40"
+                  )}>
+                    <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                    <span className="text-center leading-tight">
+                      Your plan<span className="hidden sm:inline"> —</span>
+                      <span className="block sm:inline"> trial day {daysOnTrial} of {currentPlanTrialDays}</span>
+                    </span>
                   </span>
                 )}
 

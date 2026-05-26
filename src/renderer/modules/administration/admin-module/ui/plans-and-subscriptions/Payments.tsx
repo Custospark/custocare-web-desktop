@@ -68,7 +68,6 @@ export const Payments: React.FC<PaymentsProps> = ({ theme }) => {
       setSubmitted(true);
       refetch();
       refetchSubscription();
-      showToast('success', 'Proof of payment submitted successfully. Awaiting platform admin approval.', 5000);
     },
   });
 
