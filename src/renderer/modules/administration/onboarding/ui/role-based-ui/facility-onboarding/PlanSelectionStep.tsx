@@ -10,7 +10,9 @@ import {
   planLimitHeadline,
 } from '../../../../../../shared/config/planConfig';
 import { PlanDetailsModal } from './PlanDetailsModal';
-import { useGetCurrencies, useCurrencyConvert } from '../../../../admin-module/api/subscriptions/CurrencyQueries';
+import { CURRENCIES } from '../../../../../../shared/utils/currencies';
+import { formatCurrencyWithCustomCurrency } from '../../../../../../shared/utils/formatCurrency';
+import { useCurrencyConvert } from '../../../../admin-module/api/subscriptions/CurrencyQueries';
 
 interface PlanPricing {
   usd: number;
@@ -58,8 +60,6 @@ export const PlanSelectionStep: React.FC<PlanSelectionStepProps> = ({
 }) => {
   const [detailPlan, setDetailPlan] = useState<Plan | null>(null);
   const [displayCurrency, setDisplayCurrency] = useState('USD');
-  const { data: currenciesRes } = useGetCurrencies();
-  const currencies = currenciesRes?.data ?? [];
   const { data: rateData } = useCurrencyConvert(1, 'USD', displayCurrency);
   const exchangeRate = rateData?.data?.converted ?? null;
   const convertPrice = (usd: number) =>
@@ -106,29 +106,27 @@ export const PlanSelectionStep: React.FC<PlanSelectionStepProps> = ({
         </p>
       </div>
 
-      {currencies.length > 0 && (
-        <div className="flex items-center justify-end gap-2">
-          <label className={cn('text-xs font-medium', isDark ? 'text-gray-400' : 'text-gray-500')}>
-            Show prices in
-          </label>
-          <select
-            value={displayCurrency}
-            onChange={(e) => setDisplayCurrency(e.target.value)}
-            className={cn(
-              'px-2 py-1 rounded-lg border text-xs font-medium',
-              isDark
-                ? 'bg-gray-800 border-gray-700 text-white'
-                : 'bg-white border-gray-200 text-gray-900',
-            )}
-          >
-            {currencies.map((c) => (
-              <option key={c.code} value={c.code}>
-                {c.code} — {c.symbol}
-              </option>
-            ))}
-          </select>
-        </div>
-      )}
+      <div className="flex items-center justify-end gap-2">
+        <label className={cn('text-xs font-medium', isDark ? 'text-gray-400' : 'text-gray-500')}>
+          Show prices in
+        </label>
+        <select
+          value={displayCurrency}
+          onChange={(e) => setDisplayCurrency(e.target.value)}
+          className={cn(
+            'px-2 py-1 rounded-lg border text-xs font-medium',
+            isDark
+              ? 'bg-gray-800 border-gray-700 text-white'
+              : 'bg-white border-gray-200 text-gray-900',
+          )}
+        >
+          {CURRENCIES.map((c) => (
+            <option key={c.code} value={c.code}>
+              {c.code} — {c.symbol}
+            </option>
+          ))}
+        </select>
+      </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {sorted.map((plan) => {
@@ -181,8 +179,7 @@ export const PlanSelectionStep: React.FC<PlanSelectionStepProps> = ({
                   </span>
                   {displayCurrency !== 'USD' && exchangeRate !== null && (
                     <p className={cn("text-xs mt-0.5", isDark ? "text-gray-500" : "text-gray-400")}>
-                      ≈ {currencies.find((c) => c.code === displayCurrency)?.symbol ?? ''}
-                      {convertPrice(plan.pricing.usd)?.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                      ≈ {formatCurrencyWithCustomCurrency(convertPrice(plan.pricing.usd), displayCurrency)}
                     </p>
                   )}
                 </div>

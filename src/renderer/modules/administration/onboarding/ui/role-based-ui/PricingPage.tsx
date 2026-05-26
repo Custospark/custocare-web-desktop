@@ -8,7 +8,9 @@ import { LandingLayout } from './LandingLayout';
 import { useGetPlans } from '../../../admin-module/api/subscriptions/SubscriptionQueries';
 import { TIER_FEATURES, calcAnnualPrice } from '../../../../../shared/config/planConfig';
 import type { Plan } from '../../../admin-module/api/subscriptions/SubscriptionTypes';
-import { useGetCurrencies, useCurrencyConvert } from '../../../admin-module/api/subscriptions/CurrencyQueries';
+import { CURRENCIES } from '../../../../../shared/utils/currencies';
+import { formatCurrencyWithCustomCurrency } from '../../../../../shared/utils/formatCurrency';
+import { useCurrencyConvert } from '../../../admin-module/api/subscriptions/CurrencyQueries';
 
 interface DisplayTier {
   name: string;
@@ -62,13 +64,10 @@ export const PricingPage: React.FC = () => {
   const [annual, setAnnual] = useState(false);
   const [displayCurrency, setDisplayCurrency] = useState('USD');
   const { data: plansResponse, isLoading, error } = useGetPlans();
-  const { data: currenciesRes } = useGetCurrencies();
-  const currencies = currenciesRes?.data ?? [];
   const { data: rateData } = useCurrencyConvert(1, 'USD', displayCurrency);
   const exchangeRate = rateData?.data?.converted ?? null;
   const convertPrice = (usd: number) =>
     exchangeRate !== null ? Math.round(usd * exchangeRate * 100) / 100 : null;
-  const symbol = currencies.find((c) => c.code === displayCurrency)?.symbol ?? '';
 
   const tiers = plansResponse?.data ? buildTiers(plansResponse.data) : [];
 
@@ -123,29 +122,27 @@ export const PricingPage: React.FC = () => {
             </span>
           </div>
 
-          {currencies.length > 0 && (
-            <div className="flex items-center justify-center gap-2 mt-4">
-              <label className={cn('text-xs font-medium', theme === 'dark' ? 'text-slate-400' : 'text-slate-500')}>
-                Show prices in
-              </label>
-              <select
-                value={displayCurrency}
-                onChange={(e) => setDisplayCurrency(e.target.value)}
-                className={cn(
-                  'px-2 py-1 rounded-lg border text-xs font-medium',
-                  theme === 'dark'
-                    ? 'bg-slate-800 border-slate-700 text-white'
-                    : 'bg-white border-slate-200 text-slate-900',
-                )}
-              >
-                {currencies.map((c) => (
-                  <option key={c.code} value={c.code}>
-                    {c.code} — {c.symbol}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
+          <div className="flex items-center justify-center gap-2 mt-4">
+            <label className={cn('text-xs font-medium', theme === 'dark' ? 'text-slate-400' : 'text-slate-500')}>
+              Show prices in
+            </label>
+            <select
+              value={displayCurrency}
+              onChange={(e) => setDisplayCurrency(e.target.value)}
+              className={cn(
+                'px-2 py-1 rounded-lg border text-xs font-medium',
+                theme === 'dark'
+                  ? 'bg-slate-800 border-slate-700 text-white'
+                  : 'bg-white border-slate-200 text-slate-900',
+              )}
+            >
+              {CURRENCIES.map((c) => (
+                <option key={c.code} value={c.code}>
+                  {c.code} — {c.symbol}
+                </option>
+              ))}
+            </select>
+          </div>
         </motion.div>
 
         {isLoading ? (
@@ -213,9 +210,10 @@ export const PricingPage: React.FC = () => {
                       )}
                       {displayCurrency !== 'USD' && exchangeRate !== null && (
                         <p className={cn("text-xs mt-1", theme === 'dark' ? "text-slate-500" : "text-slate-400")}>
-                          ≈ {symbol}{convertPrice(
-                            annual ? calcAnnualPrice(tier.monthlyPrice) : tier.monthlyPrice
-                          )?.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                          ≈ {formatCurrencyWithCustomCurrency(
+                            convertPrice(annual ? calcAnnualPrice(tier.monthlyPrice) : tier.monthlyPrice),
+                            displayCurrency,
+                          )}
                         </p>
                       )}
                     </div>
