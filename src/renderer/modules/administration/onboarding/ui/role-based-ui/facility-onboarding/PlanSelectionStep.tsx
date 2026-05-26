@@ -107,7 +107,7 @@ export const PlanSelectionStep: React.FC<PlanSelectionStepProps> = ({
       </div>
 
       <div className="flex items-center justify-end gap-2">
-        <label className={cn('text-xs font-medium', isDark ? 'text-gray-400' : 'text-gray-500')}>
+        <label className={cn('text-xs font-medium', theme === 'dark' ? 'text-gray-400' : 'text-gray-500')}>
           Show prices in
         </label>
         <select
@@ -115,7 +115,7 @@ export const PlanSelectionStep: React.FC<PlanSelectionStepProps> = ({
           onChange={(e) => setDisplayCurrency(e.target.value)}
           className={cn(
             'px-2 py-1 rounded-lg border text-xs font-medium',
-            isDark
+            theme === 'dark'
               ? 'bg-gray-800 border-gray-700 text-white'
               : 'bg-white border-gray-200 text-gray-900',
           )}
@@ -178,7 +178,7 @@ export const PlanSelectionStep: React.FC<PlanSelectionStepProps> = ({
                     /month
                   </span>
                   {displayCurrency !== 'USD' && exchangeRate !== null && (
-                    <p className={cn("text-xs mt-0.5", isDark ? "text-gray-500" : "text-gray-400")}>
+                    <p className={cn("text-xs mt-0.5", theme === 'dark' ? "text-gray-500" : "text-gray-400")}>
                       ≈ {formatCurrencyWithCustomCurrency(convertPrice(plan.pricing.usd), displayCurrency)}
                     </p>
                   )}
