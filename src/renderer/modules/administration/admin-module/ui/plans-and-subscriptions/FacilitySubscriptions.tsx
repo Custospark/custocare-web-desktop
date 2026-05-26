@@ -583,7 +583,7 @@ export const FacilitySubscriptions: React.FC<FacilitySubscriptionsProps> = ({
                           <div>
                             <p className={cn('text-sm', isDark ? 'text-gray-400' : 'text-gray-600')}>Next Billing</p>
                             <p className="font-medium">
-                              {new Date(subscription.next_billing_date).toLocaleDateString()}
+                              {new Date(subscription.next_billing_date).toLocaleDateString('en-US', { timeZone: 'UTC', month: 'short', day: 'numeric', year: 'numeric' })}
                             </p>
                           </div>
                         </div>

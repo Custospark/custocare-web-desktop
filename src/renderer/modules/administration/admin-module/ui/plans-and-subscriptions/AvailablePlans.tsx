@@ -217,7 +217,7 @@ export const AvailablePlans: React.FC<AvailablePlansProps> = ({ theme }) => {
     const effectiveLabel = effectiveAt
       ? new Date(effectiveAt).toLocaleDateString()
       : subscription?.next_billing_date
-        ? new Date(subscription.next_billing_date).toLocaleDateString()
+        ? new Date(subscription.next_billing_date).toLocaleDateString('en-US', { timeZone: 'UTC' })
         : 'your next billing date';
 
     const confirmed = await confirm({
@@ -312,7 +312,7 @@ export const AvailablePlans: React.FC<AvailablePlansProps> = ({ theme }) => {
             </p>
             <p className={cn("text-xs", theme === 'dark' ? "text-gray-400" : "text-gray-600")}>
               {subscription?.next_billing_date
-                ? `Next billing: ${new Date(subscription.next_billing_date).toLocaleDateString()}`
+                ? `Next billing: ${new Date(subscription.next_billing_date).toLocaleDateString('en-US', { timeZone: 'UTC' })}`
                 : 'Manage your subscription below'}
             </p>
           </div>
