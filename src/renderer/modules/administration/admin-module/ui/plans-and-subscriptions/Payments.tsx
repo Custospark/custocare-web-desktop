@@ -23,6 +23,7 @@ import {
 } from '../../api/subscriptions/SubscriptionTypes';
 import { cn } from '../../../../../shared/types/cn';
 import { useToast } from '../../../../../app/store/contexts/toast/useToast';
+import LoadingSkeleton from '../../../../../shared/components/Loading/LoadingSkeletons';
 import { ADMINISTRATION_PLANS_SUBSCRIPTIONS_ROUTES } from '../../../../../app/routes/constants/administration.paths';
 import { ReceiptViewButton } from '../../../../../shared/components/billing/ReceiptViewButton';
 import { RestoreFacilityFunctionalityBanner } from '../../../../../shared/components/billing/RestoreFacilityFunctionalityBanner';
@@ -55,7 +56,7 @@ export const Payments: React.FC<PaymentsProps> = ({ theme }) => {
   const [submitted, setSubmitted] = useState(false);
   const navigate = useNavigate();
 
-  const { data: subResp, refetch: refetchSubscription } = useGetFacilitySubscription();
+  const { data: subResp, isLoading: subLoading, refetch: refetchSubscription } = useGetFacilitySubscription();
   const { data: paymentsResp, refetch } = useGetFacilityPayments({ per_page: 100 });
   const { data: plansResp } = useGetPlans();
 
@@ -170,6 +171,14 @@ export const Payments: React.FC<PaymentsProps> = ({ theme }) => {
     });
   };
 
+  if (subLoading) {
+    return (
+      <div className="space-y-6 max-w-3xl mx-auto">
+        <LoadingSkeleton variant="default" theme={theme} message="Loading payment details…" />
+      </div>
+    );
+  }
+
   if (noSubscription) {
     return (
       <div className="space-y-6 max-w-3xl mx-auto">
@@ -216,6 +225,11 @@ export const Payments: React.FC<PaymentsProps> = ({ theme }) => {
           {planName && (
             <p className={cn('text-sm', isDark ? 'text-gray-400' : 'text-gray-600')}>
               {planName}
+              {subscription?.billing_cycle && (
+                <span className="ml-2 font-medium capitalize text-blue-500">
+                  ({subscription.billing_cycle === 'yearly' ? 'Annual' : 'Monthly'} billing)
+                </span>
+              )}
             </p>
           )}
         </div>
@@ -286,10 +300,7 @@ export const Payments: React.FC<PaymentsProps> = ({ theme }) => {
             </div>
           )}
           {quoteLoading && (
-            <div className="flex items-center justify-center gap-2 py-4 text-sm text-gray-500">
-              <Loader2 className="w-4 h-4 animate-spin" />
-              Loading payment quote…
-            </div>
+            <LoadingSkeleton variant="default" theme={theme} message="Loading payment quote…" />
           )}
           {!quoteLoading && lineItems.map((item, idx) => (
             <div key={idx} className="flex justify-between items-center">
@@ -413,7 +424,7 @@ export const Payments: React.FC<PaymentsProps> = ({ theme }) => {
 
                 <input
                   type="text"
-                  placeholder="Transaction reference (e.g. STANBIC-12345)"
+                  placeholder="Transaction reference (e.g. 12345)"
                   value={reference}
                   onChange={(e) => setReference(e.target.value)}
                   disabled={!canSubmitProof}

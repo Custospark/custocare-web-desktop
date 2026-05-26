@@ -156,9 +156,13 @@ export const AvailablePlans: React.FC<AvailablePlansProps> = ({ theme }) => {
     if (!plan || !currentPlan) return;
 
     if (subscriptionNeedsPayment(subscription)) {
+      const cycleLabel = annual ? 'Annual' : 'Monthly';
+      const cycleDesc = annual
+        ? `Billed once per year at ${plan.pricing.annual_usd ?? Math.round(plan.pricing.usd * 10)} USD.`
+        : `Billed ${plan.pricing.usd} USD per month.`;
       const confirmed = await confirm({
-        title: 'Switch plan',
-        message: `Switch to ${plan.name} and complete payment for that plan.`,
+        title: `Switch to ${plan.name} — ${cycleLabel}`,
+        message: `Switch to ${plan.name} and complete payment for that plan.\n\n${cycleDesc}`,
         confirmText: 'Switch & pay',
         cancelText: 'Cancel',
         variant: 'info',
@@ -186,13 +190,17 @@ export const AvailablePlans: React.FC<AvailablePlansProps> = ({ theme }) => {
     if (!activeFacilityId) return;
     if (isSubscribedToPlan(subscription, planId)) return;
 
+    const cycleLabel = annual ? 'Annual' : 'Monthly';
+    const cycleDesc = annual
+      ? `Billed once per year at ${plan.pricing.annual_usd ?? Math.round(plan.pricing.usd * 10)} USD (${Math.round(plan.pricing.usd * 2)} USD off).`
+      : `Billed ${plan.pricing.usd} USD per month.`;
     const trialDays = plan.trial_days ?? 0;
     const confirmed = await confirm({
-      title: 'Subscribe to Plan',
+      title: `Subscribe — ${cycleLabel} Plan`,
       message: trialDays > 0
-        ? `Start a ${plan.name} subscription with a ${trialDays}-day free trial.`
-        : `Start a ${plan.name} subscription.`,
-      confirmText: trialDays > 0 ? 'Start Free Trial' : 'Subscribe',
+        ? `Start a ${plan.name} subscription with a ${trialDays}-day free trial.\n\n${cycleDesc}\n\nYou can switch or cancel anytime before the billing date.`
+        : `Start a ${plan.name} subscription.\n\n${cycleDesc}`,
+      confirmText: trialDays > 0 ? `Start ${cycleLabel} Free Trial` : `Subscribe ${cycleLabel}`,
       cancelText: 'Cancel',
       variant: 'info',
       theme,

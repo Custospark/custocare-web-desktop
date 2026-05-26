@@ -532,7 +532,7 @@ export const FacilitySubscriptions: React.FC<FacilitySubscriptionsProps> = ({
                 <SubscriptionTimeline theme={theme} subscription={subscription} payments={payments} />
               ) : (                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {/* Plan Details */}
-                  <div className="space-y-4">
+                    <div className="space-y-4">
                     <h3 className="font-semibold">Plan Details</h3>
                     <div className="space-y-3">
                       <div className="flex items-start gap-2">
@@ -542,15 +542,26 @@ export const FacilitySubscriptions: React.FC<FacilitySubscriptionsProps> = ({
                           <p className="font-medium">
                             ${(() => {
                               const isYearly = subscription.billing_cycle === 'yearly';
-                              const basePrice = subscription.plan?.pricing.usd ?? 0;
-                              return isYearly ? Math.round(basePrice * 10 / 12) : basePrice;
-                            })()} USD / {subscription.billing_cycle ?? 'monthly'}
+                              return isYearly
+                                ? Math.round((subscription.plan?.pricing.usd ?? 0) * 10 / 12)
+                                : (subscription.plan?.pricing.usd ?? 0);
+                            })()} USD / month (billed {subscription.billing_cycle === 'yearly' ? 'annually' : 'monthly'})
                           </p>
                           {subscription.billing_cycle === 'yearly' && (
                             <p className={cn('text-xs mt-0.5', isDark ? 'text-emerald-400' : 'text-emerald-600')}>
-                              ${Math.round((subscription.plan?.pricing.usd ?? 0) * 10)}/yr — save ${Math.round((subscription.plan?.pricing.usd ?? 0) * 2)}/yr
+                              ${Math.round((subscription.plan?.pricing.usd ?? 0) * 10)}/yr billed annually
                             </p>
                           )}
+                        </div>
+                      </div>
+
+                      <div className="flex items-start gap-2">
+                        <RefreshCw className={cn('w-4 h-4 mt-0.5', isDark ? 'text-gray-500' : 'text-gray-400')} />
+                        <div>
+                          <p className={cn('text-sm', isDark ? 'text-gray-400' : 'text-gray-600')}>Billing Cycle</p>
+                          <p className="font-medium capitalize">
+                            {subscription.billing_cycle === 'yearly' ? 'Annual' : 'Monthly'}
+                          </p>
                         </div>
                       </div>
 
