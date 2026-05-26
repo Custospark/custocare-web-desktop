@@ -5,11 +5,13 @@
 import React from 'react';
 import { useSelector } from 'react-redux';
 import { useNetworkStatusMonitor } from '../../../app/store/hooks/useNetworkStatusMonitor';
+import { useNetworkStatusToasts } from '../../../app/store/hooks/useNetworkStatusToasts';
 import { selectIsCompletelyOffline } from '../../../app/store/slices/networkSlice';
 import Offline from './Offline';
 
 const NetworkOfflineOverlay: React.FC = () => {
   useNetworkStatusMonitor();
+  useNetworkStatusToasts();
 
   const isCompletelyOffline = useSelector(selectIsCompletelyOffline);
 

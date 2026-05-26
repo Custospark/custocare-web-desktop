@@ -8,8 +8,14 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-type ToastVariant = 'success' | 'error' | 'warning' | 'info';
-type ToastPosition = 'top-center' | 'top-right' | 'top-left' | 'bottom-center' | 'bottom-right' | 'bottom-left';
+export type ToastVariant = 'success' | 'error' | 'warning' | 'info';
+export type ToastPosition =
+  | 'top-center'
+  | 'top-right'
+  | 'top-left'
+  | 'bottom-center'
+  | 'bottom-right'
+  | 'bottom-left';
 
 interface ToastProps {
   variant: ToastVariant;
@@ -240,11 +246,14 @@ const Toast: React.FC<ToastProps> = ({
 interface ToastContainerProps {
   children: React.ReactNode;
   position?: ToastPosition;
+  /** Above modals / offline overlay when needed (default 9999). */
+  zIndex?: number;
 }
 
-export const ToastContainer: React.FC<ToastContainerProps> = ({ 
-  children, 
-  position = 'top-right' 
+export const ToastContainer: React.FC<ToastContainerProps> = ({
+  children,
+  position = 'top-right',
+  zIndex = 9999,
 }) => {
   const positionClasses = {
     'top-center': 'top-2 sm:top-4 left-1/2 -translate-x-1/2',
@@ -264,17 +273,17 @@ export const ToastContainer: React.FC<ToastContainerProps> = ({
   };
 
   return (
-    <div 
+    <div
       className={`
-        fixed 
+        fixed
         ${positionClasses[position]}
-        z-[9999]
-        flex 
-        flex-col 
+        flex
+        flex-col
         gap-2 sm:gap-3
         pointer-events-none
         ${getWidthClasses()}
       `}
+      style={{ zIndex }}
     >
       {children}
     </div>
@@ -298,15 +307,17 @@ interface ToastManagerProps {
   toasts: ToastItem[];
   onRemove: (id: string) => void;
   position?: ToastPosition;
+  zIndex?: number;
 }
 
-export const ToastManager: React.FC<ToastManagerProps> = ({ 
-  toasts, 
+export const ToastManager: React.FC<ToastManagerProps> = ({
+  toasts,
   onRemove,
-  position = 'top-right' 
+  position = 'top-right',
+  zIndex,
 }) => {
   return (
-    <ToastContainer position={position}>
+    <ToastContainer position={position} zIndex={zIndex}>
       <AnimatePresence mode="popLayout">
         {toasts.map((toast) => (
           <motion.div

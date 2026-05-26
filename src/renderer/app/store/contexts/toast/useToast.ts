@@ -1,9 +1,17 @@
-import{ createContext, useContext} from 'react';
+import { createContext, useContext } from 'react';
+import type { ToastPosition } from '../../../../shared/components/Feedback/Toast';
 
 export type ToastVariant = 'success' | 'error' | 'warning' | 'info';
+export type { ToastPosition };
 
 interface ToastContextType {
-  showToast: (variant: ToastVariant, message: string, duration?: number) => void;
+  showToast: (
+    variant: ToastVariant,
+    message: string,
+    duration?: number,
+    position?: ToastPosition,
+    elevated?: boolean,
+  ) => void;
   hideToast: (id: string) => void;
 }
 export const ToastContext = createContext<ToastContextType | undefined>(undefined);

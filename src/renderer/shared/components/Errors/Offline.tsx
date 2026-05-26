@@ -19,7 +19,7 @@ import LogoImage from '../../assets/LogoImage';
 import { BrandName, BRAND_TAGLINE } from '../../utils/BrandName';
 import { selectTheme } from '../../../app/store/slices/uiSlice';
 import { selectUser } from '../../../app/store/slices/authSlice';
-import type { UnifiedUserProfile } from '../../types/userTypes';
+import { getUserFirstName } from '../../utils/userGreeting';
 import { cn } from '../../utils/classNameUtils';
 
 const CONNECTION_TIPS = [
@@ -43,22 +43,6 @@ const CONNECTION_TIPS = [
 
 type RetryStatus = 'idle' | 'checking' | 'still_offline' | 'reconnecting';
 
-/** First name for greeting — profile.first_name, else first token of display name. */
-function getGreetingName(user: UnifiedUserProfile | null): string | null {
-  if (!user) return null;
-
-  const first = user.profile?.first_name?.trim();
-  if (first) return first;
-
-  const display =
-    user.profile?.display_name?.trim() ||
-    user.profile?.full_name?.trim() ||
-    user.name?.trim();
-  if (!display) return null;
-
-  return display.split(/\s+/)[0] ?? null;
-}
-
 function buildCopy(greetingName: string | null): { headline: string; reassurance: string } {
   if (greetingName) {
     return {
@@ -79,7 +63,7 @@ const Offline: React.FC = () => {
   const user = useSelector(selectUser);
   const isDark = theme === 'dark';
 
-  const greetingName = useMemo(() => getGreetingName(user), [user]);
+  const greetingName = useMemo(() => getUserFirstName(user), [user]);
   const { headline, reassurance } = useMemo(
     () => buildCopy(greetingName),
     [greetingName],

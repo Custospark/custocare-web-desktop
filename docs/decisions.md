@@ -11,6 +11,7 @@
 - Concise, empathetic copy; `BrandName` + `BRAND_TAGLINE` (same as navbar); no dashboard CTA — global overlay for any route.
 - Actionable “What you can try” tips; Reconnect dispatches `checkNetworkConnectivity`.
 - **`networkSlice`** (`systemStatus`: online | slow | offline) — monitor at root via `NetworkOfflineOverlay`; full-screen UI only when `offline` (slow keeps app usable). Layout status bar reads same slice.
+- Connectivity toasts: `info` (offline) / `success` (back online), 8s, **top-center**, `z-index` 10001 (above overlay); personalized via `getUserFirstName`.
 - Preview route `ROUTES.OFFLINE` (`/offline`) in `ErrorRoutes`; listed in `ModuleAccessMiddleware` bypass lists. No `navigator.onLine` wiring yet.
 - **Preview URL (dev):** `http://localhost:5173/#/offline`
 

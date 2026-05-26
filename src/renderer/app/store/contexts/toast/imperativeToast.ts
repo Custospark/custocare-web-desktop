@@ -9,9 +9,16 @@
  *  2. axiosConfig (or anything outside React) calls `imperativeToast.show(...)`.
  */
 
+import type { ToastPosition } from '../../../../shared/components/Feedback/Toast';
 import type { ToastVariant } from './useToast';
 
-type ShowToastFn = (variant: ToastVariant, message: string, duration?: number) => void;
+type ShowToastFn = (
+  variant: ToastVariant,
+  message: string,
+  duration?: number,
+  position?: ToastPosition,
+  elevated?: boolean,
+) => void;
 
 let _handler: ShowToastFn | null = null;
 
@@ -27,9 +34,15 @@ export const imperativeToast = {
   },
 
   /** Fire a toast from anywhere — inside or outside React. */
-  show(variant: ToastVariant, message: string, duration = 6000): void {
+  show(
+    variant: ToastVariant,
+    message: string,
+    duration = 6000,
+    position?: ToastPosition,
+    elevated?: boolean,
+  ): void {
     if (_handler) {
-      _handler(variant, message, duration);
+      _handler(variant, message, duration, position, elevated);
     } else {
       // Provider not mounted yet (early boot edge-case)
       console.warn(
