@@ -15,12 +15,19 @@ import React, {
   useState, useCallback, useRef, useMemo,
 } from 'react';
 import {
-  X, AlertCircle, Mail, Phone,
+  X, AlertCircle, Mail, Phone, BookUser, UserPlus, Users,
 } from 'lucide-react';
+import { ComposeContactPicker, type NotebookRecipientPick, type RecipientTargetField } from './ComposeContactPicker';
 import type { Recipient, StoredContact } from './composeTypes';
 import { cn } from '../../../../../shared/types/cn';
 import { loadStoredContacts } from './useComposeState';
 import { PhoneInputWithCountryCode } from '../../../../../shared/components/Forms/PhoneInputWithCountryCode';
+import {
+  useGetMessageContacts,
+  useTouchMessageContact,
+} from '../../../api/messageContacts/MessageContactQueries';
+import type { MessageContact } from '../../../api/messageContacts/MessageContactTypes';
+import { filterMessageContacts } from '../../../api/messageContacts/messageContactDisplay';
 import {
   isValidInternationalPhone,
   looksLikeEmailInput,
@@ -44,6 +51,31 @@ const filterContacts = (query: string, contacts: StoredContact[]): StoredContact
     )
     .sort((a, b) => b.useCount - a.useCount)
     .slice(0, 8);
+};
+
+const notebookToStored = (contact: MessageContact): StoredContact => ({
+  id: `nb_${contact.id}`,
+  name: contact.display_name,
+  email: contact.email ?? '',
+  phone: contact.phone ?? undefined,
+  useCount: 0,
+  lastUsed: contact.last_used_at ? Date.parse(contact.last_used_at) : 0,
+});
+
+const mergeContactSuggestions = (
+  local: StoredContact[],
+  notebook: MessageContact[],
+): StoredContact[] => {
+  const merged = [...notebook.map(notebookToStored), ...local];
+  const seen = new Set<string>();
+  const result: StoredContact[] = [];
+  for (const item of merged) {
+    const key = (item.email || item.phone || item.id).toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    result.push(item);
+  }
+  return result.slice(0, 12);
 };
 
 /* ── chip ───────────────────────────────────────────────────────── */
@@ -163,6 +195,8 @@ interface RecipientRowProps {
   isDark: boolean;
   onAdd: (type: 'to' | 'cc' | 'bcc', input: string, name?: string) => void;
   onRemove: (type: 'to' | 'cc' | 'bcc', id: string) => void;
+  onSaveToContacts?: (payload: { display_name: string; email?: string; phone?: string }) => void;
+  isSavingContact?: boolean;
   error?: string;
   rightSlot?: React.ReactNode;
 }
@@ -170,7 +204,7 @@ interface RecipientRowProps {
 type RecipientInputMode = 'email' | 'phone';
 
 const RecipientRow: React.FC<RecipientRowProps> = ({
-  type, label, recipients, isDark, onAdd, onRemove, error, rightSlot,
+  type, label, recipients, isDark, onAdd, onRemove, onSaveToContacts, isSavingContact, error, rightSlot,
 }) => {
   const [inputMode, setInputMode] = useState<RecipientInputMode>('email');
   const [inputValue, setInputValue] = useState('');
@@ -180,6 +214,22 @@ const RecipientRow: React.FC<RecipientRowProps> = ({
   const [showSuggest, setShowSuggest] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const contacts = useMemo(() => loadStoredContacts(), []);
+
+  const { data: notebookList } = useGetMessageContacts({ per_page: 100 });
+
+  const touchContact = useTouchMessageContact();
+
+  const refreshSuggestions = useCallback(
+    (query: string) => {
+      const local = filterContacts(query, contacts);
+      const notebook = filterMessageContacts(notebookList?.data ?? [], query);
+      const merged = mergeContactSuggestions(local, notebook);
+      setSuggestions(merged);
+      setShowSuggest(merged.length > 0);
+      setHighlightIdx(-1);
+    },
+    [contacts, notebookList?.data],
+  );
 
   const commitEmail = useCallback(
     (value: string, name?: string) => {
@@ -206,6 +256,10 @@ const RecipientRow: React.FC<RecipientRowProps> = ({
 
   const selectSuggestion = useCallback(
     (contact: StoredContact) => {
+      if (contact.id.startsWith('nb_')) {
+        const notebookId = contact.id.replace(/^nb_/, '');
+        touchContact.mutate(notebookId);
+      }
       if (contact.email && validateEmail(contact.email)) {
         setInputMode('email');
         commitEmail(contact.email, contact.name);
@@ -213,14 +267,13 @@ const RecipientRow: React.FC<RecipientRowProps> = ({
       }
       if (contact.phone) {
         setInputMode('phone');
-        setPhoneValue(normalizePhoneInput(contact.phone));
         onAdd(type, normalizePhoneInput(contact.phone), contact.name);
         setPhoneValue('');
         setShowSuggest(false);
         return;
       }
     },
-    [commitEmail, onAdd, type],
+    [commitEmail, onAdd, touchContact, type],
   );
 
   const handleEmailChange = (v: string) => {
@@ -231,15 +284,29 @@ const RecipientRow: React.FC<RecipientRowProps> = ({
       setInputValue('');
       return;
     }
-    if (v.length > 0) {
-      const found = filterContacts(v, contacts);
-      setSuggestions(found);
-      setShowSuggest(found.length > 0);
-      setHighlightIdx(-1);
-    } else {
-      setSuggestions([]);
-      setShowSuggest(false);
-    }
+    refreshSuggestions(v);
+  };
+
+  const handlePhoneChange = (v: string) => {
+    setPhoneValue(v);
+    refreshSuggestions(v);
+  };
+
+  const canSaveCurrentContact =
+    inputMode === 'email'
+      ? validateEmail(inputValue.trim())
+      : isValidInternationalPhone(normalizePhoneInput(phoneValue));
+
+  const handleSaveContactClick = () => {
+    if (!onSaveToContacts || !canSaveCurrentContact) return;
+    onSaveToContacts({
+      display_name:
+        inputMode === 'email'
+          ? inputValue.trim().split('@')[0]
+          : phoneValue.trim(),
+      email: inputMode === 'email' ? inputValue.trim() : undefined,
+      phone: inputMode === 'phone' ? normalizePhoneInput(phoneValue) : undefined,
+    });
   };
 
   const handleEmailKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -384,7 +451,7 @@ const RecipientRow: React.FC<RecipientRowProps> = ({
                   value={inputValue}
                   onChange={e => handleEmailChange(e.target.value)}
                   onKeyDown={handleEmailKeyDown}
-                  onFocus={() => inputValue && setShowSuggest(suggestions.length > 0)}
+                  onFocus={() => refreshSuggestions(inputValue)}
                   onBlur={handleEmailBlur}
                   placeholder={emailPlaceholder}
                   className={cn(
@@ -398,7 +465,7 @@ const RecipientRow: React.FC<RecipientRowProps> = ({
                 theme={isDark ? 'dark' : 'light'}
                 compact
                 value={phoneValue}
-                onChange={setPhoneValue}
+                onChange={handlePhoneChange}
                 onKeyDown={handlePhoneKeyDown}
                 onBlur={handlePhoneBlur}
                 placeholder={phonePlaceholder}
@@ -420,7 +487,7 @@ const RecipientRow: React.FC<RecipientRowProps> = ({
                     isDark ? 'border-gray-700 text-gray-400' : 'border-gray-100 text-gray-500',
                   )}
                 >
-                  <Mail className="w-3 h-3" /> Suggestions
+                  <BookUser className="w-3 h-3" /> Contacts & suggestions
                 </div>
                 {suggestions.map((s, i) => (
                   <SuggestionItem
@@ -434,6 +501,24 @@ const RecipientRow: React.FC<RecipientRowProps> = ({
               </div>
             )}
           </div>
+
+          {onSaveToContacts && canSaveCurrentContact && (
+            <button
+              type="button"
+              onClick={handleSaveContactClick}
+              disabled={isSavingContact}
+              className={cn(
+                'mt-1 inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-xs font-medium cursor-pointer',
+                isDark
+                  ? 'border-gray-600 text-gray-300 hover:bg-gray-700'
+                  : 'border-gray-300 text-gray-600 hover:bg-gray-100',
+                isSavingContact && 'opacity-50 cursor-not-allowed',
+              )}
+            >
+              <UserPlus className="h-3 w-3" />
+              {isSavingContact ? 'Saving…' : 'Save to contacts'}
+            </button>
+          )}
         </div>
       </div>
 
@@ -461,6 +546,9 @@ interface ComposeRecipientsProps {
   validationErrors: Record<string, string>;
   onAddRecipient: (type: 'to' | 'cc' | 'bcc', input: string, name?: string) => void;
   onRemoveRecipient: (type: 'to' | 'cc' | 'bcc', id: string) => void;
+  onSaveToContacts?: (payload: { display_name: string; email?: string; phone?: string }) => void;
+  isSavingContact?: boolean;
+  onAddRecipientsFromNotebook?: (target: RecipientTargetField, picks: NotebookRecipientPick[]) => void;
   onToggleCc: () => void;
   onToggleBcc: () => void;
 }
@@ -468,14 +556,50 @@ interface ComposeRecipientsProps {
 export const ComposeRecipients: React.FC<ComposeRecipientsProps> = ({
   theme, to, cc, bcc, showCc, showBcc,
   validationErrors, onAddRecipient, onRemoveRecipient,
+  onSaveToContacts, isSavingContact,
+  onAddRecipientsFromNotebook,
   onToggleCc, onToggleBcc,
 }) => {
   const isDark = theme === 'dark';
+  const [contactPickerOpen, setContactPickerOpen] = useState(false);
+  const [contactPickerKey, setContactPickerKey] = useState(0);
   const allRecipients = [...to, ...cc, ...bcc];
   const hasInvalidRecipients = allRecipients.some(r => !r.isValid);
 
   return (
     <div className="px-4 pt-2">
+      {onAddRecipientsFromNotebook && (
+        <div className="mb-2 flex justify-end">
+          <button
+            type="button"
+            onClick={() => {
+              setContactPickerKey((k) => k + 1);
+              setContactPickerOpen(true);
+            }}
+            className={cn(
+              'inline-flex items-center gap-1.5 rounded-lg border-2 px-3 py-1.5 text-xs font-medium cursor-pointer transition-colors',
+              isDark
+                ? 'border-blue-500/40 bg-blue-600/20 text-blue-200 hover:bg-blue-600/30'
+                : 'border-blue-300 bg-blue-50 text-blue-700 hover:bg-blue-100',
+            )}
+          >
+            <Users className="h-3.5 w-3.5" />
+            Add from contacts
+          </button>
+        </div>
+      )}
+
+      {onAddRecipientsFromNotebook && (
+        <ComposeContactPicker
+          key={contactPickerKey}
+          theme={theme}
+          open={contactPickerOpen}
+          onClose={() => setContactPickerOpen(false)}
+          recipientsByField={{ to, cc, bcc }}
+          onAddRecipients={onAddRecipientsFromNotebook}
+        />
+      )}
+
       {/* TO row */}
       <RecipientRow
         type="to"
@@ -484,6 +608,8 @@ export const ComposeRecipients: React.FC<ComposeRecipientsProps> = ({
         isDark={isDark}
         onAdd={onAddRecipient}
         onRemove={onRemoveRecipient}
+        onSaveToContacts={onSaveToContacts}
+        isSavingContact={isSavingContact}
         error={validationErrors.recipients}
         rightSlot={
           !showCc || !showBcc ? (
@@ -528,6 +654,8 @@ export const ComposeRecipients: React.FC<ComposeRecipientsProps> = ({
           isDark={isDark}
           onAdd={onAddRecipient}
           onRemove={onRemoveRecipient}
+          onSaveToContacts={onSaveToContacts}
+          isSavingContact={isSavingContact}
         />
       )}
 
@@ -540,6 +668,8 @@ export const ComposeRecipients: React.FC<ComposeRecipientsProps> = ({
           isDark={isDark}
           onAdd={onAddRecipient}
           onRemove={onRemoveRecipient}
+          onSaveToContacts={onSaveToContacts}
+          isSavingContact={isSavingContact}
         />
       )}
 

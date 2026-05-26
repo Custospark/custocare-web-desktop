@@ -33,6 +33,7 @@ import Sent from "../../../modules/account/ui/message/Sent";
 import Draft from "../../../modules/account/ui/message/Draft";
 import Trash from "../../../modules/account/ui/message/Trash";
 import Compose from "../../../modules/account/ui/message/Compose";
+import MessageContacts from "../../../modules/account/ui/message/MessageContacts";
 import StaffWithoutFacilityMessage from "../../../modules/account/ui/StaffWithoutFacilityMessage";
 
 // ============================================================================
@@ -146,6 +147,15 @@ export const accountRoutes = [
             <WithThemeProp Component={Compose} />
           </SuspenseWrapper>
         } 
+      />
+
+      <Route
+        path={ACCOUNT_ROUTES.MESSAGES_CONTACTS}
+        element={
+          <SuspenseWrapper variant="detail">
+            <WithThemeProp Component={MessageContacts} />
+          </SuspenseWrapper>
+        }
       />
     </Route>
     

@@ -41,6 +41,8 @@ import {
   useUploadMessageAttachment,
   useRemoveMessageAttachment,
 } from '../../../api/messages/MessageQueries';
+import { useCreateMessageContact, useTouchMessageContact } from '../../../api/messageContacts/MessageContactQueries';
+import type { NotebookRecipientPick } from './ComposeContactPicker';
 import type {
   StoreMessageRequest,
   UpdateMessageRequest,
@@ -184,6 +186,8 @@ export const useComposeState = ({
   const sendDraft        = useSendDraftMessage();
   const uploadAttachment = useUploadMessageAttachment();
   const removeAttachment = useRemoveMessageAttachment();
+  const createMessageContact = useCreateMessageContact();
+  const touchMessageContact = useTouchMessageContact();
 
   /* ── backend draft id ──────────────────────────────────────── */
   const [draftMessageId, setDraftMessageId] = useState<number | null>(
@@ -512,6 +516,92 @@ export const useComposeState = ({
     [],
   );
 
+  const buildRecipientFromPick = (
+    pick: NotebookRecipientPick,
+    idSuffix: string,
+  ): Recipient | null => {
+    const { contact, channel } = pick;
+    if (channel === 'email' && contact.email && validateEmail(contact.email)) {
+      return {
+        id: `r_nb_${contact.id}_${idSuffix}`,
+        name: contact.display_name,
+        email: contact.email.trim(),
+        contactType: 'email',
+        isValid: true,
+      };
+    }
+    if (channel === 'phone' && contact.phone) {
+      const normalized = normalizePhoneInput(contact.phone);
+      if (!isValidInternationalPhone(normalized)) return null;
+      return {
+        id: `r_nb_${contact.id}_${idSuffix}`,
+        name: contact.display_name,
+        email: '',
+        phone: normalized,
+        contactType: 'phone',
+        isValid: true,
+      };
+    }
+    return null;
+  };
+
+  const recipientMatches = (a: Recipient, b: Recipient): boolean => {
+    if (a.contactType === 'email' && b.contactType === 'email') {
+      return a.email.toLowerCase() === b.email.toLowerCase();
+    }
+    if (a.contactType === 'phone' && b.contactType === 'phone') {
+      return normalizePhoneInput(a.phone || '') === normalizePhoneInput(b.phone || '');
+    }
+    return false;
+  };
+
+  const handleAddRecipientsFromNotebook = useCallback(
+    (type: 'to' | 'cc' | 'bcc', picks: NotebookRecipientPick[]) => {
+      if (picks.length === 0) return;
+
+      setMessage((prev) => {
+        const existing = prev[type];
+        const additions: Recipient[] = [];
+
+        picks.forEach((pick, index) => {
+          const recipient = buildRecipientFromPick(pick, `${Date.now()}_${index}`);
+          if (!recipient) return;
+          const dup =
+            existing.some((r) => recipientMatches(r, recipient)) ||
+            additions.some((r) => recipientMatches(r, recipient));
+          if (!dup) additions.push(recipient);
+        });
+
+        if (additions.length === 0) return prev;
+        return { ...prev, [type]: [...existing, ...additions] };
+      });
+
+      picks.forEach((pick) => touchMessageContact.mutate(pick.contact.id));
+
+      setValidationErrors((prev) => {
+        const next = { ...prev };
+        delete next.recipients;
+        return next;
+      });
+    },
+    [touchMessageContact],
+  );
+
+  const handleSaveToContacts = useCallback(
+    (payload: { display_name: string; email?: string; phone?: string }) => {
+      const name = payload.display_name.trim()
+        || (payload.email ? payload.email.split('@')[0] : '')
+        || payload.phone
+        || 'Contact';
+      createMessageContact.mutate({
+        display_name: name,
+        email: payload.email?.trim() || null,
+        phone: payload.phone?.trim() || null,
+      });
+    },
+    [createMessageContact],
+  );
+
   /* ── file upload ──────────────────────────────────────────── */
   const uploadFile = useCallback(
     async (file: File, attachmentId: string) => {
@@ -668,6 +758,9 @@ export const useComposeState = ({
     handleScheduleSend,
     handleAddRecipient,
     handleRemoveRecipient,
+    handleSaveToContacts,
+    handleAddRecipientsFromNotebook,
+    isSavingContact: createMessageContact.isPending,
     handleFileSelect,
     handleRemoveAttachment,
     handleDragEnter,

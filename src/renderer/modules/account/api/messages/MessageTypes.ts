@@ -357,9 +357,17 @@ export interface UpdateMessageRequest {
  * - draft save: { message, status: 'draft_saved' }
  * - send:       { message, status: 'sent'|'scheduled' }
  */
+export interface SkippedMessageRecipient {
+  type: 'to' | 'cc' | 'bcc';
+  channel: 'email' | 'phone';
+  value: string;
+  message: string;
+}
+
 export interface StoreMessageResponse {
   message: Message;
   status: 'draft_saved' | 'sent' | 'scheduled';
+  skipped_recipients?: SkippedMessageRecipient[];
 }
 
 /**

@@ -265,6 +265,17 @@ export const useStoreMessage = (
       if (data.status === 'sent') showToast('success', 'Message sent.', 5000);
       if (data.status === 'scheduled') showToast('success', 'Message scheduled.', 6000);
 
+      if (data.skipped_recipients?.length) {
+        const skippedSummary = data.skipped_recipients
+          .map((s) => `${s.value} (${s.message})`)
+          .join('; ');
+        showToast(
+          'warning',
+          `Message sent. Skipped ${data.skipped_recipients.length} recipient(s) not on Custocare: ${skippedSummary}`,
+          12_000,
+        );
+      }
+
       await qc.invalidateQueries({ queryKey: messageKeys.lists() });
       callbacks.onSuccess?.(data);
     },

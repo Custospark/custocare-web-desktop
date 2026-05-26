@@ -76,6 +76,9 @@ export const Compose: React.FC<ComposeProps> = props => {
     handleSend,
     handleAddRecipient,
     handleRemoveRecipient,
+    handleSaveToContacts,
+    handleAddRecipientsFromNotebook,
+    isSavingContact,
     handleFileSelect,
     handleRemoveAttachment,
     handleDragEnter,
@@ -297,6 +300,9 @@ export const Compose: React.FC<ComposeProps> = props => {
             validationErrors={validationErrors}
             onAddRecipient={handleAddRecipient}
             onRemoveRecipient={handleRemoveRecipient}
+            onSaveToContacts={handleSaveToContacts}
+            isSavingContact={isSavingContact}
+            onAddRecipientsFromNotebook={handleAddRecipientsFromNotebook}
             onToggleCc={() => setShowCc(v => !v)}
             onToggleBcc={() => setShowBcc(v => !v)}
           />

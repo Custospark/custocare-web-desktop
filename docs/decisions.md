@@ -2,6 +2,18 @@
 
 ---
 
+## 2026-05-26: Message contact notebook (owner-scoped address book)
+
+**Context:** Users could not search recipients by name; compose only had device-local frequent contacts with plain email/phone. Messaging still resolves recipients via `User` `email_hash` / `phone_hash`.
+
+**Decisions:**
+- New `user_message_contacts` table: `owner_user_id`, `display_name`, optional `linked_user_id`, encrypted + hashed email/phone (same pattern as `User`).
+- API: `GET/POST/PUT/DELETE /api/message-contacts`, `POST /message-contacts/resolve`, `POST /message-contacts/{id}/touch`.
+- FE: **Messages → Contacts** page + compose picker merges notebook with `compose_contacts_v1` local frequent list.
+- **Save to contacts** is manual (button in compose); send path unchanged.
+
+---
+
 ## 2026-05-25: Compose recipients — email or international phone
 
 **Context:** Account Message Center compose allowed free-text “email or phone” without dial-code UI. Phone values often did not match signup format (`+{dial}{digits}`), so `MessageService` could not resolve `users.phone_hash`.
@@ -801,6 +813,23 @@ Separately, inventory ledger entries for refund/void stock restorations used the
 - `patientId` as optional param/option on `useGetVisit*` hooks adds some API surface but keeps backward compatibility with callers that don't have patientId (patient portal, report launchers).
 - Combined key pattern means more specific invalidation targets; generic `invalidateQueries({ queryKey: ['entity-root', 'patient', patientId] })` is broader than necessary but ensures correctness.
 - Removing toast from the mutation hook means template appliers must show their own toast. Single grouped toast is better UX but requires each caller to implement it.
+
+---
+
+## 2026-05-26: Messaging — Partial Send, Custocare-Only Contacts, Exact Errors
+
+**Context:** Compose showed a generic “Failed to send message” when the API failed; one unresolved recipient aborted the entire send. Contacts could be saved even when email/phone did not match a Custocare user. The contact list did not show the linked Custocare account name beside the notebook label.
+
+**Decision:**
+- **Send:** `MessageService::syncRecipients()` accepts `skipUnresolved`; unresolved addresses are collected in `skipped_recipients` on the JSON response while resolved recipients still receive the message. If none resolve, return 422 with a clear message (no generic wrapper for validation/resolution errors).
+- **Drafts:** Same lenient sync so drafts can be saved without failing the whole payload; `updateDraft` now syncs when `to`/`cc`/`bcc` are present (fixed `recipients` key bug).
+- **Contacts:** `UserMessageContactService` rejects create/update when email or phone is not on Custocare; response includes `custocare_user_name` for list UI.
+- **FE:** `useStoreMessage` surfaces API `message` + validation errors; warns when `skipped_recipients` is non-empty. Compose contact picker only lists `can_message` contacts.
+- **Contacts page (2026-05-26 follow-up):** Fetch up to 100 contacts once; filter client-side via `filterMessageContacts()` (display name, Custocare name, email, phone). Always-visible **New contact** button beside search and in empty / no-results states.
+
+**Files changed (BE):** `MessageService.php`, `MessageController.php`, `MessageRecipientNotResolvedException.php`, `UserMessageContactService.php`, `bootstrap/app.php`
+
+**Files changed (FE):** `MessageTypes.ts`, `MessageQueries.ts`, `MessageContacts.tsx`, `ComposeContactPicker.tsx`, `messageContactDisplay.ts`, `MessageContactTypes.ts`
 
 ---
 

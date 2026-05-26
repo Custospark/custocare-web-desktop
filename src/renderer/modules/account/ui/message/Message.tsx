@@ -6,7 +6,7 @@
  */
 
 import React from 'react';
-import { Inbox, SendIcon, Notebook, Trash, MessageCircleMore, Edit3 } from 'lucide-react';
+import { Inbox, SendIcon, Notebook, Trash, MessageCircleMore, Edit3, BookUser } from 'lucide-react';
 import { BaseActionWorkspace } from '../../../../shared/components/workspace/BaseActionWorkspace';
 import { ACCOUNT_ROUTES } from '../../../../app/routes/routeConstants';
 import { MessagesPollingProvider } from '../../api/messages/MessagesPollingProvider';
@@ -18,6 +18,7 @@ export type MessageCenterRoutes = {
   draft: string;
   trash: string;
   compose: string;
+  contacts: string;
 };
 
 const DEFAULT_MESSAGE_ROUTES: MessageCenterRoutes = {
@@ -26,6 +27,7 @@ const DEFAULT_MESSAGE_ROUTES: MessageCenterRoutes = {
   draft: ACCOUNT_ROUTES.MESSAGES_DRAFT,
   trash: ACCOUNT_ROUTES.MESSAGES_TRASH,
   compose: ACCOUNT_ROUTES.MESSAGES_COMPOSE,
+  contacts: ACCOUNT_ROUTES.MESSAGES_CONTACTS,
 };
 
 interface MessageProps {
@@ -68,6 +70,12 @@ const Message: React.FC<MessageProps> = ({ theme, messageRoutes }) => {
           label: 'Draft', 
           icon: <Notebook className="w-4 h-4" />, 
           to: r.draft 
+        },
+        {
+          key: 'contacts',
+          label: 'Contacts',
+          icon: <BookUser className="w-4 h-4" />,
+          to: r.contacts,
         },
         { 
           key: 'trash', 

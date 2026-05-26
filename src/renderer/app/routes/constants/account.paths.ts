@@ -12,6 +12,7 @@ export const ACCOUNT_ROUTES = {
   MESSAGES_DRAFT: `${ROUTES.ACCOUNT}/messages/draft`,
   MESSAGES_TRASH: `${ROUTES.ACCOUNT}/messages/trash`,
   MESSAGES_COMPOSE: `${ROUTES.ACCOUNT}/messages/compose`,
+  MESSAGES_CONTACTS: `${ROUTES.ACCOUNT}/messages/contacts`,
 
   // Settings routes
   SETTINGS_PROFILE: `${ROUTES.ACCOUNT}/settings/profile`,
