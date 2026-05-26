@@ -17,6 +17,7 @@ import { ToastProvider } from './app/store/contexts/toast/ToastContext';
 import { NavigationBridge } from './app/routes/navigation/NavigationBridge';
 import { UpdateNotification } from './shared/components/Feedback/UpdateNotification';
 import { ScrollToTop } from './shared/components/ScrollToTop/ScrollToTop'; // ← Import ScrollToTop
+import NetworkOfflineOverlay from './shared/components/Errors/NetworkOfflineOverlay';
 
 import './App.css';
 import { BillingTray } from './modules/medical-records/ui/visit-action-center/billing-space';
@@ -51,6 +52,7 @@ function App() {
             <QueryClientProvider client={queryClient}>
               <ReverbInit />
               <Router>
+                <NetworkOfflineOverlay />
                 <ScrollToTop /> {/* ← Add ScrollToTop here - MUST be inside Router */}
                 <NavigationBridge /> {/* ← registers imperativeNavigate.tS, must be inside <Router> */}
                 <AppProvider>

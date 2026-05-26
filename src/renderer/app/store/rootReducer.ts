@@ -7,6 +7,7 @@ import { combineReducers } from '@reduxjs/toolkit';
 import authReducer from './slices/authSlice';
 import activeContextReducer from './slices/activeContextSlice';
 import uiReducer from './slices/uiSlice';
+import networkReducer from './slices/networkSlice';
 
 // ==============================
 // DOMAIN SLICES
@@ -35,6 +36,7 @@ export const rootReducer = combineReducers({
   auth: authReducer,
   activeContext: activeContextReducer, // Role / Facility context
   ui: uiReducer,
+  network: networkReducer,
   visits:visitReducer,
   patientForwarding: patientForwardingReducer,
 

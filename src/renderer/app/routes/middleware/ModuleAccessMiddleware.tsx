@@ -125,6 +125,7 @@ const UNRESTRICTED_ROUTES: readonly string[] = [
   '/logout',
   '/error',
   '/404',
+  '/offline',
 ] as const;
 
 /**
@@ -138,6 +139,7 @@ const BYPASS_ROUTES: readonly string[] = [
   '/logout',
   '/error',
   '/404',
+  '/offline',
 ] as const;
 
 /**

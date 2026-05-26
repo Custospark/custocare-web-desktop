@@ -37,6 +37,9 @@ export const ROUTES = {
   // Support & Help
   HELP: '/help',
 
+  /** Full-screen offline state (preview + future navigator wiring) */
+  OFFLINE: '/offline',
+
   // Dashboards
   PATIENT_DASHBOARD: '/dashboard/patient',
 

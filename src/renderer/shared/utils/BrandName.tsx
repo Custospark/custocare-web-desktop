@@ -14,3 +14,5 @@ export const BrandName: React.FC<{ className?: string }> = ({ className }) => (
 );
 export const BRAND_NAME_UCASE = 'CUSTOCARE';
 export const BRAND_NAME_LCASE = 'Custocare';
+/** Navbar / offline / auth — keep in sync across the app */
+export const BRAND_TAGLINE = 'Continuous Care. Clinical Excellence.';

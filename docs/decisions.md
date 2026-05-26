@@ -2,6 +2,22 @@
 
 ---
 
+## 2026-05-26: Offline full-screen page (preview route)
+
+**Context:** Users need a dedicated offline state matching 404 / ErrorBoundary styling, with theme from `uiSlice`.
+
+**Decision:**
+- `Offline.tsx` in `shared/components/Errors/` — `selectTheme` + `selectUser` (greeting via `profile.first_name` or first token of display name; generic copy if unauthenticated).
+- Concise, empathetic copy; `BrandName` + `BRAND_TAGLINE` (same as navbar); no dashboard CTA — global overlay for any route.
+- Actionable “What you can try” tips; Reconnect dispatches `checkNetworkConnectivity`.
+- **`networkSlice`** (`systemStatus`: online | slow | offline) — monitor at root via `NetworkOfflineOverlay`; full-screen UI only when `offline` (slow keeps app usable). Layout status bar reads same slice.
+- Preview route `ROUTES.OFFLINE` (`/offline`) in `ErrorRoutes`; listed in `ModuleAccessMiddleware` bypass lists. No `navigator.onLine` wiring yet.
+- **Preview URL (dev):** `http://localhost:5173/#/offline`
+
+**Later:** Gate app or overlay from `seNetworkStatus` / browser `offline` events.
+
+---
+
 ## 2026-05-26: Message contact notebook (owner-scoped address book)
 
 **Context:** Users could not search recipients by name; compose only had device-local frequent contacts with plain email/phone. Messaging still resolves recipients via `User` `email_hash` / `phone_hash`.
@@ -830,6 +846,24 @@ Separately, inventory ledger entries for refund/void stock restorations used the
 **Files changed (BE):** `MessageService.php`, `MessageController.php`, `MessageRecipientNotResolvedException.php`, `UserMessageContactService.php`, `bootstrap/app.php`
 
 **Files changed (FE):** `MessageTypes.ts`, `MessageQueries.ts`, `MessageContacts.tsx`, `ComposeContactPicker.tsx`, `messageContactDisplay.ts`, `MessageContactTypes.ts`
+
+---
+
+## 2026-05-26: Message body encryption at rest (server-side)
+
+**Context:** Message Center stored `messages.body` in plaintext. Contacts and user PII already use Laravel `encrypt()` / `decrypt()`.
+
+**Decision:**
+- Encrypt **body only** at rest in `body_encrypted`; **subject** remains plaintext so inbox search and sort by subject keep working.
+- `Message` model exposes virtual `body` (decrypt on read, encrypt on write); API JSON shape unchanged — **no frontend changes**.
+- Folder search no longer matches body text (encrypted); search still works on subject, people, and labels.
+- Migration backfills existing rows and clears legacy `body` plaintext.
+
+**Files changed (BE):** `MessageBodyCipher.php`, `Message.php`, `MessageService.php` (search), migration `2026_05_26_120000_add_body_encrypted_to_messages_table.php`, `tests/Unit/MessageBodyCipherTest.php`, `docs/entities.md`
+
+**Files changed (FE):** None (contract unchanged).
+
+**Run after deploy:** `php artisan migrate` from `Backend/`.
 
 ---
 
