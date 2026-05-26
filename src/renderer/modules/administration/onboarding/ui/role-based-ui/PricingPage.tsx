@@ -6,7 +6,7 @@ import { useAppSelector } from '../../../../../app/store/hooks/useApp';
 import { cn } from '../../../../../shared/types/cn';
 import { LandingLayout } from './LandingLayout';
 import { useGetPlans } from '../../../admin-module/api/subscriptions/SubscriptionQueries';
-import { TIER_FEATURES, calcAnnualPrice } from '../../../../../shared/config/planConfig';
+import { TIER_FEATURES } from '../../../../../shared/config/planConfig';
 import type { Plan } from '../../../admin-module/api/subscriptions/SubscriptionTypes';
 import { CURRENCIES } from '../../../../../shared/utils/currencies';
 import { formatCurrencyWithCustomCurrency } from '../../../../../shared/utils/formatCurrency';
@@ -16,6 +16,7 @@ interface DisplayTier {
   name: string;
   slug: string;
   monthlyPrice: number;
+  annualPrice: number;
   description: string;
   features: string[];
   limits: { label: string; value: string }[];
@@ -37,6 +38,7 @@ const buildTiers = (plans: Plan[]): DisplayTier[] => {
         name: plan.name,
         slug: plan.slug,
         monthlyPrice: plan.pricing.usd,
+        annualPrice: plan.pricing.annual_usd ?? Math.round(plan.pricing.usd * 10 / 12),
         description: plan.description || '',
         features: display.features,
         limits: [
@@ -159,8 +161,7 @@ export const PricingPage: React.FC = () => {
           <>
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8 mb-16">
               {tiers.map((tier, index) => {
-                const annualPrice = calcAnnualPrice(tier.monthlyPrice);
-                const displayPrice = annual ? `$${annualPrice}` : `$${tier.monthlyPrice}`;
+                const displayPrice = annual ? `$${tier.annualPrice}` : `$${tier.monthlyPrice}`;
 
                 return (
                   <motion.div
@@ -211,7 +212,7 @@ export const PricingPage: React.FC = () => {
                       {displayCurrency !== 'USD' && exchangeRate !== null && (
                         <p className={cn("text-xs mt-1", theme === 'dark' ? "text-slate-500" : "text-slate-400")}>
                           ≈ {formatCurrencyWithCustomCurrency(
-                            convertPrice(annual ? calcAnnualPrice(tier.monthlyPrice) : tier.monthlyPrice),
+                            convertPrice(annual ? tier.annualPrice : tier.monthlyPrice),
                             displayCurrency,
                           )}
                         </p>

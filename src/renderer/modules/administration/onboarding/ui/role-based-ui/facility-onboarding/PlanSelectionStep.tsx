@@ -59,6 +59,7 @@ export const PlanSelectionStep: React.FC<PlanSelectionStepProps> = ({
   theme,
 }) => {
   const [detailPlan, setDetailPlan] = useState<Plan | null>(null);
+  const [annual, setAnnual] = useState(false);
   const [displayCurrency, setDisplayCurrency] = useState('USD');
   const { data: rateData } = useCurrencyConvert(1, 'USD', displayCurrency);
   const exchangeRate = rateData?.data?.converted ?? null;
@@ -106,7 +107,19 @@ export const PlanSelectionStep: React.FC<PlanSelectionStepProps> = ({
         </p>
       </div>
 
-      <div className="flex items-center justify-end gap-2">
+      <div className="flex items-center justify-end gap-4">
+        <div className="flex items-center gap-2">
+          <span className={cn("text-xs font-medium", !annual ? "text-blue-600" : theme === 'dark' ? "text-gray-400" : "text-gray-500")}>Monthly</span>
+          <button
+            type="button"
+            onClick={() => setAnnual(!annual)}
+            className={cn("relative w-10 h-5 rounded-full transition-colors", annual ? "bg-blue-600" : theme === 'dark' ? "bg-gray-700" : "bg-gray-300")}
+          >
+            <span className={cn("absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-transform", annual && "translate-x-5")} />
+          </button>
+          <span className={cn("text-xs font-medium", annual ? "text-blue-600" : theme === 'dark' ? "text-gray-400" : "text-gray-500")}>Annual</span>
+          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">Save ~17%</span>
+        </div>
         <label className={cn('text-xs font-medium', theme === 'dark' ? 'text-gray-400' : 'text-gray-500')}>
           Show prices in
         </label>
@@ -171,17 +184,26 @@ export const PlanSelectionStep: React.FC<PlanSelectionStepProps> = ({
                 </h4>
 
                 <div className="mb-3">
-                  <span className={cn("text-2xl font-extrabold", theme === 'dark' ? "text-white" : "text-gray-900")}>
-                    ${plan.pricing.usd}
-                  </span>
-                  <span className={cn("text-sm ml-1", theme === 'dark' ? "text-gray-400" : "text-gray-500")}>
-                    /month
-                  </span>
-                  {displayCurrency !== 'USD' && exchangeRate !== null && (
-                    <p className={cn("text-xs mt-0.5", theme === 'dark' ? "text-gray-500" : "text-gray-400")}>
-                      ≈ {formatCurrencyWithCustomCurrency(convertPrice(plan.pricing.usd), displayCurrency)}
-                    </p>
-                  )}
+                  {(() => {
+                    const dp = annual
+                      ? (plan.pricing.annual_usd ?? Math.round(plan.pricing.usd * 10))
+                      : plan.pricing.usd;
+                    return (
+                      <>
+                        <span className={cn("text-2xl font-extrabold", theme === 'dark' ? "text-white" : "text-gray-900")}>
+                          ${dp}
+                        </span>
+                        <span className={cn("text-sm ml-1", theme === 'dark' ? "text-gray-400" : "text-gray-500")}>
+                          {annual ? '/yr' : '/month'}
+                        </span>
+                        {displayCurrency !== 'USD' && exchangeRate !== null && (
+                          <p className={cn("text-xs mt-0.5", theme === 'dark' ? "text-gray-500" : "text-gray-400")}>
+                            ≈ {formatCurrencyWithCustomCurrency(convertPrice(dp), displayCurrency)}
+                          </p>
+                        )}
+                      </>
+                    );
+                  })()}
                 </div>
 
                 <p className={cn("text-xs mb-3 leading-relaxed line-clamp-2", theme === 'dark' ? "text-gray-400" : "text-gray-600")}>

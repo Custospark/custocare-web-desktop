@@ -85,6 +85,7 @@ export enum PaymentType {
  */
 export enum BillingCycle {
   MONTHLY = 'monthly',
+  YEARLY  = 'yearly',
 }
 
 // ============================================================================
@@ -96,6 +97,8 @@ export interface PlanPricing {
   usd: number;
   ugx: number;
   billing_cycle: BillingCycle | string;
+  annual_usd?: number;
+  annual_ugx?: number;
 }
 
 /** Onboarding-fee block within PlanResource. */
@@ -276,6 +279,7 @@ export interface Subscription {
   plan: Plan | null;
   /** Plan that currently grants access (same as plan until a scheduled change applies). */
   effective_plan: Plan | null;
+  billing_cycle?: BillingCycle | string;
   scheduled_change: SubscriptionScheduledChange | null;
   cancel_at_period_end: boolean;
   access_ends_at: string | null;
