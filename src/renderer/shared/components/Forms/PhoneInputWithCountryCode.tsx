@@ -26,8 +26,11 @@ export interface PhoneInputWithCountryCodeProps {
   compact?: boolean;
   className?: string;
   onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
+  onFocus?: () => void;
   onBlur?: () => void;
   showPreview?: boolean;
+  /** When true, disables browser autofill on the tel input (compose recipients). */
+  disableBrowserAutocomplete?: boolean;
 }
 
 export const PhoneInputWithCountryCode: React.FC<PhoneInputWithCountryCodeProps> = ({
@@ -43,8 +46,10 @@ export const PhoneInputWithCountryCode: React.FC<PhoneInputWithCountryCodeProps>
   compact = false,
   className,
   onKeyDown,
+  onFocus,
   onBlur,
   showPreview = !compact,
+  disableBrowserAutocomplete = false,
 }) => {
   const isDark = theme === 'dark';
   const inputId = React.useId();
@@ -291,11 +296,18 @@ export const PhoneInputWithCountryCode: React.FC<PhoneInputWithCountryCodeProps>
             value={displayValue}
             onChange={(e) => handlePhoneChange(e.target.value)}
             onKeyDown={onKeyDown}
+            onFocus={onFocus}
             onBlur={onBlur}
             disabled={disabled}
             placeholder={placeholder}
             className={telInputClass}
             aria-invalid={hasError ? true : undefined}
+            autoComplete={disableBrowserAutocomplete ? 'off' : undefined}
+            autoCorrect={disableBrowserAutocomplete ? 'off' : undefined}
+            spellCheck={disableBrowserAutocomplete ? false : undefined}
+            data-form-type={disableBrowserAutocomplete ? 'other' : undefined}
+            data-lpignore={disableBrowserAutocomplete ? 'true' : undefined}
+            data-1p-ignore={disableBrowserAutocomplete ? 'true' : undefined}
           />
         </div>
       </div>

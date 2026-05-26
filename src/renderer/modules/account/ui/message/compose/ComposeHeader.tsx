@@ -27,7 +27,6 @@ interface ComposeHeaderProps {
   scheduledSend?: Date | null;
   isReply?: boolean;
   isForward?: boolean;
-  subject?: string;
   onMinimize: () => void;
   onMaximize: () => void;
   onDiscard: () => void;
@@ -41,7 +40,6 @@ export const ComposeHeader: React.FC<ComposeHeaderProps> = ({
   scheduledSend,
   isReply,
   isForward,
-  subject,
   onMinimize,
   onMaximize,
   onDiscard,
@@ -68,17 +66,6 @@ export const ComposeHeader: React.FC<ComposeHeaderProps> = ({
       {/* Center: message title and badges */}
       <div className="flex-1 flex items-center justify-center gap-3 min-w-0 px-4">
         <h2 className="text-base font-semibold truncate">{title}</h2>
-
-        {subject && (
-          <span
-            className={cn(
-              'hidden sm:block text-xs truncate max-w-[220px] italic',
-              isDark ? 'text-gray-400' : 'text-gray-500',
-            )}
-          >
-            {subject}
-          </span>
-        )}
 
         {scheduledSend && (
           <span

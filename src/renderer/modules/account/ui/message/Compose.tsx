@@ -245,7 +245,6 @@ export const Compose: React.FC<ComposeProps> = props => {
           scheduledSend={message.scheduledSend}
           isReply={!!replyTo}
           isForward={!!forwardOf}
-          subject={message.subject}
           onMinimize={handleMinimize}
           onMaximize={handleMaximize}
           onDiscard={handleDiscard}
