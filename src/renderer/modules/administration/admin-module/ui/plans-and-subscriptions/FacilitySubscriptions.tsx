@@ -61,9 +61,8 @@ interface TimelineEvent {
   metadata?: Record<string, unknown>;
 }
 
-// ─── Helper: is subscription "visibly current"? ───────────────────────────────
-const isCurrentlyVisible = (status: SubscriptionStatus | string): boolean =>
-  status === SubscriptionStatus.TRIAL || status === SubscriptionStatus.ACTIVE;
+// ─── Helper: subscription still has platform access ───────────────────────────
+const hasSubscriptionAccess = (sub: Subscription): boolean => sub.has_access;
 
 // ─── Status Badge ─────────────────────────────────────────────────────────────
 const SubscriptionStatusBadge: React.FC<SubscriptionStatusBadgeProps> = ({
@@ -235,7 +234,11 @@ const InactiveSubscriptionBanner: React.FC<{
 
   const Icon = iconCfg.icon;
 
-  const title = isCancelled ? 'Subscription Cancelled' : isSuspended ? 'Subscription Suspended' : 'Payment Overdue';
+  const title = isCancelled
+    ? 'Subscription Cancelled'
+    : isSuspended
+    ? 'Subscription Suspended'
+    : 'Payment Overdue';
   const message = isCancelled
     ? 'Your subscription has been cancelled. To regain access, please choose a new plan.'
     : isSuspended
@@ -356,8 +359,7 @@ export const FacilitySubscriptions: React.FC<FacilitySubscriptionsProps> = ({
     );
   }
 
-  // ── GATE: only show "current subscription" UI for TRIAL or ACTIVE ─────────
-  const showCurrentSubscription = isCurrentlyVisible(subscription.status);
+  const showCurrentSubscription = hasSubscriptionAccess(subscription);
 
   // ── Inactive/Cancelled state ──────────────────────────────────────────────
   if (!showCurrentSubscription) {
@@ -376,9 +378,53 @@ export const FacilitySubscriptions: React.FC<FacilitySubscriptionsProps> = ({
 
   // ── Active / Trial subscription UI ───────────────────────────────────────
   const isTrial = subscription.status === SubscriptionStatus.TRIAL;
+  const isEndingAtPeriodEnd = subscription.cancel_at_period_end && subscription.has_access;
+  const scheduledChange = subscription.scheduled_change;
 
   return (
     <div className="space-y-6">
+      {isEndingAtPeriodEnd && subscription.access_ends_at && (
+        <div className={cn(
+          'rounded-xl border-2 p-4 flex items-start gap-3',
+          isDark ? 'bg-amber-900/20 border-amber-700/50' : 'bg-amber-50 border-amber-200',
+        )}>
+          <AlertTriangle className={cn('w-5 h-5 shrink-0 mt-0.5', isDark ? 'text-amber-400' : 'text-amber-600')} />
+          <div>
+            <p className={cn('font-bold text-sm', isDark ? 'text-amber-200' : 'text-amber-900')}>
+              Cancellation scheduled
+            </p>
+            <p className={cn('text-xs mt-1', isDark ? 'text-amber-300/80' : 'text-amber-800')}>
+              You will keep full access until{' '}
+              {new Date(subscription.access_ends_at).toLocaleDateString(undefined, {
+                year: 'numeric', month: 'long', day: 'numeric',
+              })}
+              . Your subscription will not renew after that date.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {scheduledChange?.to_plan && scheduledChange.effective_at && (
+        <div className={cn(
+          'rounded-xl border-2 p-4 flex items-start gap-3',
+          isDark ? 'bg-cyan-900/20 border-cyan-700/50' : 'bg-cyan-50 border-cyan-200',
+        )}>
+          <TrendingUp className={cn('w-5 h-5 shrink-0 mt-0.5', isDark ? 'text-cyan-400' : 'text-cyan-600')} />
+          <div>
+            <p className={cn('font-bold text-sm', isDark ? 'text-cyan-200' : 'text-cyan-900')}>
+              Plan change scheduled
+            </p>
+            <p className={cn('text-xs mt-1', isDark ? 'text-cyan-300/80' : 'text-cyan-800')}>
+              Switching to {scheduledChange.to_plan.name} on{' '}
+              {new Date(scheduledChange.effective_at).toLocaleDateString(undefined, {
+                year: 'numeric', month: 'long', day: 'numeric',
+              })}
+              . No charge until then.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Main Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left — details */}

@@ -2,6 +2,31 @@
 
 ---
 
+## 2026-05-26: Facility subscription billing v2 (scheduled changes, proration, quotes)
+
+**Context:** Cancel and plan changes applied immediately on the FE (cancel + recreate). Payments used hardcoded plan price + onboarding. UI showed "Current Plan" after cancellation. Trial copy hardcoded 7 days.
+
+**Decisions:**
+- **Cancel at period end** (facility): `status` stays `active`; `metadata.cancel_at_period_end` + `access_ends_at`; `hasAccess()` until `ends_at`. Immediate cancel = platform admin only.
+- **`subscription_scheduled_changes`** table: one pending row per subscription; types `upgrade`, `downgrade`, `cancel`, `plan_change`.
+- **Apply pending on read** — `applyPendingScheduledChanges()` in `getSubscriptionForFacility()` and `EnsureFacilitySubscriptionIsActive` (no cron).
+- **Upgrade paths:** schedule (next cycle, $0 quote) vs upgrade now (proration due, `upgrade_proration` payment type, plan swaps on admin approve).
+- **`GET .../subscription/payment-quote`** + server validates `POST .../payments` amount (±$0.01) via `quote_intent` / `target_plan_id`.
+- **FE:** `AvailablePlans` uses schedule/upgrade-now APIs; "Your plan" pill; `Payments` consumes quote line items only.
+- **Navbar `Subscription.tsx`:** Uses `effective_plan`, status badges (Trial / Active / Ending / Change scheduled / Past due), cancel + scheduled-change callouts in dropdown; inactive CTA when `!has_access`; brand badge in `Navbar.tsx` hidden when no access.
+
+**API (facility):**
+| Method | Path |
+|--------|------|
+| POST | `/facilities/{facility}/subscription/schedule-change` |
+| POST | `/facilities/{facility}/subscription/upgrade-now` |
+| DELETE | `/facilities/{facility}/subscription/scheduled-change` |
+| GET | `/facilities/{facility}/subscription/payment-quote?intent=&plan_id=` |
+
+**Plan:** `docs/plans.md`
+
+---
+
 ## 2026-05-26: Offline full-screen page (preview route)
 
 **Context:** Users need a dedicated offline state matching 404 / ErrorBoundary styling, with theme from `uiSlice`.

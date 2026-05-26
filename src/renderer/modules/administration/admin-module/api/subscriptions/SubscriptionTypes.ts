@@ -72,9 +72,10 @@ export enum PaymentMethod {
  * Mirrors: app/Enums/Billing/PaymentType.php
  */
 export enum PaymentType {
-  ONBOARDING   = 'onboarding',   // one-time setup fee
-  SUBSCRIPTION = 'subscription', // initial subscription payment
-  RENEWAL      = 'renewal',      // monthly renewal
+  ONBOARDING        = 'onboarding',   // one-time setup fee
+  SUBSCRIPTION      = 'subscription', // initial subscription payment
+  RENEWAL           = 'renewal',      // monthly renewal
+  UPGRADE_PRORATION = 'upgrade_proration',
 }
 
 /**
@@ -182,6 +183,49 @@ export interface Payment {
 }
 
 // ============================================================================
+// SCHEDULED CHANGE & PAYMENT QUOTE  (billing v2)
+// ============================================================================
+
+export type SubscriptionChangeType = 'upgrade' | 'downgrade' | 'cancel' | 'plan_change';
+
+export interface SubscriptionScheduledChange {
+  id: number;
+  change_type: SubscriptionChangeType | string;
+  status: string;
+  effective_at: string | null;
+  from_plan: Plan | null;
+  to_plan: Plan | null;
+  metadata?: Record<string, unknown> | null;
+  created_at?: string | null;
+}
+
+export type PaymentQuoteIntent =
+  | 'first_activation'
+  | 'subscription'
+  | 'renewal'
+  | 'scheduled_change'
+  | 'upgrade_now'
+  | 'trial_activation';
+
+export interface PaymentQuoteLineItem {
+  label: string;
+  amount: number;
+}
+
+export interface PaymentQuote {
+  intent: PaymentQuoteIntent | string;
+  line_items: PaymentQuoteLineItem[];
+  total_usd: number;
+  currency: string;
+  payment_type: string;
+  onboarding_fee_applicable: boolean;
+  trial_days: number;
+  target_plan_id: number | null;
+  effective_at: string | null;
+  notes: string | null;
+}
+
+// ============================================================================
 // SUBSCRIPTION RESOURCE SHAPE  (mirror SubscriptionResource.php)
 // ============================================================================
 
@@ -206,6 +250,11 @@ export interface Subscription {
   facility: SubscriptionFacilityInfo;
   /** Loaded plan details; null if relationship was not eager-loaded. */
   plan: Plan | null;
+  /** Plan that currently grants access (same as plan until a scheduled change applies). */
+  effective_plan: Plan | null;
+  scheduled_change: SubscriptionScheduledChange | null;
+  cancel_at_period_end: boolean;
+  access_ends_at: string | null;
   status: SubscriptionStatus | string;
   status_label: string;
   /** True when status is active, valid trial, or within grace period. */
@@ -304,6 +353,15 @@ export type CreateSubscriptionResponse = ApiSuccessResponse<Subscription>;
 /** DELETE /facilities/{facility}/subscription */
 export type CancelSubscriptionResponse = ApiSuccessResponse<Subscription>;
 
+/** GET /facilities/{facility}/subscription/payment-quote */
+export type PaymentQuoteResponse = ApiSuccessResponse<PaymentQuote>;
+
+/** POST schedule-change / upgrade-now */
+export type ScheduleChangeResponse = ApiSuccessResponse<Subscription> & {
+  scheduled_change?: Pick<SubscriptionScheduledChange, 'id' | 'change_type' | 'effective_at' | 'to_plan'>;
+  quote?: PaymentQuote;
+};
+
 /** GET /facilities/{facility}/payments/{payment} */
 export type GetPaymentResponse = ApiSuccessResponse<Payment>;
 
@@ -351,6 +409,21 @@ export interface StoreSubscriptionRequest {
  */
 export interface CancelSubscriptionRequest {
   reason?: string | null;
+  mode?: 'at_period_end' | 'immediate';
+}
+
+export interface ScheduleSubscriptionChangeRequest {
+  plan_id: number;
+  change_type: 'upgrade' | 'downgrade';
+}
+
+export interface UpgradeNowRequest {
+  plan_id: number;
+}
+
+export interface PaymentQuoteParams {
+  intent: PaymentQuoteIntent | string;
+  plan_id?: number;
 }
 
 /**
@@ -372,6 +445,8 @@ export interface StorePaymentRequest {
   receipt_notes?: string | null;
   /** ISO date string; must be past or present (before_or_equal:now). */
   paid_at: string;
+  quote_intent?: PaymentQuoteIntent | string;
+  target_plan_id?: number | null;
 }
 
 /**
@@ -486,6 +561,14 @@ export interface CreateSubscriptionParams {
  */
 export interface CancelSubscriptionParams {
   data?: CancelSubscriptionRequest;
+}
+
+export interface ScheduleSubscriptionChangeParams {
+  data: ScheduleSubscriptionChangeRequest;
+}
+
+export interface UpgradeNowParams {
+  data: UpgradeNowRequest;
 }
 
 /**
@@ -708,9 +791,10 @@ export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
 
 /** UI labels for payment types (mirrors backend PaymentType::label()). */
 export const PAYMENT_TYPE_LABELS: Record<PaymentType, string> = {
-  [PaymentType.ONBOARDING]:   'Onboarding Fee',
-  [PaymentType.SUBSCRIPTION]: 'Subscription',
-  [PaymentType.RENEWAL]:      'Renewal',
+  [PaymentType.ONBOARDING]:        'Onboarding Fee',
+  [PaymentType.SUBSCRIPTION]:      'Subscription',
+  [PaymentType.RENEWAL]:           'Renewal',
+  [PaymentType.UPGRADE_PRORATION]: 'Plan Upgrade (Proration)',
 };
 
 /**

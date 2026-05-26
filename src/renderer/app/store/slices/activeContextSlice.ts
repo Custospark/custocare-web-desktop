@@ -1032,6 +1032,18 @@ export const selectHasActiveStaffFacility = createSelector(
     isStaffMode && activeFacilityId != null,
 );
 
+/** Facility owner in staff mode with an active facility (can manage billing). */
+export const selectCanManageFacilitySubscription = createSelector(
+  [selectHasActiveStaffFacility, selectIsActiveFacilityOwner],
+  (hasStaffFacility, isOwner): boolean => hasStaffFacility && isOwner,
+);
+
+export const selectActiveContextUser = (state: RootState) => state.activeContext.user;
+export const selectActiveContextCapability = (state: RootState) =>
+  state.activeContext.activeCapability;
+export const selectAvailableCapabilities = (state: RootState) =>
+  state.activeContext.availableCapabilities;
+
 /**
  * Returns the facility_currency of the currently selected facility.
  * Returns null if not in staff mode or no facility selected.

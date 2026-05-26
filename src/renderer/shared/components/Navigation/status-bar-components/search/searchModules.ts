@@ -27,6 +27,7 @@ export const allModules: SearchableModule[] = [
 
   { id: 'patient-billing', label: 'Billing & Payments', route: PATIENT_PORTAL_ROUTES.BILLING, description: 'View billing history, invoices, and payment methods.', moduleCode: 'patient_dashboard', keywords: ['billing', 'payments', 'invoices', 'payment history', 'billing overview'], category: 'Patient Portal' },
   { id: 'patient-notifications', label: 'Notifications', route: PATIENT_PORTAL_ROUTES.NOTIFICATIONS, description: 'View all notifications, inbox, and message center.', moduleCode: 'patient_dashboard', keywords: ['notifications', 'inbox', 'messages', 'alerts', 'patient notifications'], category: 'Patient Portal' },
+  { id: 'patient-message-contacts', label: 'Message Contacts', route: PATIENT_PORTAL_ROUTES.NOTIFICATIONS_CONTACTS, description: 'Your message contact notebook for notifications and messaging.', moduleCode: 'patient_dashboard', keywords: ['message contacts', 'contacts', 'address book', 'recipients', 'notification contacts', 'custocare contacts'], category: 'Patient Portal' },
   { id: 'patient-downloads', label: 'Downloads & Reports', route: PATIENT_PORTAL_ROUTES.DOWNLOADS, description: 'Download medical records, lab reports, and billing documents.', moduleCode: 'patient_dashboard', keywords: ['downloads', 'reports', 'download records', 'medical reports', 'lab reports download'], category: 'Patient Portal' },
 
   // Staff Portal
@@ -165,6 +166,7 @@ export const allModules: SearchableModule[] = [
   { id: 'account-message-sent', label: 'Sent Messages', route: ACCOUNT_ROUTES.MESSAGES_SENT, description: 'View sent messages.', moduleCode: 'account', keywords: ['sent messages', 'outbox', 'sent items'], category: 'Account' },
   { id: 'account-message-draft', label: 'Draft Messages', route: ACCOUNT_ROUTES.MESSAGES_DRAFT, description: 'View and continue message drafts.', moduleCode: 'account', keywords: ['draft messages', 'saved drafts', 'unsent messages'], category: 'Account' },
   { id: 'account-message-trash', label: 'Trash', route: ACCOUNT_ROUTES.MESSAGES_TRASH, description: 'Deleted messages bin.', moduleCode: 'account', keywords: ['trash', 'deleted messages', 'message bin', 'recycle bin'], category: 'Account' },
+  { id: 'account-message-contacts', label: 'Message Contacts', route: ACCOUNT_ROUTES.MESSAGES_CONTACTS, description: 'Your Custocare message contact notebook.', moduleCode: 'account', keywords: ['message contacts', 'contacts', 'address book', 'recipients', 'message notebook', 'custocare contacts'], category: 'Account' },
 
   // Common shortcuts
   { id: 'shortcut-medical-records-root', label: 'Medical Records', route: MEDICAL_RECORDS_ROUTES.OVERVIEW, description: 'Jump to Medical Records intelligence page.', moduleCode: 'medical_records', keywords: ['medical records', 'front desk', 'reception'], category: 'Clinical' },

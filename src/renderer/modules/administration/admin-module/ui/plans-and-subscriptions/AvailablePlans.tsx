@@ -14,7 +14,8 @@ import {
   useGetPlans,
   useGetFacilitySubscription,
   useCreateSubscription,
-  useCancelSubscription,
+  useScheduleSubscriptionChange,
+  useUpgradeNow,
 } from '../../api/subscriptions/SubscriptionQueries';
 import { useConfirm } from '../../../../../shared/components/Feedback/ConfirmDialog/ConfirmContext';
 import { ADMINISTRATION_PLANS_SUBSCRIPTIONS_ROUTES } from '../../../../../app/routes/constants/administration.paths';
@@ -71,38 +72,41 @@ export const AvailablePlans: React.FC<AvailablePlansProps> = ({ theme }) => {
     },
   });
 
-  const cancelSubscription = useCancelSubscription({
-    onSuccess: () => {
-      // refetch will happen automatically via query invalidation
-    },
-  });
+  const scheduleChange = useScheduleSubscriptionChange();
+  const upgradeNow = useUpgradeNow();
 
   const isLoading = plansLoading || subLoading;
   const plans = plansResponse?.data || [];
   const subscription = subscriptionResponse?.data;
-  const currentPlan = subscription?.plan;
+  const currentPlan = subscription?.effective_plan ?? subscription?.plan;
   const hasActiveSubscription = subscription?.has_access || false;
   const isInTrial = subscription?.status === 'trial';
+  const scheduledTargetId = subscription?.scheduled_change?.to_plan?.id ?? null;
+  const effectiveAt = subscription?.scheduled_change?.effective_at;
   const sorted = [...plans].sort((a, b) => a.pricing.usd - b.pricing.usd);
 
   const isDowngrade = (planId: number) => {
     if (!currentPlan) return false;
     const current = sorted.find(p => p.id === currentPlan.id);
     const target = sorted.find(p => p.id === planId);
-    return current && target && target.pricing.usd < current.pricing.usd;
+    return Boolean(current && target && target.pricing.usd < current.pricing.usd);
   };
 
   const isUpgrade = (planId: number) => {
     if (!currentPlan) return false;
     const current = sorted.find(p => p.id === currentPlan.id);
     const target = sorted.find(p => p.id === planId);
-    return current && target && target.pricing.usd > current.pricing.usd;
+    return Boolean(current && target && target.pricing.usd > current.pricing.usd);
   };
 
-  const handlePlanAction = async (planId: number) => {
+  const isYourPlan = (planId: number) =>
+    hasActiveSubscription && currentPlan?.id === planId && scheduledTargetId !== planId;
+
+  const isScheduledTarget = (planId: number) => scheduledTargetId === planId;
+
+  const handleStartTrial = async (planId: number) => {
     const plan = sorted.find(p => p.id === planId);
     if (!plan) return;
-    const currentName = currentPlan?.name || '';
 
     dispatch(selectPlan({
       planId: plan.id,
@@ -111,77 +115,74 @@ export const AvailablePlans: React.FC<AvailablePlansProps> = ({ theme }) => {
       onboardingFee: plan.onboarding_fee?.usd || 0,
     }));
 
-    if (!hasActiveSubscription) {
-      const confirmed = await confirm({
-        title: 'Subscribe to Plan',
-        message: `You are about to start a ${plan.name} subscription. A 7-day free trial will begin immediately.`,
-        confirmText: 'Start Free Trial',
-        cancelText: 'Cancel',
-        variant: 'info',
-        theme,
-      });
-      if (!confirmed) return;
-      createSubscription.mutate({ data: { plan_id: planId } });
-      navigate(ADMINISTRATION_PLANS_SUBSCRIPTIONS_ROUTES.PAYMENTS);
-      return;
-    }
+    const trialDays = plan.trial_days ?? 0;
+    const confirmed = await confirm({
+      title: 'Subscribe to Plan',
+      message: trialDays > 0
+        ? `Start a ${plan.name} subscription with a ${trialDays}-day free trial.`
+        : `Start a ${plan.name} subscription.`,
+      confirmText: trialDays > 0 ? 'Start Free Trial' : 'Subscribe',
+      cancelText: 'Cancel',
+      variant: 'info',
+      theme,
+    });
+    if (!confirmed) return;
+    createSubscription.mutate({ data: { plan_id: planId } });
+    navigate(ADMINISTRATION_PLANS_SUBSCRIPTIONS_ROUTES.PAYMENTS);
+  };
 
-    if (isInTrial) {
-      const confirmed = await confirm({
-        title: 'Switch Plan',
-        message: `You are currently on ${currentName} (trial). You will be subscribed to ${plan.name}. Your trial will transition to the new plan.`,
-        confirmText: 'Switch & Continue',
-        cancelText: 'Cancel',
-        variant: 'info',
-        theme,
-      });
-      if (!confirmed) return;
-      cancelSubscription.mutate({}, {
-        onSuccess: () => {
-          createSubscription.mutate({ data: { plan_id: planId } });
-          navigate(ADMINISTRATION_PLANS_SUBSCRIPTIONS_ROUTES.PAYMENTS);
-        },
-      });
-      return;
-    }
+  const handleScheduleChange = async (planId: number, changeType: 'upgrade' | 'downgrade') => {
+    const plan = sorted.find(p => p.id === planId);
+    if (!plan || !currentPlan) return;
 
-    if (isUpgrade(planId)) {
-      const confirmed = await confirm({
-        title: 'Upgrade Plan',
-        message: `You are currently on ${currentName}. Your plan will be upgraded to ${plan.name}.`,
-        confirmText: 'Upgrade',
-        cancelText: 'Cancel',
-        variant: 'info',
-        theme,
-      });
-      if (!confirmed) return;
-      cancelSubscription.mutate({}, {
-        onSuccess: () => {
-          createSubscription.mutate({ data: { plan_id: planId } });
-          navigate(ADMINISTRATION_PLANS_SUBSCRIPTIONS_ROUTES.PAYMENTS);
-        },
-      });
-      return;
-    }
+    const effectiveLabel = effectiveAt
+      ? new Date(effectiveAt).toLocaleDateString()
+      : subscription?.next_billing_date
+        ? new Date(subscription.next_billing_date).toLocaleDateString()
+        : 'your next billing date';
 
-    if (isDowngrade(planId)) {
-      const confirmed = await confirm({
-        title: 'Downgrade Plan',
-        message: `You are currently on ${currentName}. Your plan will be downgraded to ${plan.name}. Some features may be limited.`,
-        confirmText: 'Downgrade',
-        cancelText: 'Cancel',
-        variant: 'warning',
-        theme,
-      });
-      if (!confirmed) return;
-      cancelSubscription.mutate({}, {
+    const confirmed = await confirm({
+      title: changeType === 'upgrade' ? 'Schedule Upgrade' : 'Schedule Downgrade',
+      message: `Your plan will change to ${plan.name} on ${effectiveLabel}. No charge today — the new price applies at renewal.`,
+      confirmText: 'Schedule Change',
+      cancelText: 'Cancel',
+      variant: changeType === 'upgrade' ? 'info' : 'warning',
+      theme,
+    });
+    if (!confirmed) return;
+    scheduleChange.mutate({ data: { plan_id: planId, change_type: changeType } });
+  };
+
+  const handleUpgradeNow = async (planId: number) => {
+    const plan = sorted.find(p => p.id === planId);
+    if (!plan) return;
+
+    const confirmed = await confirm({
+      title: 'Upgrade Now',
+      message: `Upgrade to ${plan.name} immediately. You will pay a prorated amount for the remainder of this billing period.`,
+      confirmText: 'Continue to Payment',
+      cancelText: 'Cancel',
+      variant: 'info',
+      theme,
+    });
+    if (!confirmed) return;
+
+    upgradeNow.mutate(
+      { data: { plan_id: planId } },
+      {
         onSuccess: () => {
-          createSubscription.mutate({ data: { plan_id: planId } });
-          navigate(ADMINISTRATION_PLANS_SUBSCRIPTIONS_ROUTES.PAYMENTS);
+          dispatch(selectPlan({
+            planId: plan.id,
+            planName: plan.name,
+            planPrice: plan.pricing.usd,
+            onboardingFee: plan.onboarding_fee?.usd || 0,
+          }));
+          navigate(ADMINISTRATION_PLANS_SUBSCRIPTIONS_ROUTES.PAYMENTS, {
+            state: { quoteIntent: 'upgrade_now', targetPlanId: planId },
+          });
         },
-      });
-      return;
-    }
+      },
+    );
   };
 
   if (isLoading) {
@@ -273,7 +274,8 @@ export const AvailablePlans: React.FC<AvailablePlansProps> = ({ theme }) => {
       {/* Plan Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-5xl mx-auto">
         {sorted.map((plan) => {
-          const isCurrent = currentPlan?.id === plan.id;
+          const isYourPlanCard = isYourPlan(plan.id);
+          const isScheduled = isScheduledTarget(plan.id);
           const limitDisplay = plan.limits.max_staff
             ? `${plan.limits.max_staff} staff · ${plan.limits.max_departments} depts · ${plan.limits.max_patients_per_month} patients per month`
             : 'Unlimited staff, departments & patients';
@@ -285,35 +287,51 @@ export const AvailablePlans: React.FC<AvailablePlansProps> = ({ theme }) => {
               animate={{ opacity: 1, y: 0 }}
               className={cn(
                 "relative rounded-xl border-2 p-5 flex flex-col transition-all duration-200",
-                isCurrent
+                isYourPlanCard
                   ? theme === 'dark'
                     ? 'border-blue-500 bg-blue-500/10 shadow-lg shadow-blue-500/10'
                     : 'border-blue-500 bg-blue-50 shadow-lg shadow-blue-500/10'
+                  : isScheduled
+                    ? theme === 'dark'
+                      ? 'border-cyan-500/50 bg-cyan-500/5'
+                      : 'border-cyan-400 bg-cyan-50/50'
                   : theme === 'dark'
                     ? 'border-gray-700 bg-gray-800/40 hover:border-gray-600'
                     : 'border-gray-200 bg-white hover:border-gray-300'
               )}
             >
-              {plan.is_popular && !isCurrent && (
+              {plan.is_popular && !isYourPlanCard && !isScheduled && (
                 <span className="absolute -top-2.5 right-3 px-2.5 py-0.5 rounded-full text-[10px] font-bold text-white bg-gradient-to-r from-blue-600 to-emerald-600 shadow">
                   Most Popular
                 </span>
               )}
 
-              {isCurrent && (
-                <span className="absolute -top-2.5 left-3 px-2.5 py-0.5 rounded-full text-[10px] font-bold text-white bg-gradient-to-r from-blue-600 to-blue-700 shadow">
-                  Current Plan
+              {isYourPlanCard && (
+                <span className="absolute -top-2.5 left-3 px-2.5 py-0.5 rounded-full text-[10px] font-bold text-white bg-gradient-to-r from-blue-600 to-cyan-500 shadow">
+                  Your plan
+                </span>
+              )}
+
+              {isScheduled && effectiveAt && (
+                <span className="absolute -top-2.5 left-3 px-2.5 py-0.5 rounded-full text-[10px] font-bold text-white bg-gradient-to-r from-cyan-600 to-blue-600 shadow">
+                  Starts {new Date(effectiveAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                </span>
+              )}
+
+              {isYourPlanCard && subscription?.cancel_at_period_end && subscription.access_ends_at && (
+                <span className="absolute -top-2.5 right-3 px-2.5 py-0.5 rounded-full text-[10px] font-bold text-amber-900 bg-amber-200 shadow">
+                  Access until {new Date(subscription.access_ends_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                 </span>
               )}
 
               <div className="flex items-center justify-between mb-3">
                 <div className={cn(
                   "w-9 h-9 rounded-lg flex items-center justify-center",
-                  isCurrent ? "bg-blue-600 text-white" : theme === 'dark' ? "bg-gray-700 text-gray-300" : "bg-gray-100 text-gray-600"
+                  isYourPlanCard ? "bg-blue-600 text-white" : theme === 'dark' ? "bg-gray-700 text-gray-300" : "bg-gray-100 text-gray-600"
                 )}>
                   {PLAN_ICONS[plan.slug]}
                 </div>
-                {isCurrent && (
+                {isYourPlanCard && (
                   <CheckCircle2 className="w-5 h-5 text-blue-600" />
                 )}
               </div>
@@ -347,17 +365,14 @@ export const AvailablePlans: React.FC<AvailablePlansProps> = ({ theme }) => {
 
               {/* Action Buttons */}
               <div className="space-y-2 mt-auto">
-                {isCurrent && !isInTrial && (
-                  <button
-                    disabled
-                    className="w-full py-2.5 rounded-lg text-xs font-bold cursor-not-allowed opacity-60 bg-gray-200 dark:bg-gray-700 text-gray-500"
-                  >
+                {isYourPlanCard && !isInTrial && (
+                  <span className="w-full py-2.5 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 bg-gradient-to-r from-blue-600/15 to-cyan-500/15 text-blue-700 dark:text-cyan-300 border border-blue-300/40 dark:border-cyan-500/30">
                     <CheckCircle2 className="w-3.5 h-3.5" />
-                    Current Plan
-                  </button>
+                    Your plan
+                  </span>
                 )}
 
-                {isCurrent && isInTrial && (
+                {isYourPlanCard && isInTrial && (
                   <button
                     onClick={() => {
                       dispatch(selectPlan({
@@ -375,9 +390,9 @@ export const AvailablePlans: React.FC<AvailablePlansProps> = ({ theme }) => {
                   </button>
                 )}
 
-                {!isCurrent && !hasActiveSubscription && (
+                {!isYourPlanCard && !isScheduled && !hasActiveSubscription && (
                   <button
-                    onClick={() => handlePlanAction(plan.id)}
+                    onClick={() => handleStartTrial(plan.id)}
                     disabled={createSubscription.isPending}
                     className={cn(
                       "w-full py-2.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer bg-gradient-to-r from-blue-600 to-emerald-600 text-white shadow-lg hover:shadow-xl hover:scale-[1.02]",
@@ -392,9 +407,9 @@ export const AvailablePlans: React.FC<AvailablePlansProps> = ({ theme }) => {
                   </button>
                 )}
 
-                {isInTrial && !isCurrent && (
+                {isInTrial && !isYourPlanCard && (
                   <button
-                    onClick={() => handlePlanAction(plan.id)}
+                    onClick={() => handleStartTrial(plan.id)}
                     disabled={createSubscription.isPending}
                     className={cn(
                       "w-full py-2.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer bg-gradient-to-r from-blue-600 to-indigo-700 text-white shadow-lg hover:shadow-xl hover:scale-[1.02]",
@@ -406,25 +421,35 @@ export const AvailablePlans: React.FC<AvailablePlansProps> = ({ theme }) => {
                   </button>
                 )}
 
-                {hasActiveSubscription && !isInTrial && isUpgrade(plan.id) && (
-                  <button
-                    onClick={() => handlePlanAction(plan.id)}
-                    disabled={createSubscription.isPending}
-                    className="w-full py-2.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer bg-gradient-to-r from-blue-600 to-indigo-700 text-white shadow-lg hover:shadow-xl hover:scale-[1.02]"
-                  >
-                    <ArrowUp className="w-3.5 h-3.5" />
-                    Upgrade to {plan.name}
-                  </button>
+                {hasActiveSubscription && !isInTrial && !isYourPlanCard && !isScheduled && isUpgrade(plan.id) && (
+                  <>
+                    <button
+                      onClick={() => handleUpgradeNow(plan.id)}
+                      disabled={upgradeNow.isPending}
+                      className="w-full py-2.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer bg-gradient-to-r from-blue-600 to-cyan-600 text-white shadow-lg hover:shadow-xl hover:scale-[1.02]"
+                    >
+                      <CreditCard className="w-3.5 h-3.5" />
+                      Upgrade now
+                    </button>
+                    <button
+                      onClick={() => handleScheduleChange(plan.id, 'upgrade')}
+                      disabled={scheduleChange.isPending}
+                      className="w-full py-2.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer bg-gradient-to-r from-blue-600 to-indigo-700 text-white shadow-lg hover:shadow-xl hover:scale-[1.02]"
+                    >
+                      <ArrowUp className="w-3.5 h-3.5" />
+                      Schedule upgrade
+                    </button>
+                  </>
                 )}
 
-                {hasActiveSubscription && !isInTrial && isDowngrade(plan.id) && (
+                {hasActiveSubscription && !isInTrial && !isYourPlanCard && !isScheduled && isDowngrade(plan.id) && (
                   <button
-                    onClick={() => handlePlanAction(plan.id)}
-                    disabled={createSubscription.isPending}
+                    onClick={() => handleScheduleChange(plan.id, 'downgrade')}
+                    disabled={scheduleChange.isPending}
                     className="w-full py-2.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer bg-gradient-to-r from-amber-500 to-orange-600 text-white shadow-lg hover:shadow-xl hover:scale-[1.02]"
                   >
                     <ArrowDown className="w-3.5 h-3.5" />
-                    Downgrade to {plan.name}
+                    Schedule downgrade
                   </button>
                 )}
 
@@ -432,7 +457,7 @@ export const AvailablePlans: React.FC<AvailablePlansProps> = ({ theme }) => {
                   onClick={() => setDetailPlan(plan)}
                   className={cn(
                     "w-full flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-semibold transition-all border-2 cursor-pointer",
-                    isCurrent
+                    isYourPlanCard
                       ? "border-blue-300 dark:border-blue-700 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20"
                       : theme === 'dark'
                         ? "border-gray-600 text-gray-300 hover:bg-gray-800"

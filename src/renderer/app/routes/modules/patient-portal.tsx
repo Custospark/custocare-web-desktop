@@ -19,6 +19,7 @@ import Sent from "../../../modules/account/ui/message/Sent";
 import Draft from "../../../modules/account/ui/message/Draft";
 import Trash from "../../../modules/account/ui/message/Trash";
 import Compose from "../../../modules/account/ui/message/Compose";
+import MessageContacts from "../../../modules/account/ui/message/MessageContacts";
 
 function pp(title: string) {
   return (
@@ -211,6 +212,7 @@ export const patientPortalRoutes = [
               draft: PATIENT_PORTAL_ROUTES.NOTIFICATIONS_DRAFT,
               trash: PATIENT_PORTAL_ROUTES.NOTIFICATIONS_TRASH,
               compose: PATIENT_PORTAL_ROUTES.NOTIFICATIONS_COMPOSE,
+              contacts: PATIENT_PORTAL_ROUTES.NOTIFICATIONS_CONTACTS,
             },
           }}
         />
@@ -255,6 +257,14 @@ export const patientPortalRoutes = [
       element={
         <SuspenseWrapper variant="dashboard">
           <WithThemeProp Component={Compose} />
+        </SuspenseWrapper>
+      }
+    />
+    <Route
+      path="contacts"
+      element={
+        <SuspenseWrapper variant="dashboard">
+          <WithThemeProp Component={MessageContacts} />
         </SuspenseWrapper>
       }
     />

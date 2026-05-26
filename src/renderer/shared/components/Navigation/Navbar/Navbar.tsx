@@ -33,6 +33,9 @@ import {
   switchCapability,
   switchFacility,
   selectActiveFacilityId,
+  selectActiveContextUser,
+  selectActiveContextCapability,
+  selectAvailableCapabilities,
   selectCurrentCapabilityName,
   selectStaffFacilities,
   selectHasActiveStaffFacility,
@@ -105,9 +108,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   const { showToast } = useToast();
 
   const activeFacilityId = useAppSelector(selectActiveFacilityId);
-  const showStaffFacilityContext = useAppSelector((state) =>
-    selectHasActiveStaffFacility(state),
-  );
+  const showStaffFacilityContext = useAppSelector(selectHasActiveStaffFacility);
   const subscriptionQueryEnabled =
     showStaffFacilityContext && activeFacilityId != null;
 
@@ -115,9 +116,9 @@ export const Navbar: React.FC<NavbarProps> = ({
     enabled: subscriptionQueryEnabled,
   });
 
-  const { user, activeCapability, availableCapabilities } = useAppSelector(
-    (state) => state.activeContext
-  );
+  const user = useAppSelector(selectActiveContextUser);
+  const activeCapability = useAppSelector(selectActiveContextCapability);
+  const availableCapabilities = useAppSelector(selectAvailableCapabilities);
 
   const currentCapabilityName = useAppSelector(selectCurrentCapabilityName);
   const staffFacilities = useAppSelector(selectStaffFacilities);
@@ -354,9 +355,10 @@ export const Navbar: React.FC<NavbarProps> = ({
       <div className="flex items-center gap-2">
       <BrandName />
         {subscriptionQueryEnabled && (() => {
-          const plan = subResp?.data?.plan;
+          const sub = subResp?.data;
+          const plan = sub?.effective_plan ?? sub?.plan;
           const slug = plan?.slug || '';
-          const name = plan?.name?.slice(0, 3) || '';
+          const name = sub?.has_access ? plan?.name?.slice(0, 3) || '' : '';
           if (!name) {
             return null;
           }

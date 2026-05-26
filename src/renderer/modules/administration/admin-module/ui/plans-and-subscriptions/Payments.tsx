@@ -5,13 +5,23 @@ import {
   Building2, ArrowLeft,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { axiosInstance } from '../../../../../app/api/axiosConfig';
 
 import { useAppDispatch, useAppSelector } from '../../../../../app/store/hooks/useApp';
-import { useGetFacilitySubscription, useRecordPayment } from '../../api/subscriptions/SubscriptionQueries';
-import { useGetFacilityPayments } from '../../api/subscriptions/SubscriptionQueries';
-import { PaymentStatus, PaymentMethod, PaymentType, type Payment } from '../../api/subscriptions/SubscriptionTypes';
+import {
+  useGetFacilitySubscription,
+  useGetFacilityPayments,
+  useGetPaymentQuote,
+  useRecordPayment,
+} from '../../api/subscriptions/SubscriptionQueries';
+import {
+  PaymentStatus,
+  PaymentMethod,
+  PaymentType,
+  type Payment,
+  type PaymentQuoteIntent,
+} from '../../api/subscriptions/SubscriptionTypes';
 import { cn } from '../../../../../shared/types/cn';
 import { useToast } from '../../../../../app/store/contexts/toast/useToast';
 import { setUserContext, switchCapability, switchFacility } from '../../../../../app/store/slices/activeContextSlice';
@@ -41,6 +51,8 @@ export const Payments: React.FC<PaymentsProps> = ({ theme }) => {
   const [copied, setCopied] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
+  const navState = location.state as { quoteIntent?: PaymentQuoteIntent; targetPlanId?: number } | null;
 
   const { data: subResp, refetch: refetchSubscription } = useGetFacilitySubscription();
   const { data: paymentsResp, refetch } = useGetFacilityPayments({ per_page: 100 });
@@ -60,11 +72,37 @@ export const Payments: React.FC<PaymentsProps> = ({ theme }) => {
 
   const subscription = subResp?.data;
   const plan = subscription?.plan;
-  const price = plan?.pricing.usd || planSelection?.planPrice || 0;
+
+  const resolveQuoteIntent = (): PaymentQuoteIntent => {
+    if (navState?.quoteIntent) return navState.quoteIntent;
+    if (subscription?.status === 'past_due') return 'renewal';
+    if (subscription?.status === 'trial') return 'subscription';
+    if (subscription?.status === 'active') return 'renewal';
+    return 'subscription';
+  };
+
+  const quoteIntent = resolveQuoteIntent();
+  const targetPlanId = navState?.targetPlanId ?? planSelection?.planId ?? undefined;
+
+  const { data: quoteResp, isLoading: quoteLoading } = useGetPaymentQuote(
+    subscription
+      ? { intent: quoteIntent, ...(targetPlanId ? { plan_id: targetPlanId } : {}) }
+      : null,
+  );
+
+  const quote = quoteResp?.data;
+  const lineItems = quote?.line_items ?? [];
+  const total = quote?.total_usd ?? 0;
   const planName = plan?.name || planSelection?.planName || '';
-  const onboardingFee = plan?.onboarding_fee?.applicable ? (plan.onboarding_fee.usd || planSelection?.onboardingFee || 0) : 0;
-  const total = price + onboardingFee;
   const noPlan = !planName && !planSelection && !subscription;
+
+  const paymentType = (() => {
+    const fromQuote = quote?.payment_type;
+    if (fromQuote === 'upgrade_proration') return PaymentType.UPGRADE_PRORATION;
+    if (fromQuote === 'renewal') return PaymentType.RENEWAL;
+    if (fromQuote === 'onboarding') return PaymentType.ONBOARDING;
+    return PaymentType.SUBSCRIPTION;
+  })();
 
   const approvedPayment = payments.find((p) => p.status === PaymentStatus.APPROVED) || null;
 
@@ -103,13 +141,15 @@ export const Payments: React.FC<PaymentsProps> = ({ theme }) => {
   };
 
   const handleSubmitPayment = () => {
-    if (!reference.trim() || hasPendingProof) return;
+    if (!reference.trim() || hasPendingProof || quoteLoading || !quote) return;
     recordPayment.mutate({
       data: {
         amount: total,
         currency: 'USD',
         method: PaymentMethod.BANK_TRANSFER,
-        payment_type: PaymentType.SUBSCRIPTION,
+        payment_type: paymentType,
+        quote_intent: quoteIntent,
+        target_plan_id: targetPlanId ?? quote.target_plan_id ?? undefined,
         transaction_reference: reference,
         receipt_notes: notes,
         paid_at: new Date().toISOString(),
@@ -155,23 +195,32 @@ export const Payments: React.FC<PaymentsProps> = ({ theme }) => {
           Transaction Summary
         </h2>
         <div className="space-y-3">
-          <div className="flex justify-between items-center">
-            <span className={isDark ? 'text-gray-400' : 'text-gray-600'}>Plan</span>
-            <span className="font-bold">{planName}</span>
-          </div>
-          <div className="flex justify-between items-center">
-            <span className={isDark ? 'text-gray-400' : 'text-gray-600'}>Plan Price</span>
-            <span className="font-bold">${price} USD</span>
-          </div>
-          {onboardingFee > 0 && (
+          {planName && (
             <div className="flex justify-between items-center">
-              <span className={isDark ? 'text-gray-400' : 'text-gray-600'}>Onboarding Fee</span>
-              <span className="font-bold">${onboardingFee} USD</span>
+              <span className={isDark ? 'text-gray-400' : 'text-gray-600'}>Plan</span>
+              <span className="font-bold">{planName}</span>
             </div>
           )}
+          {quoteLoading && (
+            <div className="flex items-center justify-center gap-2 py-4 text-sm text-gray-500">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              Loading payment quote…
+            </div>
+          )}
+          {!quoteLoading && lineItems.map((item, idx) => (
+            <div key={idx} className="flex justify-between items-center">
+              <span className={isDark ? 'text-gray-400' : 'text-gray-600'}>{item.label}</span>
+              <span className="font-bold">${item.amount.toFixed(2)} USD</span>
+            </div>
+          ))}
+          {!quoteLoading && quote?.notes && (
+            <p className={cn('text-xs', isDark ? 'text-gray-500' : 'text-gray-500')}>{quote.notes}</p>
+          )}
           <div className={cn('border-t pt-3 flex justify-between items-center', isDark ? 'border-gray-700' : 'border-gray-200')}>
-            <span className="font-bold">Total</span>
-            <span className="text-xl font-extrabold text-blue-600">${total} USD</span>
+            <span className="font-bold">Total due today</span>
+            <span className="text-xl font-extrabold text-blue-600">
+              {quoteLoading ? '—' : `$${total.toFixed(2)} USD`}
+            </span>
           </div>
         </div>
       </div>
@@ -305,7 +354,7 @@ export const Payments: React.FC<PaymentsProps> = ({ theme }) => {
 
                 <button
                   onClick={handleSubmitPayment}
-                  disabled={!reference.trim() || recordPayment.isPending || !canSubmitProof}
+                  disabled={!reference.trim() || recordPayment.isPending || !canSubmitProof || quoteLoading || !quote}
                   className={cn(
                     'w-full py-3 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2',
                     'bg-gradient-to-r from-blue-600 to-emerald-600 text-white shadow-lg hover:shadow-xl hover:scale-[1.02]',

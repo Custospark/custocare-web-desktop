@@ -11,11 +11,13 @@ import {
   Loader2,
   ArrowUp,
   ArrowDown,
+  Clock,
+  AlertTriangle,
 } from 'lucide-react';
 import type { AxiosError } from 'axios';
 import { cn } from '../../../types/cn';
 import { useNavigate } from 'react-router-dom';
-import { useSelector } from 'react-redux';
+import { useAppSelector } from '../../../../app/store/hooks/useApp';
 import {
   useGetFacilitySubscription,
   useGetPlans,
@@ -24,14 +26,14 @@ import {
   SubscriptionStatus,
   type ApiErrorResponse,
   type Plan,
+  type Subscription,
 } from '../../../../modules/administration/admin-module/api/subscriptions/SubscriptionTypes';
 import { ADMINISTRATION_PLANS_SUBSCRIPTIONS_ROUTES } from '../../../../app/routes/constants/administration.paths';
 import {
   selectActiveFacilityId,
+  selectCanManageFacilitySubscription,
   selectHasActiveStaffFacility,
-  selectIsActiveFacilityOwner,
 } from '../../../../app/store/slices/activeContextSlice';
-import type { RootState } from '../../../../app/store/store';
 
 interface SubscriptionProps {
   isDark: boolean;
@@ -74,6 +76,105 @@ const getIcon = (slug: string, className = 'w-3.5 h-3.5') =>
     <Building2 className={className} />
   );
 
+const formatShortDate = (iso: string | null | undefined): string => {
+  if (!iso) return '';
+  return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+};
+
+type StatusBadgeKind = 'trial' | 'active' | 'ending' | 'past_due' | 'scheduled' | 'suspended' | 'cancelled';
+
+interface SubscriptionDisplay {
+  badge: string;
+  badgeKind: StatusBadgeKind;
+  subtitle: string;
+}
+
+const getSubscriptionDisplay = (sub: Subscription | undefined): SubscriptionDisplay => {
+  if (!sub) {
+    return { badge: '', badgeKind: 'active', subtitle: '' };
+  }
+
+  if (sub.status === SubscriptionStatus.TRIAL) {
+    return {
+      badge: 'Trial',
+      badgeKind: 'trial',
+      subtitle: sub.trial_ends_at
+        ? `Trial ends ${formatShortDate(sub.trial_ends_at)}`
+        : '',
+    };
+  }
+
+  if (sub.cancel_at_period_end && sub.has_access) {
+    return {
+      badge: 'Ending',
+      badgeKind: 'ending',
+      subtitle: sub.access_ends_at
+        ? `Access until ${formatShortDate(sub.access_ends_at)}`
+        : 'Cancellation scheduled',
+    };
+  }
+
+  if (sub.scheduled_change?.to_plan && sub.scheduled_change.effective_at) {
+    return {
+      badge: 'Change scheduled',
+      badgeKind: 'scheduled',
+      subtitle: `→ ${sub.scheduled_change.to_plan.name} on ${formatShortDate(sub.scheduled_change.effective_at)}`,
+    };
+  }
+
+  if (sub.status === SubscriptionStatus.PAST_DUE) {
+    return {
+      badge: 'Past due',
+      badgeKind: 'past_due',
+      subtitle: sub.grace_period_ends_at
+        ? `Grace until ${formatShortDate(sub.grace_period_ends_at)}`
+        : 'Payment required',
+    };
+  }
+
+  if (sub.status === SubscriptionStatus.SUSPENDED) {
+    return {
+      badge: 'Suspended',
+      badgeKind: 'suspended',
+      subtitle: 'Renew to restore access',
+    };
+  }
+
+  if (sub.status === SubscriptionStatus.CANCELLED) {
+    return {
+      badge: 'Cancelled',
+      badgeKind: 'cancelled',
+      subtitle: '',
+    };
+  }
+
+  return {
+    badge: 'Active',
+    badgeKind: 'active',
+    subtitle: sub.next_billing_date
+      ? `Renews ${formatShortDate(sub.next_billing_date)}`
+      : '',
+  };
+};
+
+const badgeTone = (kind: StatusBadgeKind, isDark: boolean): string => {
+  switch (kind) {
+    case 'trial':
+      return isDark ? 'bg-amber-500/20 text-amber-300' : 'bg-amber-100 text-amber-800';
+    case 'ending':
+      return isDark ? 'bg-orange-500/20 text-orange-300' : 'bg-orange-100 text-orange-800';
+    case 'scheduled':
+      return isDark ? 'bg-cyan-500/20 text-cyan-300' : 'bg-cyan-100 text-cyan-800';
+    case 'past_due':
+      return isDark ? 'bg-yellow-500/20 text-yellow-300' : 'bg-yellow-100 text-yellow-800';
+    case 'suspended':
+    case 'cancelled':
+      return isDark ? 'bg-red-500/20 text-red-300' : 'bg-red-100 text-red-800';
+    default:
+      return isDark ? 'bg-emerald-500/20 text-emerald-300' : 'bg-emerald-100 text-emerald-800';
+  }
+};
+
 const lims = (l: Plan['limits']) => [
   l.max_staff !== null ? `Up to ${l.max_staff} staff` : 'Unlimited staff',
   l.max_departments !== null
@@ -87,12 +188,13 @@ const lims = (l: Plan['limits']) => [
 interface PlanBadgeProps {
   plan: Plan;
   isDark: boolean;
-  isTrial: boolean;
+  display: SubscriptionDisplay;
 }
 
-const PlanBadgeContent: React.FC<PlanBadgeProps> = ({ plan, isDark, isTrial }) => {
+const PlanBadgeContent: React.FC<PlanBadgeProps> = ({ plan, isDark, display }) => {
   const slug = plan.slug || 'essential';
   const cc = getC(slug, isDark);
+  const secondaryLine = display.subtitle || `$${plan.pricing.usd}/mo`;
 
   return (
     <>
@@ -106,7 +208,7 @@ const PlanBadgeContent: React.FC<PlanBadgeProps> = ({ plan, isDark, isTrial }) =
       >
         <span className={cc.color}>{getIcon(slug)}</span>
       </div>
-      <div className="hidden lg:block min-w-0">
+      <div className="hidden lg:block min-w-0 max-w-[140px]">
         <span
           className={cn(
             'text-xs font-semibold truncate block',
@@ -114,15 +216,15 @@ const PlanBadgeContent: React.FC<PlanBadgeProps> = ({ plan, isDark, isTrial }) =
           )}
         >
           {plan.name}
-          {isTrial && <span className="ml-1 text-amber-500">(Trial)</span>}
         </span>
         <span
           className={cn(
             'block text-xs truncate',
             isDark ? 'text-gray-400' : 'text-gray-600',
           )}
+          title={secondaryLine}
         >
-          ${plan.pricing.usd}/mo
+          {secondaryLine}
         </span>
       </div>
     </>
@@ -133,13 +235,15 @@ interface SubscriptionDropdownProps {
   isDark: boolean;
   isMobile: boolean;
   isInteractive: boolean;
+  subscription: Subscription;
   current: Plan;
-  isTrial: boolean;
+  display: SubscriptionDisplay;
   otherPlans: Array<{
     plan: Plan;
     slug: string;
     isHigher: boolean;
     isLower: boolean;
+    isScheduledTarget: boolean;
   }>;
   onNavigate: (path: string) => void;
   onClose: () => void;
@@ -149,8 +253,9 @@ const SubscriptionDropdown: React.FC<SubscriptionDropdownProps> = ({
   isDark,
   isMobile,
   isInteractive,
+  subscription,
   current,
-  isTrial,
+  display,
   otherPlans,
   onNavigate,
   onClose,
@@ -192,18 +297,48 @@ const SubscriptionDropdown: React.FC<SubscriptionDropdownProps> = ({
               <span
                 className={cn(
                   'px-2 py-0.5 text-xs font-bold rounded-full shrink-0',
-                  cc.bgColor,
-                  cc.color,
+                  badgeTone(display.badgeKind, isDark),
                 )}
               >
-                {isTrial ? 'Trial' : 'Active'}
+                {display.badge}
               </span>
             </div>
             <span className={cn('text-xs', isDark ? 'text-gray-400' : 'text-gray-600')}>
-              ${current.pricing.usd}/mo
+              {display.subtitle || `$${current.pricing.usd}/mo`}
             </span>
           </div>
         </div>
+
+        {subscription.cancel_at_period_end && subscription.has_access && subscription.access_ends_at && (
+          <div
+            className={cn(
+              'mt-3 flex items-start gap-2 rounded-lg px-2.5 py-2 text-xs',
+              isDark ? 'bg-amber-900/30 text-amber-200' : 'bg-amber-50 text-amber-900',
+            )}
+          >
+            <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+            <span>
+              Cancellation scheduled — access until{' '}
+              {formatShortDate(subscription.access_ends_at)}
+            </span>
+          </div>
+        )}
+
+        {subscription.scheduled_change?.to_plan && subscription.scheduled_change.effective_at && (
+          <div
+            className={cn(
+              'mt-3 flex items-start gap-2 rounded-lg px-2.5 py-2 text-xs',
+              isDark ? 'bg-cyan-900/30 text-cyan-200' : 'bg-cyan-50 text-cyan-900',
+            )}
+          >
+            <Clock className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+            <span>
+              Switching to {subscription.scheduled_change.to_plan.name} on{' '}
+              {formatShortDate(subscription.scheduled_change.effective_at)}
+            </span>
+          </div>
+        )}
+
         <div className="mt-3 space-y-1.5">
           {currentFeatures.map((f, i) => (
             <div key={i} className="flex items-start gap-2">
@@ -233,7 +368,7 @@ const SubscriptionDropdown: React.FC<SubscriptionDropdownProps> = ({
             Other plans
           </p>
           <div className="space-y-1">
-            {otherPlans.map(({ plan: p, slug, isHigher, isLower }) => {
+            {otherPlans.map(({ plan: p, slug, isHigher, isLower, isScheduledTarget }) => {
               const pc = getC(slug, isDark);
               const rowClass = cn(
                 'w-full flex items-center gap-3 p-2 rounded-md text-left',
@@ -255,17 +390,24 @@ const SubscriptionDropdown: React.FC<SubscriptionDropdownProps> = ({
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-xs font-semibold truncate">{p.name}</span>
-                      <span className={cn('text-xs shrink-0', isDark ? 'text-gray-500' : 'text-gray-500')}>
-                        ${p.pricing.usd}/mo
-                      </span>
+                      {isScheduledTarget ? (
+                        <span className={cn('text-[10px] font-bold shrink-0', isDark ? 'text-cyan-400' : 'text-cyan-700')}>
+                          Starts {formatShortDate(subscription.scheduled_change?.effective_at)}
+                        </span>
+                      ) : (
+                        <span className={cn('text-xs shrink-0', isDark ? 'text-gray-500' : 'text-gray-500')}>
+                          ${p.pricing.usd}/mo
+                        </span>
+                      )}
                     </div>
                     <span className={cn('text-xs', isDark ? 'text-gray-500' : 'text-gray-600')}>
-                      {lims(p.limits)[0]}
+                      {isScheduledTarget ? 'Scheduled plan change' : lims(p.limits)[0]}
                     </span>
                   </div>
                   <div className="flex items-center gap-0.5 shrink-0">
-                    {isHigher && <ArrowUp className="w-3 h-3 text-blue-500" />}
-                    {isLower && <ArrowDown className="w-3 h-3 text-amber-500" />}
+                    {isScheduledTarget && <Clock className="w-3 h-3 text-cyan-500" />}
+                    {!isScheduledTarget && isHigher && <ArrowUp className="w-3 h-3 text-blue-500" />}
+                    {!isScheduledTarget && isLower && <ArrowDown className="w-3 h-3 text-amber-500" />}
                   </div>
                 </>
               );
@@ -298,6 +440,20 @@ const SubscriptionDropdown: React.FC<SubscriptionDropdownProps> = ({
 
       {isInteractive && (
         <div className={cn('p-2 space-y-1', isDark ? 'bg-gray-800/20' : 'bg-gray-50/50')}>
+          <button
+            type="button"
+            onClick={() => {
+              onNavigate(ADMINISTRATION_PLANS_SUBSCRIPTIONS_ROUTES.SUBSCRIPTIONS);
+              onClose();
+            }}
+            className={cn(
+              'w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm cursor-pointer',
+              isDark ? 'hover:bg-gray-800 text-gray-300' : 'hover:bg-gray-100 text-gray-700',
+            )}
+          >
+            <Settings className="w-4 h-4" />
+            <span>Manage subscription</span>
+          </button>
           <button
             type="button"
             onClick={() => {
@@ -363,14 +519,9 @@ export const Subscription: React.FC<SubscriptionProps> = ({
   isMobile,
   className,
 }) => {
-  const activeFacilityId = useSelector((state: RootState) => selectActiveFacilityId(state));
-  const showForStaffFacility = useSelector((state: RootState) =>
-    selectHasActiveStaffFacility(state),
-  );
-  const canManageSubscription = useSelector(
-    (state: RootState) =>
-      selectHasActiveStaffFacility(state) && selectIsActiveFacilityOwner(state),
-  );
+  const activeFacilityId = useAppSelector(selectActiveFacilityId);
+  const showForStaffFacility = useAppSelector(selectHasActiveStaffFacility);
+  const canManageSubscription = useAppSelector(selectCanManageFacilitySubscription);
 
   const queryEnabled = showForStaffFacility && activeFacilityId != null;
 
@@ -393,13 +544,19 @@ export const Subscription: React.FC<SubscriptionProps> = ({
   });
 
   const sub = subRes?.data;
-  const current = sub?.plan ?? null;
-  const plans = (plansRes?.data || []) as Plan[];
-  const isTrial = sub?.status === SubscriptionStatus.TRIAL;
+  const current = sub?.effective_plan ?? sub?.plan ?? null;
+  const display = getSubscriptionDisplay(sub);
+  const hasAccess = sub?.has_access ?? false;
 
   const subscriptionNotFound =
     subError &&
     (subQueryError as AxiosError<ApiErrorResponse>)?.response?.status === 404;
+
+  const showInactivePlan =
+    !hasAccess &&
+    sub != null &&
+    (sub.status === SubscriptionStatus.CANCELLED ||
+      sub.status === SubscriptionStatus.SUSPENDED);
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -411,22 +568,31 @@ export const Subscription: React.FC<SubscriptionProps> = ({
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
+  const scheduledTargetId = sub?.scheduled_change?.to_plan?.id ?? null;
+  const currentPlanId = current?.id ?? null;
+  const currentPlanPrice = current?.pricing.usd ?? 0;
+
+  const plansList = useMemo(
+    () => (plansRes?.data ?? []) as Plan[],
+    [plansRes?.data],
+  );
+
   const otherPlans = useMemo(() => {
-    if (!current) {
+    if (!currentPlanId) {
       return [];
     }
-    const sorted = [...plans].sort((a, b) => a.pricing.usd - b.pricing.usd);
-    const currentPrice = current.pricing.usd ?? 0;
+    const sorted = [...plansList].sort((a, b) => a.pricing.usd - b.pricing.usd);
     return sorted
-      .filter((p) => p.id !== current.id)
+      .filter((p) => p.id !== currentPlanId)
       .map((p) => ({
         plan: p,
         slug: p.slug,
-        isHigher: p.pricing.usd > currentPrice,
-        isLower: p.pricing.usd < currentPrice,
+        isHigher: p.pricing.usd > currentPlanPrice,
+        isLower: p.pricing.usd < currentPlanPrice,
+        isScheduledTarget: scheduledTargetId === p.id,
       }))
       .slice(0, 3);
-  }, [plans, current]);
+  }, [plansList, currentPlanId, currentPlanPrice, scheduledTargetId]);
 
   if (!queryEnabled) {
     return null;
@@ -465,10 +631,19 @@ export const Subscription: React.FC<SubscriptionProps> = ({
     );
   }
 
-  if (subscriptionNotFound || !current) {
+  if (subscriptionNotFound || !current || showInactivePlan) {
     if (!canManageSubscription) {
       return null;
     }
+
+    const inactiveLabel =
+      sub?.status === SubscriptionStatus.SUSPENDED ? 'Subscription suspended' : 'Choose a plan';
+    const inactiveHint =
+      sub?.status === SubscriptionStatus.SUSPENDED
+        ? 'Renew to restore access'
+        : sub?.status === SubscriptionStatus.CANCELLED
+          ? 'Subscribe again to continue'
+          : 'Get started today';
 
     return (
       <div className={cn('relative', className)}>
@@ -495,10 +670,10 @@ export const Subscription: React.FC<SubscriptionProps> = ({
                 isDark ? 'text-amber-400' : 'text-amber-700',
               )}
             >
-              Choose a Plan
+              {inactiveLabel}
             </span>
             <span className={cn('block text-xs', isDark ? 'text-gray-400' : 'text-gray-600')}>
-              Get started today
+              {inactiveHint}
             </span>
           </div>
           <ChevronDown className="hidden lg:block w-3 h-3 ml-auto text-amber-500" />
@@ -530,7 +705,7 @@ export const Subscription: React.FC<SubscriptionProps> = ({
           isDark ? 'bg-gray-800/40 hover:bg-gray-800/70' : 'bg-white hover:bg-gray-50',
         )}
       >
-        <PlanBadgeContent plan={current} isDark={isDark} isTrial={isTrial} />
+        <PlanBadgeContent plan={current} isDark={isDark} display={display} />
         <ChevronDown
           className={cn(
             'hidden lg:block w-3 h-3 transition-transform shrink-0',
@@ -540,13 +715,14 @@ export const Subscription: React.FC<SubscriptionProps> = ({
         />
       </button>
 
-      {open && (
+      {open && sub && (
         <SubscriptionDropdown
           isDark={isDark}
           isMobile={isMobile}
           isInteractive={isInteractive}
+          subscription={sub}
           current={current}
-          isTrial={isTrial}
+          display={display}
           otherPlans={otherPlans}
           onNavigate={(path) => navigate(path)}
           onClose={() => setOpen(false)}

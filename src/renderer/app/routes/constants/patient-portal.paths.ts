@@ -31,6 +31,7 @@ export const PATIENT_PORTAL_ROUTES = {
   NOTIFICATIONS_DRAFT: `${PP}/notifications/draft`,
   NOTIFICATIONS_TRASH: `${PP}/notifications/trash`,
   NOTIFICATIONS_COMPOSE: `${PP}/notifications/compose`,
+  NOTIFICATIONS_CONTACTS: `${PP}/notifications/contacts`,
 
   DOWNLOADS: `${PP}/downloads-reports`,
 

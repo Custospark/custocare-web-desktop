@@ -15,6 +15,10 @@
  *   GET    /facilities/{facility}/subscription         → useGetFacilitySubscription
  *   POST   /facilities/{facility}/subscription         → useCreateSubscription
  *   DELETE /facilities/{facility}/subscription         → useCancelSubscription
+ *   POST   /facilities/{facility}/subscription/schedule-change
+ *   POST   /facilities/{facility}/subscription/upgrade-now
+ *   DELETE /facilities/{facility}/subscription/scheduled-change
+ *   GET    /facilities/{facility}/subscription/payment-quote
  *   GET    /facilities/{facility}/payments             → useGetFacilityPayments
  *   POST   /facilities/{facility}/payments             → useRecordPayment
  *   GET    /facilities/{facility}/payments/{payment}   → useGetFacilityPayment
@@ -68,7 +72,12 @@ import type {
   ApiErrorResponse,
   CancelSubscriptionParams,
   CancelSubscriptionResponse,
+  PaymentQuoteParams,
+  PaymentQuoteResponse,
   CreateSubscriptionParams,
+  ScheduleChangeResponse,
+  ScheduleSubscriptionChangeParams,
+  UpgradeNowParams,
   CreateSubscriptionResponse,
   FacilityInvoiceFilters,
   FacilityPaymentFilters,
@@ -386,7 +395,7 @@ export const useCancelSubscription = (
     },
 
     onSuccess: (data) => {
-      showToast('success', data.message || 'Subscription cancelled successfully.', 6000);
+      showToast('success', data.message || 'Cancellation scheduled successfully.', 6000);
       if (facilityId) {
         queryClient.setQueryData(subscriptionKeys.subscriptions.facility(facilityId), data);
       }
@@ -407,6 +416,153 @@ export const useCancelSubscription = (
       if (facilityId) {
         queryClient.invalidateQueries({ queryKey: subscriptionKeys.subscriptions.facility(facilityId) });
       }
+    },
+  });
+};
+
+/**
+ * GET /facilities/{facility}/subscription/payment-quote
+ */
+export const useGetPaymentQuote = (
+  params: PaymentQuoteParams | null,
+  options?: Omit<
+    UseQueryOptions<PaymentQuoteResponse, AxiosError<ApiErrorResponse>>,
+    'queryKey' | 'queryFn'
+  >,
+) => {
+  const facilityId = useActiveFacilityId();
+
+  return useQuery<PaymentQuoteResponse, AxiosError<ApiErrorResponse>>({
+    queryKey: facilityId
+      ? [...subscriptionKeys.subscriptions.facility(facilityId), 'payment-quote', params ?? {}]
+      : subscriptionKeys.subscriptions.all,
+    enabled: Boolean(facilityId) && Boolean(params?.intent),
+    queryFn: async () => {
+      const res = await axiosInstance.get<PaymentQuoteResponse>(
+        `/facilities/${facilityId}/subscription/payment-quote`,
+        { params },
+      );
+      return res.data;
+    },
+    staleTime: 60 * 1000,
+    ...options,
+  });
+};
+
+/**
+ * POST /facilities/{facility}/subscription/schedule-change
+ */
+export const useScheduleSubscriptionChange = (
+  callbacks: MutationCallbacks<ScheduleChangeResponse, AxiosError<ApiErrorResponse>> = {},
+) => {
+  const { showToast } = useToast();
+  const queryClient   = useQueryClient();
+  const facilityId    = useActiveFacilityId();
+
+  return useMutation<
+    ScheduleChangeResponse,
+    AxiosError<ApiErrorResponse>,
+    ScheduleSubscriptionChangeParams
+  >({
+    mutationFn: async ({ data }) => {
+      if (!facilityId) throw new Error('No active facility selected.');
+      const res = await axiosInstance.post<ScheduleChangeResponse>(
+        `/facilities/${facilityId}/subscription/schedule-change`,
+        data,
+      );
+      return res.data;
+    },
+
+    onSuccess: (data) => {
+      showToast('success', data.message || 'Plan change scheduled.', 6000);
+      if (facilityId) {
+        queryClient.invalidateQueries({ queryKey: subscriptionKeys.subscriptions.facility(facilityId) });
+      }
+      callbacks.onSuccess?.(data);
+    },
+
+    onError: (error: AxiosError<ApiErrorResponse>) => {
+      const base    = extractErrorMessage(error, 'Failed to schedule plan change.');
+      const details = formatValidationErrors(error.response?.data?.errors);
+      showToast('error', details ? `${base} (${details})` : base, 9000);
+      callbacks.onError?.(error);
+    },
+  });
+};
+
+/**
+ * POST /facilities/{facility}/subscription/upgrade-now
+ */
+export const useUpgradeNow = (
+  callbacks: MutationCallbacks<ScheduleChangeResponse, AxiosError<ApiErrorResponse>> = {},
+) => {
+  const { showToast } = useToast();
+  const queryClient   = useQueryClient();
+  const facilityId    = useActiveFacilityId();
+
+  return useMutation<
+    ScheduleChangeResponse,
+    AxiosError<ApiErrorResponse>,
+    UpgradeNowParams
+  >({
+    mutationFn: async ({ data }) => {
+      if (!facilityId) throw new Error('No active facility selected.');
+      const res = await axiosInstance.post<ScheduleChangeResponse>(
+        `/facilities/${facilityId}/subscription/upgrade-now`,
+        data,
+      );
+      return res.data;
+    },
+
+    onSuccess: (data) => {
+      showToast('success', data.message || 'Upgrade quote ready.', 6000);
+      if (facilityId) {
+        queryClient.invalidateQueries({ queryKey: subscriptionKeys.subscriptions.facility(facilityId) });
+      }
+      callbacks.onSuccess?.(data);
+    },
+
+    onError: (error: AxiosError<ApiErrorResponse>) => {
+      const base    = extractErrorMessage(error, 'Failed to prepare upgrade.');
+      const details = formatValidationErrors(error.response?.data?.errors);
+      showToast('error', details ? `${base} (${details})` : base, 9000);
+      callbacks.onError?.(error);
+    },
+  });
+};
+
+/**
+ * DELETE /facilities/{facility}/subscription/scheduled-change
+ */
+export const useCancelScheduledChange = (
+  callbacks: MutationCallbacks<CancelSubscriptionResponse, AxiosError<ApiErrorResponse>> = {},
+) => {
+  const { showToast } = useToast();
+  const queryClient   = useQueryClient();
+  const facilityId    = useActiveFacilityId();
+
+  return useMutation<CancelSubscriptionResponse, AxiosError<ApiErrorResponse>, void>({
+    mutationFn: async () => {
+      if (!facilityId) throw new Error('No active facility selected.');
+      const res = await axiosInstance.delete<CancelSubscriptionResponse>(
+        `/facilities/${facilityId}/subscription/scheduled-change`,
+      );
+      return res.data;
+    },
+
+    onSuccess: (data) => {
+      showToast('success', data.message || 'Scheduled change cancelled.', 6000);
+      if (facilityId) {
+        queryClient.invalidateQueries({ queryKey: subscriptionKeys.subscriptions.facility(facilityId) });
+      }
+      callbacks.onSuccess?.(data);
+    },
+
+    onError: (error: AxiosError<ApiErrorResponse>) => {
+      const base    = extractErrorMessage(error, 'Failed to cancel scheduled change.');
+      const details = formatValidationErrors(error.response?.data?.errors);
+      showToast('error', details ? `${base} (${details})` : base, 9000);
+      callbacks.onError?.(error);
     },
   });
 };
