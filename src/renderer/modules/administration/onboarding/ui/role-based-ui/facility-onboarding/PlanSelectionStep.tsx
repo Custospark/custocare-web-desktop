@@ -10,6 +10,7 @@ import {
   planLimitHeadline,
 } from '../../../../../../shared/config/planConfig';
 import { PlanDetailsModal } from './PlanDetailsModal';
+import { useGetCurrencies, useCurrencyConvert } from '../../../../admin-module/api/subscriptions/CurrencyQueries';
 
 interface PlanPricing {
   usd: number;
@@ -56,6 +57,14 @@ export const PlanSelectionStep: React.FC<PlanSelectionStepProps> = ({
   theme,
 }) => {
   const [detailPlan, setDetailPlan] = useState<Plan | null>(null);
+  const [displayCurrency, setDisplayCurrency] = useState('USD');
+  const { data: currenciesRes } = useGetCurrencies();
+  const currencies = currenciesRes?.data ?? [];
+  const { data: rateData } = useCurrencyConvert(1, 'USD', displayCurrency);
+  const exchangeRate = rateData?.data?.converted ?? null;
+  const convertPrice = (usd: number) =>
+    exchangeRate !== null ? Math.round(usd * exchangeRate * 100) / 100 : null;
+
   const { data: plans, isLoading, error } = useQuery({
     queryKey: ['billing-plans'],
     queryFn: fetchPlans,
@@ -96,6 +105,30 @@ export const PlanSelectionStep: React.FC<PlanSelectionStepProps> = ({
           Select a plan that fits your facility. Start with a 7-day free trial — no payment required.
         </p>
       </div>
+
+      {currencies.length > 0 && (
+        <div className="flex items-center justify-end gap-2">
+          <label className={cn('text-xs font-medium', isDark ? 'text-gray-400' : 'text-gray-500')}>
+            Show prices in
+          </label>
+          <select
+            value={displayCurrency}
+            onChange={(e) => setDisplayCurrency(e.target.value)}
+            className={cn(
+              'px-2 py-1 rounded-lg border text-xs font-medium',
+              isDark
+                ? 'bg-gray-800 border-gray-700 text-white'
+                : 'bg-white border-gray-200 text-gray-900',
+            )}
+          >
+            {currencies.map((c) => (
+              <option key={c.code} value={c.code}>
+                {c.code} — {c.symbol}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {sorted.map((plan) => {
@@ -146,6 +179,12 @@ export const PlanSelectionStep: React.FC<PlanSelectionStepProps> = ({
                   <span className={cn("text-sm ml-1", theme === 'dark' ? "text-gray-400" : "text-gray-500")}>
                     /month
                   </span>
+                  {displayCurrency !== 'USD' && exchangeRate !== null && (
+                    <p className={cn("text-xs mt-0.5", isDark ? "text-gray-500" : "text-gray-400")}>
+                      ≈ {currencies.find((c) => c.code === displayCurrency)?.symbol ?? ''}
+                      {convertPrice(plan.pricing.usd)?.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    </p>
+                  )}
                 </div>
 
                 <p className={cn("text-xs mb-3 leading-relaxed line-clamp-2", theme === 'dark' ? "text-gray-400" : "text-gray-600")}>
