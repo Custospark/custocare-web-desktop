@@ -1,10 +1,14 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { CheckCircle2, Users, Building2, Loader2, Info } from 'lucide-react';
+import { CheckCircle2, Building2, Loader2, Info } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { axiosInstance } from '../../../../../../app/api/axiosConfig';
 import { cn } from '../../../../../../shared/types/cn';
-import { TIER_FEATURES } from '../../../../../../shared/config/planConfig';
+import {
+  TIER_FEATURES,
+  getPlanLimitLabels,
+  planLimitHeadline,
+} from '../../../../../../shared/config/planConfig';
 import { PlanDetailsModal } from './PlanDetailsModal';
 
 interface PlanPricing {
@@ -96,9 +100,7 @@ export const PlanSelectionStep: React.FC<PlanSelectionStepProps> = ({
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {sorted.map((plan) => {
           const isSelected = selectedPlanId === plan.id;
-          const limitDisplay = plan.limits.max_staff
-            ? `${plan.limits.max_staff} staff · ${plan.limits.max_departments} depts · ${plan.limits.max_patients_per_month} patients per month`
-            : 'Unlimited staff, departments & patients';
+          const limitLabels = getPlanLimitLabels(plan.slug, plan.limits);
 
           return (
             <motion.div
@@ -151,12 +153,22 @@ export const PlanSelectionStep: React.FC<PlanSelectionStepProps> = ({
                 </p>
 
                 <div className={cn(
-                  "text-[10px] font-medium px-2.5 py-1.5 rounded-lg",
-                  theme === 'dark' ? "bg-gray-900/60 text-gray-400" : "bg-gray-50 text-gray-500"
+                  'text-[10px] font-medium px-2.5 py-1.5 rounded-lg',
+                  theme === 'dark' ? 'bg-gray-900/60 text-gray-400' : 'bg-gray-50 text-gray-500',
                 )}>
-                  <div className="flex items-center gap-1.5">
-                    <Users className="w-3 h-3" />
-                    {limitDisplay}
+                  <div className="grid grid-cols-3 gap-1 text-center">
+                    {[
+                      { label: 'Staff', value: limitLabels.staff },
+                      { label: 'Depts', value: limitLabels.depts },
+                      { label: 'Patients', value: limitLabels.patients },
+                    ].map((item) => (
+                      <div key={item.label}>
+                        <div className={cn('font-bold', theme === 'dark' ? 'text-gray-200' : 'text-gray-800')}>
+                          {planLimitHeadline(item.value)}
+                        </div>
+                        <div className="text-[9px] opacity-80">{item.label}</div>
+                      </div>
+                    ))}
                   </div>
                 </div>
 

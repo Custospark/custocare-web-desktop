@@ -81,6 +81,10 @@ const formatShortDate = (iso: string | null | undefined): string => {
   return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 };
 
+/** Navbar subtitle — max two words (limited horizontal space). */
+const navbarSubtitle = (text: string): string =>
+  text.trim().split(/\s+/).filter(Boolean).slice(0, 2).join(' ');
+
 type StatusBadgeKind = 'trial' | 'active' | 'ending' | 'past_due' | 'scheduled' | 'suspended' | 'cancelled';
 
 interface SubscriptionDisplay {
@@ -94,12 +98,44 @@ const getSubscriptionDisplay = (sub: Subscription | undefined): SubscriptionDisp
     return { badge: '', badgeKind: 'active', subtitle: '' };
   }
 
+  const paymentAction = sub.payment_action;
+
+  if (paymentAction?.pending_approval) {
+    return {
+      badge: sub.status === SubscriptionStatus.TRIAL ? 'Trial' : 'Pending',
+      badgeKind: sub.status === SubscriptionStatus.TRIAL ? 'trial' : 'past_due',
+      subtitle: navbarSubtitle('Pending review'),
+    };
+  }
+
+  if (paymentAction?.required) {
+    if (sub.status === SubscriptionStatus.TRIAL) {
+      return {
+        badge: 'Trial',
+        badgeKind: 'trial',
+        subtitle: navbarSubtitle('Payment due'),
+      };
+    }
+    if (sub.status === SubscriptionStatus.PAST_DUE) {
+      return {
+        badge: 'Past due',
+        badgeKind: 'past_due',
+        subtitle: navbarSubtitle('Payment due'),
+      };
+    }
+    return {
+      badge: 'Pay now',
+      badgeKind: 'past_due',
+      subtitle: navbarSubtitle('Payment due'),
+    };
+  }
+
   if (sub.status === SubscriptionStatus.TRIAL) {
     return {
       badge: 'Trial',
       badgeKind: 'trial',
       subtitle: sub.trial_ends_at
-        ? `Trial ends ${formatShortDate(sub.trial_ends_at)}`
+        ? navbarSubtitle(formatShortDate(sub.trial_ends_at))
         : '',
     };
   }
@@ -109,16 +145,18 @@ const getSubscriptionDisplay = (sub: Subscription | undefined): SubscriptionDisp
       badge: 'Ending',
       badgeKind: 'ending',
       subtitle: sub.access_ends_at
-        ? `Access until ${formatShortDate(sub.access_ends_at)}`
-        : 'Cancellation scheduled',
+        ? navbarSubtitle(formatShortDate(sub.access_ends_at))
+        : navbarSubtitle('Ends soon'),
     };
   }
 
   if (sub.scheduled_change?.to_plan && sub.scheduled_change.effective_at) {
     return {
-      badge: 'Change scheduled',
+      badge: 'Scheduled',
       badgeKind: 'scheduled',
-      subtitle: `→ ${sub.scheduled_change.to_plan.name} on ${formatShortDate(sub.scheduled_change.effective_at)}`,
+      subtitle: sub.scheduled_change.effective_at
+        ? navbarSubtitle(formatShortDate(sub.scheduled_change.effective_at))
+        : navbarSubtitle('Change pending'),
     };
   }
 
@@ -127,8 +165,8 @@ const getSubscriptionDisplay = (sub: Subscription | undefined): SubscriptionDisp
       badge: 'Past due',
       badgeKind: 'past_due',
       subtitle: sub.grace_period_ends_at
-        ? `Grace until ${formatShortDate(sub.grace_period_ends_at)}`
-        : 'Payment required',
+        ? navbarSubtitle(formatShortDate(sub.grace_period_ends_at))
+        : navbarSubtitle('Payment due'),
     };
   }
 
@@ -136,7 +174,7 @@ const getSubscriptionDisplay = (sub: Subscription | undefined): SubscriptionDisp
     return {
       badge: 'Suspended',
       badgeKind: 'suspended',
-      subtitle: 'Renew to restore access',
+      subtitle: navbarSubtitle('Renew now'),
     };
   }
 
@@ -152,7 +190,7 @@ const getSubscriptionDisplay = (sub: Subscription | undefined): SubscriptionDisp
     badge: 'Active',
     badgeKind: 'active',
     subtitle: sub.next_billing_date
-      ? `Renews ${formatShortDate(sub.next_billing_date)}`
+      ? navbarSubtitle(formatShortDate(sub.next_billing_date))
       : '',
   };
 };

@@ -2,6 +2,17 @@
 
 ---
 
+## 2026-05-26: Subscription `payment_action` (backend source of truth)
+
+**Context:** FE inferred "payment required" from plan slice, trial status, metadata, and payment list. Navbar already showed payment state from subscription; plan cards and Payments duplicated fragile client logic.
+
+**Decision:**
+- **`SubscriptionPaymentActionResolver`** (BE) returns `payment_action` on `SubscriptionResource`: `required`, `pending_approval`, `plan_id`, `intent` (`subscription` | `renewal` | `upgrade_now`), `label`, `message`.
+- Resolves: pending payment proof → pending approval; `metadata.pending_upgrade_plan_id` → upgrade payment; trial without `approved_at` → subscription payment; `past_due` → renewal payment.
+- **FE:** `subscriptionPaymentUtils.ts` + `AvailablePlans` ("Complete payment" pill/button), `Payments.tsx` (guided steps + quote from `payment_action` only), `FacilitySubscriptions.tsx` banners, navbar `getSubscriptionDisplay` — no plan slice for payment flow.
+
+---
+
 ## 2026-05-26: Facility subscription billing v2 (scheduled changes, proration, quotes)
 
 **Context:** Cancel and plan changes applied immediately on the FE (cancel + recreate). Payments used hardcoded plan price + onboarding. UI showed "Current Plan" after cancellation. Trial copy hardcoded 7 days.

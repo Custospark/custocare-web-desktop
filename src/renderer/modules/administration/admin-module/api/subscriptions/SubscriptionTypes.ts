@@ -212,6 +212,15 @@ export interface PaymentQuoteLineItem {
   amount: number;
 }
 
+export interface SubscriptionPaymentAction {
+  required: boolean;
+  pending_approval: boolean;
+  plan_id: number | null;
+  intent: PaymentQuoteIntent | string | null;
+  label: string | null;
+  message: string | null;
+}
+
 export interface PaymentQuote {
   intent: PaymentQuoteIntent | string;
   line_items: PaymentQuoteLineItem[];
@@ -259,6 +268,8 @@ export interface Subscription {
   status_label: string;
   /** True when status is active, valid trial, or within grace period. */
   has_access: boolean;
+  /** Backend-derived payment guidance (complete payment / pending approval). */
+  payment_action?: SubscriptionPaymentAction | null;
   trial_ends_at: string | null;
   starts_at: string | null;
   ends_at: string | null;

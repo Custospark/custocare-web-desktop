@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, CheckCircle2, Users, Shield, Lock, BadgeCheck, ArrowRight } from 'lucide-react';
 import { cn } from '../../../../../../shared/types/cn';
-import { TIER_LIMIT_LABELS, TIER_GRADIENT_BG } from '../../../../../../shared/config/planConfig';
+import { TIER_GRADIENT_BG, getPlanLimitLabels, planLimitHeadline } from '../../../../../../shared/config/planConfig';
 import { PlanCompareModal } from './PlanCompareModal';
 
 interface PlanPricing {
@@ -40,7 +40,7 @@ export const PlanDetailsModal: React.FC<PlanDetailsModalProps> = ({ plan, allPla
 
   if (!plan) return null;
 
-  const labels = TIER_LIMIT_LABELS[plan.slug];
+  const labels = getPlanLimitLabels(plan.slug, plan.limits);
 
   return (
     <>
@@ -128,7 +128,7 @@ export const PlanDetailsModal: React.FC<PlanDetailsModalProps> = ({ plan, allPla
                     <div key={item.label} className="text-center">
                       <item.icon className={cn("w-4 h-4 mx-auto mb-1", theme === 'dark' ? "text-blue-400" : "text-blue-600")} />
                       <div className={cn("text-xs font-bold", theme === 'dark' ? "text-white" : "text-gray-900")}>
-                        {item.value.split(' ')[0]}
+                        {planLimitHeadline(item.value)}
                       </div>
                       <div className={cn("text-[10px]", theme === 'dark' ? "text-gray-500" : "text-gray-500")}>
                         {item.label}

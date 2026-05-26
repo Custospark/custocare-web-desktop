@@ -38,6 +38,11 @@ import {
 import LoadingSkeleton from '../../../../../shared/components/Loading/LoadingSkeletons';
 import { ADMINISTRATION_PLANS_SUBSCRIPTIONS_ROUTES } from '../../../../../app/routes/constants/administration.paths';
 import { cn } from '../../../../../shared/utils/classNameUtils';
+import {
+  getSubscriptionPaymentAction,
+  subscriptionHasPendingPaymentApproval,
+  subscriptionNeedsPayment,
+} from '../../utils/subscriptionPaymentUtils';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface FacilitySubscriptionsProps {
@@ -239,8 +244,11 @@ const InactiveSubscriptionBanner: React.FC<{
     : isSuspended
     ? 'Subscription Suspended'
     : 'Payment Overdue';
+  const paymentAction = getSubscriptionPaymentAction(subscription);
   const message = isCancelled
     ? 'Your subscription has been cancelled. To regain access, please choose a new plan.'
+    : paymentAction?.message
+    ? paymentAction.message
     : isSuspended
     ? 'Your subscription has been suspended. Please make a payment to restore access.'
     : 'Your subscription payment is overdue. Please make a payment to avoid service interruption.';
@@ -380,9 +388,44 @@ export const FacilitySubscriptions: React.FC<FacilitySubscriptionsProps> = ({
   const isTrial = subscription.status === SubscriptionStatus.TRIAL;
   const isEndingAtPeriodEnd = subscription.cancel_at_period_end && subscription.has_access;
   const scheduledChange = subscription.scheduled_change;
+  const paymentAction = getSubscriptionPaymentAction(subscription);
+  const needsPayment = subscriptionNeedsPayment(subscription);
+  const pendingPaymentApproval = subscriptionHasPendingPaymentApproval(subscription);
 
   return (
     <div className="space-y-6">
+      {needsPayment && paymentAction?.message && (
+        <div className={cn(
+          'rounded-xl border-2 p-4 flex flex-col sm:flex-row sm:items-center gap-3',
+          isDark ? 'bg-amber-900/20 border-amber-600/40' : 'bg-amber-50 border-amber-200',
+        )}>
+          <AlertCircle className={cn('w-5 h-5 shrink-0', isDark ? 'text-amber-400' : 'text-amber-600')} />
+          <p className={cn('flex-1 text-sm', isDark ? 'text-amber-100' : 'text-amber-900')}>
+            {paymentAction.message}
+          </p>
+          <button
+            type="button"
+            onClick={() => navigate(paymentsUrl)}
+            className="shrink-0 inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold bg-gradient-to-r from-amber-500 to-orange-600 text-white shadow"
+          >
+            <CreditCard className="w-4 h-4" />
+            {paymentAction.label ?? 'Complete payment'}
+          </button>
+        </div>
+      )}
+
+      {pendingPaymentApproval && (
+        <div className={cn(
+          'rounded-xl border-2 p-4 flex items-start gap-3',
+          isDark ? 'bg-blue-900/20 border-blue-700/50' : 'bg-blue-50 border-blue-200',
+        )}>
+          <Clock className={cn('w-5 h-5 shrink-0 mt-0.5', isDark ? 'text-blue-400' : 'text-blue-600')} />
+          <p className={cn('text-sm', isDark ? 'text-blue-100' : 'text-blue-900')}>
+            {paymentAction?.message ?? 'Your payment proof is pending platform admin approval.'}
+          </p>
+        </div>
+      )}
+
       {isEndingAtPeriodEnd && subscription.access_ends_at && (
         <div className={cn(
           'rounded-xl border-2 p-4 flex items-start gap-3',

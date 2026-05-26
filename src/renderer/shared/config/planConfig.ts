@@ -44,10 +44,48 @@ export const TIER_GRADIENT_BG: Record<string, string> = {
   enterprise: 'from-purple-600 to-indigo-700',
 };
 
-export const TIER_LIMIT_LABELS: Record<string, { staff: string; depts: string; patients: string }> = {
+export interface PlanLimitLabels {
+  staff: string;
+  depts: string;
+  patients: string;
+}
+
+export const TIER_LIMIT_LABELS: Record<string, PlanLimitLabels> = {
   essential: { staff: '10 staff', depts: '3 departments', patients: '500 patients/month' },
   professional: { staff: '50 staff', depts: '10 departments', patients: '3,000 patients/month' },
   enterprise: { staff: 'Unlimited staff', depts: 'Unlimited departments', patients: 'Unlimited patients' },
+};
+
+export interface PlanLimitsShape {
+  max_staff: number | null;
+  max_departments: number | null;
+  max_patients_per_month: number | null;
+}
+
+/** Display labels for plan cards/modals (tier catalog first, then API limits). */
+export const getPlanLimitLabels = (
+  slug: string,
+  limits?: PlanLimitsShape | null,
+): PlanLimitLabels => {
+  const tier = TIER_LIMIT_LABELS[slug];
+  if (tier) return tier;
+
+  const fmt = (val: number | null | undefined, noun: string): string =>
+    val === null || val === undefined ? `Unlimited ${noun}` : `${val} ${noun}`;
+
+  return {
+    staff: fmt(limits?.max_staff, 'staff'),
+    depts: fmt(limits?.max_departments, 'departments'),
+    patients: fmt(limits?.max_patients_per_month, 'patients'),
+  };
+};
+
+/** Compact headline for plan cards (e.g. "10", "3,000", or "Unlimited"). */
+export const planLimitHeadline = (label: string): string => {
+  const trimmed = label.trim();
+  if (!trimmed) return '—';
+  if (/^unlimited/i.test(trimmed)) return 'Unlimited';
+  return trimmed.split(/\s+/)[0] ?? '—';
 };
 
 export type CompareCheck = (features: string[]) => boolean;

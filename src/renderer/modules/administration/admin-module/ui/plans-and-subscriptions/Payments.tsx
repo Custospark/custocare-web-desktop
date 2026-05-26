@@ -2,10 +2,10 @@ import React, { useState } from 'react';
 import {
   Landmark, Smartphone, CheckCircle, Copy,
   CheckCheck, Upload, Loader2, FileText,
-  Building2, ArrowLeft,
+  Building2, ArrowLeft, AlertCircle, CreditCard,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { axiosInstance } from '../../../../../app/api/axiosConfig';
 
 import { useAppDispatch, useAppSelector } from '../../../../../app/store/hooks/useApp';
@@ -13,12 +13,14 @@ import {
   useGetFacilitySubscription,
   useGetFacilityPayments,
   useGetPaymentQuote,
+  useGetPlans,
   useRecordPayment,
 } from '../../api/subscriptions/SubscriptionQueries';
 import {
   PaymentStatus,
   PaymentMethod,
   PaymentType,
+  SubscriptionStatus,
   type Payment,
   type PaymentQuoteIntent,
 } from '../../api/subscriptions/SubscriptionTypes';
@@ -27,6 +29,12 @@ import { useToast } from '../../../../../app/store/contexts/toast/useToast';
 import { setUserContext, switchCapability, switchFacility } from '../../../../../app/store/slices/activeContextSlice';
 import { ADMINISTRATION_PLANS_SUBSCRIPTIONS_ROUTES } from '../../../../../app/routes/constants/administration.paths';
 import { ReceiptViewButton } from '../../../../../shared/components/billing/ReceiptViewButton';
+import {
+  getSubscriptionPaymentAction,
+  resolvePaymentQuoteParams,
+  subscriptionHasPendingPaymentApproval,
+  subscriptionNeedsPayment,
+} from '../../utils/subscriptionPaymentUtils';
 
 interface PaymentsProps {
   theme: 'light' | 'dark';
@@ -43,7 +51,6 @@ export const Payments: React.FC<PaymentsProps> = ({ theme }) => {
   const dispatch = useAppDispatch();
   const { showToast } = useToast();
   const activeFacilityId = useAppSelector((s) => s.activeContext.activeFacilityId);
-  const planSelection = useAppSelector((s) => s.plan.selected);
   const [method, setMethod] = useState<'bank' | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [reference, setReference] = useState('');
@@ -51,11 +58,10 @@ export const Payments: React.FC<PaymentsProps> = ({ theme }) => {
   const [copied, setCopied] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
   const navigate = useNavigate();
-  const location = useLocation();
-  const navState = location.state as { quoteIntent?: PaymentQuoteIntent; targetPlanId?: number } | null;
 
   const { data: subResp, refetch: refetchSubscription } = useGetFacilitySubscription();
   const { data: paymentsResp, refetch } = useGetFacilityPayments({ per_page: 100 });
+  const { data: plansResp } = useGetPlans();
 
   const payments = paymentsResp?.data || [];
   const pendingPayment = payments.find((p) => p.status === PaymentStatus.PENDING) ?? null;
@@ -71,21 +77,23 @@ export const Payments: React.FC<PaymentsProps> = ({ theme }) => {
   });
 
   const subscription = subResp?.data;
-  const plan = subscription?.plan;
+  const paymentAction = getSubscriptionPaymentAction(subscription);
+  const needsPayment = subscriptionNeedsPayment(subscription);
+  const pendingApproval = subscriptionHasPendingPaymentApproval(subscription);
+  const quoteParams = resolvePaymentQuoteParams(subscription);
+  const plans = plansResp?.data ?? [];
 
-  const resolveQuoteIntent = (): PaymentQuoteIntent => {
-    if (navState?.quoteIntent) return navState.quoteIntent;
-    if (subscription?.status === 'past_due') return 'renewal';
-    if (subscription?.status === 'trial') return 'subscription';
-    if (subscription?.status === 'active') return 'renewal';
-    return 'subscription';
-  };
+  const targetPlanId = quoteParams?.planId ?? paymentAction?.plan_id ?? subscription?.plan?.id;
+  const planName =
+    plans.find((p) => p.id === targetPlanId)?.name
+    ?? subscription?.effective_plan?.name
+    ?? subscription?.plan?.name
+    ?? '';
 
-  const quoteIntent = resolveQuoteIntent();
-  const targetPlanId = navState?.targetPlanId ?? planSelection?.planId ?? undefined;
+  const quoteIntent: PaymentQuoteIntent = quoteParams?.intent ?? 'subscription';
 
   const { data: quoteResp, isLoading: quoteLoading } = useGetPaymentQuote(
-    subscription
+    subscription && quoteParams
       ? { intent: quoteIntent, ...(targetPlanId ? { plan_id: targetPlanId } : {}) }
       : null,
   );
@@ -93,8 +101,7 @@ export const Payments: React.FC<PaymentsProps> = ({ theme }) => {
   const quote = quoteResp?.data;
   const lineItems = quote?.line_items ?? [];
   const total = quote?.total_usd ?? 0;
-  const planName = plan?.name || planSelection?.planName || '';
-  const noPlan = !planName && !planSelection && !subscription;
+  const noSubscription = !subscription;
 
   const paymentType = (() => {
     const fromQuote = quote?.payment_type;
@@ -104,7 +111,18 @@ export const Payments: React.FC<PaymentsProps> = ({ theme }) => {
     return PaymentType.SUBSCRIPTION;
   })();
 
-  const approvedPayment = payments.find((p) => p.status === PaymentStatus.APPROVED) || null;
+  const quoteRequiresPayment = !quoteLoading && quote != null && total > 0.01;
+
+  const showRestoreAccessBanner = Boolean(
+    subscription &&
+    !subscription.has_access &&
+    !hasPendingProof &&
+    !quoteRequiresPayment &&
+    !needsPayment &&
+    subscription.status !== SubscriptionStatus.TRIAL &&
+    subscription.status !== SubscriptionStatus.CANCELLED &&
+    payments.some((p) => p.status === PaymentStatus.APPROVED),
+  );
 
   const handleRestoreFunctionality = async () => {
     if (!activeFacilityId) return;
@@ -158,23 +176,27 @@ export const Payments: React.FC<PaymentsProps> = ({ theme }) => {
     });
   };
 
-  if (noPlan) {
+  if (noSubscription) {
     return (
       <div className="space-y-6 max-w-3xl mx-auto">
         <div className="flex items-center gap-4">
-          <button onClick={() => navigate(ADMINISTRATION_PLANS_SUBSCRIPTIONS_ROUTES.AVAILABLE_PLANS)}
-            className={cn('p-2 rounded-lg transition-colors', isDark ? 'hover:bg-gray-800 text-gray-400' : 'hover:bg-gray-100 text-gray-600')}>
+          <button
+            type="button"
+            onClick={() => navigate(ADMINISTRATION_PLANS_SUBSCRIPTIONS_ROUTES.AVAILABLE_PLANS)}
+            className={cn('p-2 rounded-lg transition-colors', isDark ? 'hover:bg-gray-800 text-gray-400' : 'hover:bg-gray-100 text-gray-600')}
+          >
             <ArrowLeft className="w-5 h-5" />
           </button>
           <h1 className="text-2xl font-bold">Payment</h1>
         </div>
         <div className={cn('rounded-2xl border-2 p-10 text-center', isDark ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200')}>
           <FileText className="w-12 h-12 mx-auto mb-4 text-gray-400" />
-          <h2 className="text-lg font-bold mb-2">No Plan Selected</h2>
+          <h2 className="text-lg font-bold mb-2">No active subscription</h2>
           <p className={cn('text-sm mb-6', isDark ? 'text-gray-400' : 'text-gray-600')}>
-            Please select a plan first before proceeding to payment.
+            Choose a plan first. After you subscribe, payment steps will appear here when needed.
           </p>
           <button
+            type="button"
             onClick={() => navigate(ADMINISTRATION_PLANS_SUBSCRIPTIONS_ROUTES.AVAILABLE_PLANS)}
             className="inline-flex items-center gap-2 px-6 py-2.5 rounded-lg font-bold text-sm bg-blue-600 hover:bg-blue-700 text-white shadow-lg transition-all"
           >
@@ -187,8 +209,76 @@ export const Payments: React.FC<PaymentsProps> = ({ theme }) => {
 
   return (
     <div className="space-y-6 max-w-3xl mx-auto">
-      
+      <div className="flex items-center gap-4">
+        <button
+          type="button"
+          onClick={() => navigate(ADMINISTRATION_PLANS_SUBSCRIPTIONS_ROUTES.AVAILABLE_PLANS)}
+          className={cn('p-2 rounded-lg transition-colors', isDark ? 'hover:bg-gray-800 text-gray-400' : 'hover:bg-gray-100 text-gray-600')}
+        >
+          <ArrowLeft className="w-5 h-5" />
+        </button>
+        <div>
+          <h1 className="text-2xl font-bold">Complete payment</h1>
+          {planName && (
+            <p className={cn('text-sm', isDark ? 'text-gray-400' : 'text-gray-600')}>
+              {planName}
+            </p>
+          )}
+        </div>
+      </div>
+
+      {needsPayment && paymentAction?.message && (
+        <motion.div
+          initial={{ opacity: 0, y: -8 }}
+          animate={{ opacity: 1, y: 0 }}
+          className={cn(
+            'rounded-xl border-2 p-5',
+            isDark ? 'bg-amber-900/20 border-amber-600/40' : 'bg-amber-50 border-amber-200',
+          )}
+        >
+          <div className="flex items-start gap-3">
+            <AlertCircle className={cn('w-5 h-5 shrink-0 mt-0.5', isDark ? 'text-amber-400' : 'text-amber-600')} />
+            <div className="space-y-2">
+              <p className={cn('font-bold text-sm', isDark ? 'text-amber-100' : 'text-amber-900')}>
+                {paymentAction.label ?? 'Complete payment'}
+              </p>
+              <p className={cn('text-sm', isDark ? 'text-amber-200/90' : 'text-amber-800')}>
+                {paymentAction.message}
+              </p>
+              <ol className={cn('text-xs list-decimal list-inside space-y-1', isDark ? 'text-amber-200/80' : 'text-amber-900/80')}>
+                <li>Review the amount due below.</li>
+                <li>Transfer to our bank account (select Bank Transfer).</li>
+                <li>Upload your receipt and transaction reference, then submit.</li>
+              </ol>
+            </div>
+          </div>
+        </motion.div>
+      )}
+
+      {pendingApproval && (
+        <motion.div
+          initial={{ opacity: 0, y: -8 }}
+          animate={{ opacity: 1, y: 0 }}
+          className={cn(
+            'rounded-xl border-2 p-4 flex items-start gap-3',
+            isDark ? 'bg-blue-900/20 border-blue-700/50' : 'bg-blue-50 border-blue-200',
+          )}
+        >
+          <CreditCard className={cn('w-5 h-5 shrink-0', isDark ? 'text-blue-400' : 'text-blue-600')} />
+          <p className={cn('text-sm', isDark ? 'text-blue-100' : 'text-blue-900')}>
+            {paymentAction?.message ?? 'Your payment proof is pending platform admin approval.'}
+          </p>
+        </motion.div>
+      )}
+
+      {!needsPayment && !pendingApproval && (
+        <div className={cn('rounded-xl border p-4 text-sm', isDark ? 'border-gray-700 text-gray-400' : 'border-gray-200 text-gray-600')}>
+          No payment is required right now. You can still review past payments below or return to your subscription.
+        </div>
+      )}
+
       {/* Transaction Summary */}
+      {(needsPayment || quoteRequiresPayment) && (
       <div className={cn('rounded-2xl border-2 p-6', isDark ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200')}>
         <h2 className={cn('font-bold text-sm mb-4 flex items-center gap-2', isDark ? 'text-gray-300' : 'text-gray-700')}>
           <FileText className="w-4 h-4" />
@@ -224,10 +314,14 @@ export const Payments: React.FC<PaymentsProps> = ({ theme }) => {
           </div>
         </div>
       </div>
+      )}
 
       {/* Payment Method Selector */}
+      {needsPayment && !pendingApproval && (
+      <>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <button
+          type="button"
           onClick={() => setMethod(method === 'bank' ? null : 'bank')}
           className={cn(
             'relative rounded-xl border-2 p-5 text-left transition-all cursor-pointer',
@@ -286,7 +380,7 @@ export const Payments: React.FC<PaymentsProps> = ({ theme }) => {
                     <p className={cn('text-xs', isDark ? 'text-gray-400' : 'text-gray-500')}>{label}</p>
                     <p className="font-semibold">{value}</p>
                   </div>
-                  <button onClick={() => copy(value, key)}
+                  <button type="button" onClick={() => copy(value, key)}
                     className={cn('p-1.5 rounded-lg', isDark ? 'hover:bg-gray-800 text-gray-400' : 'hover:bg-gray-100 text-gray-500')}>
                     {copied === key ? <CheckCheck className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
                   </button>
@@ -294,7 +388,6 @@ export const Payments: React.FC<PaymentsProps> = ({ theme }) => {
               ))}
             </div>
 
-            {/* Upload Proof of Payment */}
             <div className={cn('px-6 py-4 border-t', isDark ? 'border-gray-800' : 'border-gray-200')}>
               <h3 className={cn('font-semibold text-sm mb-3', isDark ? 'text-gray-200' : 'text-gray-800')}>Upload Proof of Payment</h3>
               {hasPendingProof && (
@@ -353,6 +446,7 @@ export const Payments: React.FC<PaymentsProps> = ({ theme }) => {
                 />
 
                 <button
+                  type="button"
                   onClick={handleSubmitPayment}
                   disabled={!reference.trim() || recordPayment.isPending || !canSubmitProof || quoteLoading || !quote}
                   className={cn(
@@ -374,9 +468,10 @@ export const Payments: React.FC<PaymentsProps> = ({ theme }) => {
           </motion.div>
         )}
       </AnimatePresence>
+      </>
+      )}
 
-      {/* Success Message */}
-      {(submitted || hasPendingProof) && (
+      {(submitted || hasPendingProof) && needsPayment && (
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -390,7 +485,7 @@ export const Payments: React.FC<PaymentsProps> = ({ theme }) => {
         </motion.div>
       )}
 
-      {!subscription?.has_access && approvedPayment && (
+      {showRestoreAccessBanner && (
         <motion.div
           initial={{ opacity: 0, y: -8 }}
           animate={{ opacity: 1, y: 0 }}
@@ -404,6 +499,7 @@ export const Payments: React.FC<PaymentsProps> = ({ theme }) => {
               </p>
             </div>
             <button
+              type="button"
               onClick={handleRestoreFunctionality}
               className="px-4 py-2 rounded-lg font-semibold text-sm bg-blue-600 hover:bg-blue-700 text-white"
             >
@@ -413,7 +509,6 @@ export const Payments: React.FC<PaymentsProps> = ({ theme }) => {
         </motion.div>
       )}
 
-      {/* Payment History */}
       {payments.length > 0 && (
         <div className={cn('rounded-2xl border overflow-hidden', isDark ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200')}>
           <div className={cn('p-4 border-b font-semibold flex items-center justify-between', isDark ? 'border-gray-800' : 'border-gray-200')}>
@@ -461,7 +556,6 @@ export const Payments: React.FC<PaymentsProps> = ({ theme }) => {
         </div>
       )}
 
-      {/* More payment methods note */}
       <div className={cn('rounded-xl border border-dashed p-4 text-center', isDark ? 'border-gray-700 bg-gray-800/10' : 'border-gray-200 bg-gray-50/50')}>
         <p className={cn('text-xs', isDark ? 'text-gray-500' : 'text-gray-500')}>
           More payment methods are being integrated — card payments, PayPal, and mobile money.
