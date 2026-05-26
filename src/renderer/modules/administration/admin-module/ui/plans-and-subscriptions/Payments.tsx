@@ -48,7 +48,7 @@ const BANK_DETAILS = {
 export const Payments: React.FC<PaymentsProps> = ({ theme }) => {
   const isDark = theme === 'dark';
   const { showToast } = useToast();
-  const [method, setMethod] = useState<'bank' | null>(null);
+  const [method, setMethod] = useState<'bank' | 'counter' | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [reference, setReference] = useState('');
   const [notes, setNotes] = useState('');
@@ -348,6 +348,29 @@ export const Payments: React.FC<PaymentsProps> = ({ theme }) => {
           </div>
         </button>
 
+        <button
+          type="button"
+          onClick={() => setMethod(method === 'counter' ? null : 'counter')}
+          className={cn(
+            'relative rounded-xl border-2 p-5 text-left transition-all cursor-pointer',
+            method === 'counter'
+              ? isDark ? 'border-blue-500 bg-blue-500/10 shadow-lg' : 'border-blue-500 bg-blue-50 shadow-lg'
+              : isDark ? 'border-gray-700 bg-gray-800/40 hover:border-gray-600' : 'border-gray-200 bg-white hover:border-gray-300'
+          )}
+        >
+          <div className="flex items-center gap-3 mb-2">
+            <div className={cn('w-10 h-10 rounded-lg flex items-center justify-center',
+              method === 'counter' ? 'bg-blue-600 text-white' : isDark ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-600'
+            )}>
+              <Building2 className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className={cn('font-bold text-sm', isDark ? 'text-white' : 'text-gray-900')}>Bank Over the Counter</h3>
+              <p className={cn('text-xs', isDark ? 'text-gray-400' : 'text-gray-500')}>Deposit cash at any branch</p>
+            </div>
+          </div>
+        </button>
+
         <div className={cn('rounded-xl border-2 border-dashed p-5', isDark ? 'border-gray-700 bg-gray-800/20' : 'border-gray-300 bg-gray-50/50')}>
           <div className="flex items-center gap-3 mb-2">
             <div className={cn('w-10 h-10 rounded-lg flex items-center justify-center', isDark ? 'bg-gray-700 text-gray-400' : 'bg-gray-100 text-gray-400')}>
@@ -361,9 +384,9 @@ export const Payments: React.FC<PaymentsProps> = ({ theme }) => {
         </div>
       </div>
 
-      {/* Bank Transfer Details — shown only when selected */}
+      {/* Bank Transfer / Over-the-Counter Details — shown only when selected */}
       <AnimatePresence>
-        {method === 'bank' && (
+        {(method === 'bank' || method === 'counter') && (
           <motion.div
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
@@ -372,9 +395,16 @@ export const Payments: React.FC<PaymentsProps> = ({ theme }) => {
           >
             <div className={cn('px-6 py-4 border-b flex items-center gap-2', isDark ? 'border-gray-800 bg-gray-800/40' : 'border-gray-200 bg-gray-50')}>
               <Building2 className="w-4 h-4 text-blue-600" />
-              <span className={cn('font-semibold text-sm', isDark ? 'text-gray-200' : 'text-gray-800')}>Bank Account Details</span>
+              <span className={cn('font-semibold text-sm', isDark ? 'text-gray-200' : 'text-gray-800')}>
+                {method === 'counter' ? 'Deposit at Bank Branch' : 'Bank Account Details'}
+              </span>
             </div>
             <div className="p-6 space-y-4">
+              {method === 'counter' && (
+                <div className={cn('rounded-lg px-4 py-3 text-sm', isDark ? 'bg-blue-900/20 text-blue-200' : 'bg-blue-50 text-blue-800')}>
+                  Visit any <strong>{BANK_DETAILS.bank}</strong> branch and deposit cash into the account below. Keep the deposit slip and upload it as proof of payment.
+                </div>
+              )}
               {[
                 { label: 'Bank', value: BANK_DETAILS.bank, key: 'bank' },
                 { label: 'Account Name', value: BANK_DETAILS.accountName, key: 'name' },
@@ -424,7 +454,7 @@ export const Payments: React.FC<PaymentsProps> = ({ theme }) => {
 
                 <input
                   type="text"
-                  placeholder="Transaction reference (e.g. 12345)"
+                  placeholder="Transaction reference (e.g. 1253498....)"
                   value={reference}
                   onChange={(e) => setReference(e.target.value)}
                   disabled={!canSubmitProof}
