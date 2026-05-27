@@ -18,6 +18,7 @@ import PharmacyActionCenter from '../../../modules/pharmacy/ui/action-center/Pha
 import PharmacyDispenseMedication from '../../../modules/pharmacy/ui/action-center/PharmacyDispenseMedication';
 import PharmacyPrescriptionNotesPage from '../../../modules/pharmacy/ui/action-center/PharmacyPrescriptionNotesPage';
 import RedirectToForwardPatientFocus from '../../../modules/medical-records/ui/visit-action-center/RedirectToForwardPatientFocus';
+import ClinicalReportsView from '../../../modules/medical-records/ui/patients/views/ClinicalReportsView';
 
 const pharmacyTablePage = <P extends ThemeProp,>(Component: ComponentType<P>) => (
   <SuspenseWrapper variant="table">
@@ -131,6 +132,11 @@ export const pharmacyRoutes = [
       key="pharmacy-ac-prescription-notes"
       path="prescription-notes/:prescriptionId"
       element={pharmacyTablePage(PharmacyPrescriptionNotesPage)}
+    />
+    <Route
+      key="pharmacy-ac-clinical-reports"
+      path="clinical-reports"
+      element={pharmacyTablePage(ClinicalReportsView)}
     />
   </Route>,
 

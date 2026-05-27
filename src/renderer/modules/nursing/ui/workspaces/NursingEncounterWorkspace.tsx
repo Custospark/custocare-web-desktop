@@ -298,6 +298,13 @@ const NursingEncounterWorkspace: React.FC<NursingWorkspaceProps> = ({ theme }) =
                   activeWhenPath: NURSING_ROUTES.NURSING_ENCOUNTER_NOTES,
                   description: 'Clinical notes for this visit (focus mode)',
                 },
+                {
+                  key: 'clinical-reports',
+                  label: 'Clinical Reports',
+                  icon: <FileText className="h-4 w-4" />,
+                  to: NURSING_ROUTES.NURSING_ENCOUNTER_CLINICAL_REPORTS,
+                  description: 'View patient clinical reports and documents',
+                },
               ]}
             />
           </div>

@@ -17,6 +17,7 @@ export const REFERRAL_ROUTES = {
   ACTION_CENTER_PATIENT_INFO: `${R}/action-center/patient-info`,
   ACTION_CENTER_REFERRAL_STATUS: `${R}/action-center/referral-status`,
   ACTION_CENTER_CREATE_REFERRAL: `${R}/action-center/create-referral`,
+  ACTION_CENTER_CLINICAL_REPORTS: `${R}/action-center/clinical-reports`,
 
   NETWORK: `${R}/network`,
   NETWORK_PENDING: `${R}/network/pending`,

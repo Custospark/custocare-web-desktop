@@ -184,6 +184,13 @@ const BillingActionCenter: React.FC<BillingActionCenterProps> = ({ theme }) => {
                     queueRedirectTo: BILLING_ROUTES.PATIENT_QUEUE,
                   },
                 },
+                {
+                  key: 'clinical-reports',
+                  label: 'Clinical Reports',
+                  icon: <FileText className="h-4 w-4" />,
+                  to: BILLING_ROUTES.ACTION_CENTER_CLINICAL_REPORTS,
+                  description: 'View patient clinical reports and documents',
+                },
               ]}
             />
           </div>

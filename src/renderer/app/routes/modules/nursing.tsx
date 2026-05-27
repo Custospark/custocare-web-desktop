@@ -21,6 +21,7 @@ import ShiftHandoverView from '../../../modules/nursing/ui/tasks-shifts/ShiftHan
 import TaskHistoryView from '../../../modules/nursing/ui/tasks-shifts/TaskHistoryView';
 import NursingOverview from '../../../modules/nursing/ui/overview/NursingOverview';
 import MyWardPatientsView from '../../../modules/nursing/ui/wards-patients/MyWardPatientsView';
+import ClinicalReportsView from '../../../modules/medical-records/ui/patients/views/ClinicalReportsView';
 
 const nursingTablePage = <P extends ThemeProp,>(
   Component: ComponentType<P>,
@@ -91,6 +92,7 @@ export const nursingRoutes = [
     <Route path="tasks" element={nursingTablePage(NursingEncounterTasksView)} />
     <Route path="meds" element={nursingTablePage(NursingEncounterMedsView)} />
     <Route path="notes" element={nursingTablePage(NursingEncounterNotesView)} />
+    <Route path="clinical-reports" element={nursingTablePage(ClinicalReportsView)} />
   </Route>,
 
   <Route key="nursing-tasks-shifts" path="tasks-shifts" element={nursingTablePage(TasksShiftsWorkspace)}>

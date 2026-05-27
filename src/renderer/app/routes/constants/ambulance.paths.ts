@@ -21,6 +21,7 @@ export const AMBULANCE_ROUTES = {
   ACTION_CENTER_PATIENT_INFO: `${A}/action-center/patient-info`,
   ACTION_CENTER_TRANSPORT_TIMELINE: `${A}/action-center/transport/timeline`,
   ACTION_CENTER_TRANSPORT_LOGS: `${A}/action-center/transport/logs`,
+  ACTION_CENTER_CLINICAL_REPORTS: `${A}/action-center/clinical-reports`,
 
   // Fleet (facility-wide — not tied to a loaded visit)
   FLEET: `${A}/fleet`,

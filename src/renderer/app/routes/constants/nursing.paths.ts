@@ -22,6 +22,7 @@ export const NURSING_ROUTES = {
   NURSING_ENCOUNTER_TASKS: `${ROUTES.NURSING}/nursing-encounter/tasks`,
   NURSING_ENCOUNTER_MEDS: `${ROUTES.NURSING}/nursing-encounter/meds`,
   NURSING_ENCOUNTER_NOTES: `${ROUTES.NURSING}/nursing-encounter/notes`,
+  NURSING_ENCOUNTER_CLINICAL_REPORTS: `${ROUTES.NURSING}/nursing-encounter/clinical-reports`,
 
   // Medication & Treatment sub actions
   MEDICATION_TREATMENT_MEDICATION_SCHEDULE: `${ROUTES.NURSING}/medication-treatment/medication-schedule`,

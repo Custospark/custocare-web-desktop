@@ -17,6 +17,7 @@ import {
   ArrowLeftRight,
   ArrowRight,
   ClipboardList,
+  FileText,
 } from 'lucide-react';
 
 import { type RootState } from '../../../../app/store/rootReducer';
@@ -210,6 +211,13 @@ const PharmacyActionCenter: React.FC<PharmacyActionCenterProps> = ({ theme }) =>
                   icon: <ClipboardList className="h-4 w-4" />,
                   to: PHARMACY_ROUTES.ACTION_CENTER_PRESCRIPTION_REVIEW,
                   description: 'See what has been dispensed vs still pending for this visit',
+                },
+                {
+                  key: 'clinical-reports',
+                  label: 'Clinical Reports',
+                  icon: <FileText className="h-4 w-4" />,
+                  to: PHARMACY_ROUTES.ACTION_CENTER_CLINICAL_REPORTS,
+                  description: 'View patient clinical reports and documents',
                 },
               ]}
             />

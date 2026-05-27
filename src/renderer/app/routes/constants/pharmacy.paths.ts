@@ -21,6 +21,7 @@ export const PHARMACY_ROUTES = {
   ACTION_CENTER_PRESCRIPTION_REVIEW: `${ROUTES.PHARMACY}/action-center/prescription-review`,
   /** Edit clinical / pharmacy notes for one Rx (must match active visit + patient + facility in slice) */
   ACTION_CENTER_PRESCRIPTION_NOTES: `${ROUTES.PHARMACY}/action-center/prescription-notes`,
+  ACTION_CENTER_CLINICAL_REPORTS: `${ROUTES.PHARMACY}/action-center/clinical-reports`,
 
   /** @deprecated Facility prescription desk removed — use Queue & intake, then Medication encounter */
   PRESCRIPTIONS: `${ROUTES.PHARMACY}/prescriptions`,

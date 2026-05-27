@@ -18,6 +18,7 @@ import ReferralNetworkWorkspace from '../../../modules/referral/ui/network/Refer
 import ReferralNetworkHub from '../../../modules/referral/ui/network/ReferralNetworkHub';
 import { MRBillingReview } from '../../../modules/medical-records/ui/revenue/MRBillingReview';
 import RedirectToForwardPatientFocus from '../../../modules/medical-records/ui/visit-action-center/RedirectToForwardPatientFocus';
+import ClinicalReportsView from '../../../modules/medical-records/ui/patients/views/ClinicalReportsView';
 
 const tablePage = <P extends { theme: 'light' | 'dark' }>(Component: ComponentType<P>) => (
   <SuspenseWrapper variant="table">
@@ -92,6 +93,7 @@ export const referralRoutes = [
         </SuspenseWrapper>
       }
     />
+    <Route path="clinical-reports" element={tablePage(ClinicalReportsView)} />
   </Route>,
 
   <Route key="referral-network" path="network" element={tablePage(ReferralNetworkWorkspace)}>

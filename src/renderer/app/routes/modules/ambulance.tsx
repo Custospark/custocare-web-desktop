@@ -25,6 +25,7 @@ import VehicleEdit from '../../../modules/ambulance/ui/vehicles/views/VehicleEdi
 import AmbulanceAnalytics from '../../../modules/ambulance/ui/analytics/AmbulanceAnalytics';
 import { MRBillingReview } from '../../../modules/medical-records/ui/revenue/MRBillingReview';
 import RedirectToForwardPatientFocus from '../../../modules/medical-records/ui/visit-action-center/RedirectToForwardPatientFocus';
+import ClinicalReportsView from '../../../modules/medical-records/ui/patients/views/ClinicalReportsView';
 
 const tablePage = <P extends { theme: 'light' | 'dark' }>(Component: ComponentType<P>) => (
   <SuspenseWrapper variant="table">
@@ -107,6 +108,7 @@ export const ambulanceRoutes = [
     <Route path="trip-workspace" element={<Navigate to={AMBULANCE_ROUTES.ACTION_CENTER_TRANSPORT} replace />} />
     <Route path="trip-workspace/timeline" element={<Navigate to={AMBULANCE_ROUTES.ACTION_CENTER_TRANSPORT_TIMELINE} replace />} />
     <Route path="trip-workspace/logs" element={<Navigate to={AMBULANCE_ROUTES.ACTION_CENTER_TRANSPORT_LOGS} replace />} />
+    <Route path="clinical-reports" element={tablePage(ClinicalReportsView)} />
   </Route>,
 
   <Route key="ambulance-fleet" path="fleet" element={tablePage(AmbulanceFleetWorkspace)}>
