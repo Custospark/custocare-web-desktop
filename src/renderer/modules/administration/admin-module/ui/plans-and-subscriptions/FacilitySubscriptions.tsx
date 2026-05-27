@@ -610,7 +610,7 @@ export const FacilitySubscriptions: React.FC<FacilitySubscriptionsProps> = ({
                           {[
                             { label: 'Staff Accounts', val: subscription.plan.limits.max_staff },
                             { label: 'Departments', val: subscription.plan.limits.max_departments },
-                            { label: 'Patients / Month', val: subscription.plan.limits.max_visits_per_month },
+                            { label: 'Patient Visits/Month', val: subscription.plan.limits.max_visits_per_month },
                           ].map(({ label, val }) => (
                             <div key={label} className="flex justify-between text-sm">
                               <span className={isDark ? 'text-gray-400' : 'text-gray-600'}>{label}</span>
@@ -755,7 +755,7 @@ export const FacilitySubscriptions: React.FC<FacilitySubscriptionsProps> = ({
               {[
                 { label: 'Staff Accounts', count: usage?.staff ?? 0, max: subscription.plan?.limits.max_staff },
                 { label: 'Departments', count: usage?.departments ?? 0, max: subscription.plan?.limits.max_departments },
-                { label: 'Patients This Month', count: usage?.visits ?? 0, max: subscription.plan?.limits.max_visits_per_month },
+                { label: 'Patient Visits This Month', count: usage?.visits ?? 0, max: subscription.plan?.limits.max_visits_per_month },
               ].map(({ label, count, max }) => {
                 const limit = max === null || max === undefined ? Infinity : max;
                 const pct = limit > 0 ? Math.min(100, Math.round((count / limit) * 100)) : 0;

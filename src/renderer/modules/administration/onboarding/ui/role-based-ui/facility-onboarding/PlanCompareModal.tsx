@@ -181,7 +181,7 @@ export const PlanCompareModal: React.FC<PlanCompareModalProps> = ({ plans, onClo
               {[
                 { label: 'Staff Limit', key: 'max_staff' as const },
                 { label: 'Departments', key: 'max_departments' as const },
-                { label: 'Patients / Month', key: 'max_visits_per_month' as const },
+                { label: 'Patient Visits/Month', key: 'max_visits_per_month' as const },
               ].map((row, ri) => (
                 <React.Fragment key={row.key}>
                   <div className={cn(

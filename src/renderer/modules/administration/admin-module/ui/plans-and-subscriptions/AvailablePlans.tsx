@@ -539,7 +539,7 @@ export const AvailablePlans: React.FC<AvailablePlansProps> = ({ theme }) => {
                   {[
                     { label: 'Staff', value: limitLabels.staff },
                     { label: 'Depts', value: limitLabels.depts },
-                    { label: 'Patients', value: limitLabels.patients },
+                    { label: 'Visits', value: limitLabels.patients },
                   ].map((item) => (
                     <div key={item.label}>
                       <div className={cn('font-bold', theme === 'dark' ? 'text-gray-200' : 'text-gray-800')}>

@@ -228,8 +228,8 @@ const lims = (l: Plan['limits']) => [
     ? `Up to ${l.max_departments} departments`
     : 'Unlimited departments',
   l.max_visits_per_month !== null
-    ? `Up to ${l.max_visits_per_month} patients per month`
-    : 'Unlimited patients per month',
+    ? `Up to ${l.max_visits_per_month} patient visits per month`
+    : 'Unlimited patient visits per month',
 ];
 
 interface PlanBadgeProps {

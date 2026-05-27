@@ -44,7 +44,7 @@ const buildTiers = (plans: Plan[]): DisplayTier[] => {
         limits: [
           fmtLimit(plan.limits.max_staff, 'Staff'),
           fmtLimit(plan.limits.max_departments, 'Departments'),
-          fmtLimit(plan.limits.max_visits_per_month, 'Patients/mo'),
+          fmtLimit(plan.limits.max_visits_per_month, 'Patient Visits/mo'),
         ],
         highlighted: plan.is_popular,
         badge: plan.is_popular ? 'Most Popular' : undefined,
@@ -304,7 +304,7 @@ export const PricingPage: React.FC = () => {
                     ['', -1, -1, -1],
                     ['Staff Limit', ...tiers.map((t) => t.limits[0].value)],
                     ['Departments', ...tiers.map((t) => t.limits[1].value)],
-                    ['Patients / Month', ...tiers.map((t) => t.limits[2].value)],
+                    ['Patient Visits/Month', ...tiers.map((t) => t.limits[2].value)],
                   ]).map((row, i) => (
                     <tr key={i} className={cn(
                       "border-b", theme === 'dark' ? "border-slate-800" : "border-slate-100",

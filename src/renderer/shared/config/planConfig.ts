@@ -51,9 +51,9 @@ export interface PlanLimitLabels {
 }
 
 export const TIER_LIMIT_LABELS: Record<string, PlanLimitLabels> = {
-  essential: { staff: '10 staff', depts: '3 departments', patients: '500 patients/month' },
-  professional: { staff: '50 staff', depts: '10 departments', patients: '3,000 patients/month' },
-  enterprise: { staff: 'Unlimited staff', depts: 'Unlimited departments', patients: 'Unlimited patients' },
+  essential: { staff: '10 staff', depts: '3 departments', patients: '500 patient visits/mo' },
+  professional: { staff: '50 staff', depts: '10 departments', patients: '3,000 patient visits/mo' },
+  enterprise: { staff: 'Unlimited staff', depts: 'Unlimited departments', patients: 'Unlimited patient visits' },
 };
 
 export interface PlanLimitsShape {
@@ -76,7 +76,7 @@ export const getPlanLimitLabels = (
   return {
     staff: fmt(limits?.max_staff, 'staff'),
     depts: fmt(limits?.max_departments, 'departments'),
-    patients: fmt(limits?.max_patients_per_month, 'patients'),
+    patients: fmt(limits?.max_visits_per_month, 'patient visits'),
   };
 };
 
