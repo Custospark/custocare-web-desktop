@@ -1,4 +1,4 @@
-import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
+import { createAsyncThunk, createSelector, createSlice } from '@reduxjs/toolkit';
 import type { SystemStatus } from '../../../shared/components/Navigation/status-bar-components/StatusBarTypes';
 import { probeNetworkConnectivity } from '../network/connectivityCheck';
 import type { RootState } from '../store';
@@ -73,10 +73,10 @@ export const selectIsOnline = (state: RootState): boolean =>
 export const selectNetworkLatency = (state: RootState): number | null =>
   state.network.latency;
 
-export const selectLastCheckedAt = (state: RootState): Date | null => {
-  const raw = state.network.lastCheckedAt;
-  return raw ? new Date(raw) : null;
-};
+export const selectLastCheckedAt = createSelector(
+  [(state: RootState) => state.network.lastCheckedAt],
+  (raw): Date | null => raw ? new Date(raw) : null
+);
 
 /** Full-screen offline overlay only when completely offline (not slow). */
 export const selectIsCompletelyOffline = (state: RootState): boolean =>

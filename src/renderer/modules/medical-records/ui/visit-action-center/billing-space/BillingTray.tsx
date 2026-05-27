@@ -25,7 +25,9 @@ import {
 import {
   clearActiveVisit,
   selectActiveVisitInfo,
+  selectIsVisitCompleted,
 } from '../../../../../app/store/slices/visitSlice';
+import { VisitCompletedGuard } from '../../../../../shared/components/VisitCompletedGuard';
 import { selectTheme } from '../../../../../app/store/slices/uiSlice';
 import { clearPendingForwarding } from '../../../../../app/store/slices/forwardPatientSlice';
 import {
@@ -66,6 +68,7 @@ export const BillingTray: React.FC<BillingTrayProps> = ({
 
   const theme = useSelector(selectTheme);
   const isDark = theme === 'dark';
+  const visitCompleted = useSelector(selectIsVisitCompleted);
 
   const activeVisitInfo = useSelector(selectActiveVisitInfo);
   const isTrayOpen = useSelector(selectIsTrayOpen);
@@ -722,11 +725,13 @@ useEffect(() => {
           </div>
 
           <div className="flex-1 overflow-y-auto">
-            {currentStep === 'charge_entry' ? (
-              <ChargeEntryStep theme={theme} />
-            ) : (
-              <BillingSummaryStep theme={theme} />
-            )}
+            <VisitCompletedGuard theme={theme}>
+              {currentStep === 'charge_entry' ? (
+                <ChargeEntryStep theme={theme} />
+              ) : (
+                <BillingSummaryStep theme={theme} />
+              )}
+            </VisitCompletedGuard>
           </div>
 
           {isDirty && status !== 'settled' && (
