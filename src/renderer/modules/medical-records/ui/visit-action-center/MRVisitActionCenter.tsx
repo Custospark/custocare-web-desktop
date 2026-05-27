@@ -6,7 +6,6 @@ import { useQueryClient } from '@tanstack/react-query';
 import { 
   FileText, 
   ArrowRight, 
-  AlertTriangle,
   User,
   Calendar,
   Clock,
@@ -36,6 +35,7 @@ import {
 import { clearAll } from '../visit-action-center/billing-space';
 import { useToast } from '../../../../app/store/contexts/toast/useToast';
 import LoadingSkeleton from '../../../../shared/components/Loading/LoadingSkeletons';
+import { CompletedVisitBanner } from '../../../../shared/components/CompletedVisitBanner';
 import {
   getPatientIntakeRoutes,
   type PatientIntakeModule,
@@ -250,18 +250,7 @@ const MRVisitActionCenter: React.FC<MRVisitActionCenterProps> = ({
   return (
     <div className={`min-h-screen ${theme === 'dark' ? 'bg-gray-900' : 'bg-gray-50'}`}>
       <div className="container mx-auto p-4 lg:p-6">
-        {isReadOnly && (
-          <div className={`mb-4 p-3 rounded-lg border flex items-start gap-2 text-sm ${
-            theme === 'dark'
-              ? 'bg-amber-900/20 border-amber-700/40 text-amber-200'
-              : 'bg-amber-50 border-amber-200 text-amber-800'
-          }`}>
-            <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
-            <span>
-              This visit has been completed — viewing only. No new clinical entries, billing, or forwarding actions can be performed.
-            </span>
-          </div>
-        )}
+        <CompletedVisitBanner theme={theme} />
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-6">
           {/* Left Sidebar - Patient Info Card */}
           <div className="lg:col-span-4 xl:col-span-3">

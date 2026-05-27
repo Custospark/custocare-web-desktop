@@ -35,6 +35,7 @@ import {
   formatVisitStatusLabel,
 } from '../../../pharmacy/api/dispensing/visit-queue/visitTypes';
 import { FOCUS_MODE_ROUTES } from '../../../../app/routes/utils/forwardPatientFocus';
+import { CompletedVisitBanner } from '../../../../shared/components/CompletedVisitBanner';
 
 const NursingEncounterWorkspace: React.FC<NursingWorkspaceProps> = ({ theme }) => {
   const navigate = useNavigate();
@@ -137,6 +138,7 @@ const NursingEncounterWorkspace: React.FC<NursingWorkspaceProps> = ({ theme }) =
   return (
     <div className={`min-h-screen ${theme === 'dark' ? 'bg-slate-950' : 'bg-slate-50'}`}>
       <div className="container mx-auto p-4 lg:p-6">
+        <CompletedVisitBanner theme={theme} />
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-12 lg:gap-8">
           <div className="lg:col-span-4 xl:col-span-3">
             <div

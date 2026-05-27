@@ -31,6 +31,7 @@ import {
   formatVisitStatusLabel,
 } from '../../../pharmacy/api/dispensing/visit-queue/visitTypes';
 import { FOCUS_MODE_ROUTES } from '../../../../app/routes/utils/forwardPatientFocus';
+import { CompletedVisitBanner } from '../../../../shared/components/CompletedVisitBanner';
 
 interface BillingActionCenterProps {
   theme: 'light' | 'dark';
@@ -142,6 +143,7 @@ const BillingActionCenter: React.FC<BillingActionCenterProps> = ({ theme }) => {
   return (
     <div className={`min-h-screen ${theme === 'dark' ? 'bg-gray-900' : 'bg-gray-50'}`}>
       <div className="container mx-auto p-4 lg:p-6">
+        <CompletedVisitBanner theme={theme} />
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-12 lg:gap-6">
           <div className="lg:col-span-4 xl:col-span-3">
             <BillingPatientInfoCard
