@@ -24,6 +24,7 @@ import { axiosInstance } from '../../../../app/api/axiosConfig';
 import { useToast } from '../../../../app/store/contexts/toast/useToast';
 import { cn } from '../../../../shared/utils/classNameUtils';
 import { useConfirm } from '../../../../shared/components/Feedback/ConfirmDialog/ConfirmContext';
+import { VisitCompletedGuard } from '../../../../shared/components/VisitCompletedGuard';
 import { containerVariants } from '../../../../shared/components/animations/motionVariants';
 import LogoImage from '../../../../shared/assets/LogoImage';
 import { BrandName } from '../../../../shared/utils/BrandName';
@@ -1140,7 +1141,8 @@ const PharmacyDispenseMedication: React.FC<PharmacyDispenseMedicationProps> = ({
 
   if (!dispenseFocusOpen) {
     return (
-      <div className="space-y-6">
+      <VisitCompletedGuard theme={theme}>
+        <div className="space-y-6">
        
         <div
           className={cn(
@@ -1177,6 +1179,7 @@ const PharmacyDispenseMedication: React.FC<PharmacyDispenseMedicationProps> = ({
           </button>
         </div>
       </div>
+      </VisitCompletedGuard>
     );
   }
 
