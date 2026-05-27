@@ -81,10 +81,10 @@ export const ClinicalReportsView: React.FC<ClinicalReportsViewProps> = ({ theme 
     diagnoses: { hasData: (diagnosesQuery.data?.data ?? []).length > 0 },
     consultations: { hasData: (consultationsQuery.data?.data ?? []).length > 0 },
     clinicalNotes: { hasData: (notesQuery.data?.data ?? []).length > 0 },
-    allergies: { hasData: (allergiesQuery.data as { data?: unknown[] })?.data?.length ?? 0 > 0 },
+    allergies: { hasData: ((allergiesQuery.data as { data?: unknown[] })?.data?.length ?? 0) > 0 },
     prescriptions: { hasData: (prescriptionsQuery.data?.data ?? []).length > 0 },
     labRequests: { hasData: (labRequestsQuery.data ?? []).length > 0 },
-    labResults: { hasData: (labRequestsQuery.data ?? []).some((r: { status: string }) => r.status === 'completed') },
+    labResults: { hasData: (labRequestsQuery.data ?? []).filter((r: { status: string }) => r.status === 'completed').length > 0 },
   }), [vitalsQuery.data, diagnosesQuery.data, consultationsQuery.data, notesQuery.data, allergiesQuery.data, prescriptionsQuery.data, labRequestsQuery.data]);
 
   const openReport = useCallback((
