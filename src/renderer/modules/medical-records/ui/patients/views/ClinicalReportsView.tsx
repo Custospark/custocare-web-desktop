@@ -68,13 +68,31 @@ export const ClinicalReportsView: React.FC<ClinicalReportsViewProps> = ({ theme 
 
   const [searchQuery, setSearchQuery] = useState('');
 
-  const notesQuery = useGetActiveVisitClinicalNotes();
   const vitalsQuery = useGetActiveVisitVitals();
-  const diagnosesQuery = useGetActiveVisitDiagnoses();
-  const consultationsQuery = useGetActiveVisitConsultations();
-  const allergiesQuery = useGetAllergies(activePatientId ?? '', {});
-  const prescriptionsQuery = useGetPatientPrescriptions(Number(activePatientId ?? 0), []);
-  const labRequestsQuery = useGetRequestsByVisit(Number(activeVisitId ?? 0));
+
+  const notesQuery = useGetActiveVisitClinicalNotes({
+    enabled: vitalsQuery.isFetched,
+  });
+
+  const diagnosesQuery = useGetActiveVisitDiagnoses({
+    enabled: notesQuery.isFetched,
+  });
+
+  const consultationsQuery = useGetActiveVisitConsultations({
+    enabled: diagnosesQuery.isFetched,
+  });
+
+  const allergiesQuery = useGetAllergies(activePatientId ?? '', {}, {
+    enabled: consultationsQuery.isFetched && !!activePatientId,
+  });
+
+  const labRequestsQuery = useGetRequestsByVisit(Number(activeVisitId ?? 0), {
+    enabled: allergiesQuery.isFetched && !!activeVisitId,
+  });
+
+  const prescriptionsQuery = useGetPatientPrescriptions(Number(activePatientId ?? 0), [], {
+    enabled: labRequestsQuery.isFetched && !!activePatientId,
+  });
 
   const moduleStatus = useMemo(() => ({
     vitals: { hasData: (vitalsQuery.data?.data ?? []).length > 0 },
