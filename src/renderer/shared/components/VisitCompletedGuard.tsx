@@ -4,7 +4,7 @@ import { Eye, FileText, Receipt, AlertCircle } from 'lucide-react';
 import type { RootState } from '../../app/store/rootReducer';
 import { selectActivePatient, selectIsVisitCompleted } from '../../app/store/slices/visitSlice';
 import { selectUser } from '../../app/store/slices/authSlice';
-import { getUserFirstName } from '../../utils/userGreeting';
+import { getUserFirstName } from '../utils/userGreeting';
 import { cn } from '../utils/classNameUtils';
 
 interface VisitCompletedGuardProps {
