@@ -279,12 +279,11 @@ const MRVisitActionCenter: React.FC<MRVisitActionCenterProps> = ({
               actions={[
                 { key: 'patient-records', label: 'Patient Records', icon: <User className="w-4 h-4" />, to: actionCenterRoutes.patientRecords },
                 { key: 'clinical-care', label: 'Record Care', icon: <Plus className="w-4 h-4" />, to: actionCenterRoutes.clinicalCare },
-                ...(isReadOnly ? [
-                  { key: 'clinical-reports' as const, label: 'Clinical Reports', icon: <FileText className="w-4 h-4" />, to: actionCenterRoutes.clinicalReports },
-                ] : [
+                { key: 'clinical-reports', label: 'Clinical Reports', icon: <FileText className="w-4 h-4" />, to: actionCenterRoutes.clinicalReports },
+                ...(!isReadOnly ? [
                   { key: 'forward-patient' as const, label: 'Forward Patient', icon: <ArrowRight className="w-4 h-4" />, to: FOCUS_MODE_ROUTES.FORWARD_PATIENT_FOCUS, navigateState: forwardPatientNavigateState },
                   { key: 'billing-space' as const, label: 'Billing Space', icon: <Receipt className="w-4 h-4" />, to: actionCenterRoutes.patientBillingSpace },
-                ]),
+                ] : []),
                 { key: 'visit-status', label: 'Visit Status', icon: <Activity className="w-4 h-4" />, to: actionCenterRoutes.visitStatus },
               ]}
             />
