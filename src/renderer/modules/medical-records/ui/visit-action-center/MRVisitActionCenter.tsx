@@ -6,6 +6,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { 
   FileText, 
   ArrowRight, 
+  Plus,
   User,
   Calendar,
   Clock,
@@ -16,7 +17,6 @@ import {
   Search,
   ArrowLeftRight,
   Receipt,
-  Stethoscope,
 } from 'lucide-react';
 import { type RootState } from '../../../../app/store/rootReducer';
 import { CLINICAL_ROUTES, MEDICAL_RECORDS_ROUTES } from '../../../../app/routes/routeConstants';
@@ -278,7 +278,7 @@ const MRVisitActionCenter: React.FC<MRVisitActionCenterProps> = ({
               defaultActionTo={actionCenterRoutes.patientRecords}
               actions={[
                 { key: 'patient-records', label: 'Patient Records', icon: <User className="w-4 h-4" />, to: actionCenterRoutes.patientRecords },
-                { key: 'clinical-care', label: 'Clinical Care', icon: <Stethoscope className="w-4 h-4" />, to: actionCenterRoutes.clinicalCare },
+                { key: 'clinical-care', label: 'Record Care', icon: <Plus className="w-4 h-4" />, to: actionCenterRoutes.clinicalCare },
                 ...(isReadOnly ? [
                   { key: 'clinical-reports' as const, label: 'Clinical Reports', icon: <FileText className="w-4 h-4" />, to: actionCenterRoutes.clinicalReports },
                 ] : [
