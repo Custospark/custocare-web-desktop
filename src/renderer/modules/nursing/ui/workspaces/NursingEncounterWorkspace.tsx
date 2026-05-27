@@ -26,6 +26,7 @@ import {
   selectActivePatient,
   selectActiveVisitInfo,
   selectHasActiveVisit,
+  selectIsVisitCompleted,
 } from '../../../../app/store/slices/visitSlice';
 import { clearAll } from '../../../medical-records/ui/visit-action-center/billing-space';
 import { useToast } from '../../../../app/store/contexts/toast/useToast';
@@ -53,6 +54,7 @@ const NursingEncounterWorkspace: React.FC<NursingWorkspaceProps> = ({ theme }) =
   const patient = useSelector((state: RootState) => selectActivePatient(state));
   const visitInfo = useSelector((state: RootState) => selectActiveVisitInfo(state));
   const hasActiveVisit = useSelector((state: RootState) => selectHasActiveVisit(state));
+  const isReadOnly = useSelector(selectIsVisitCompleted);
 
   const calculateWaitTime = (arrivedAt: string | null): string => {
     if (!arrivedAt) return 'N/A';
@@ -257,56 +259,14 @@ const NursingEncounterWorkspace: React.FC<NursingWorkspaceProps> = ({ theme }) =
               defaultActionTo={NURSING_ROUTES.NURSING_ENCOUNTER_PATIENT_INFO}
               actions={[
                 { key: 'patient-info', label: 'Patient Info', icon: <ClipboardList className="w-4 h-4" />, to: NURSING_ROUTES.NURSING_ENCOUNTER_PATIENT_INFO },
-                {
-                  key: 'ward-bed',
-                  label: 'Ward & Bed',
-                  icon: <BedDouble className="w-4 h-4" />,
-                  to: FOCUS_MODE_ROUTES.NURSING_WARD_BED_FOCUS,
-                  description: 'Assign or update ward and bed (opens in focus mode)',
-                },
-                {
-                  key: 'forward-patient',
-                  label: 'Forward Patient',
-                  icon: <ArrowRight className="w-4 h-4" />,
-                  to: FOCUS_MODE_ROUTES.FORWARD_PATIENT_FOCUS,
-                  activeWhenPath: NURSING_ROUTES.NURSING_ENCOUNTER_FORWARD_PATIENT,
-                  navigateState: {
-                    cancelTo: NURSING_ROUTES.NURSING_ENCOUNTER_PATIENT_INFO,
-                    queueRedirectTo: NURSING_ROUTES.WARDS_PATIENTS_NEW_PATIENTS_UNASSIGNED,
-                  },
-                  description: 'Send this patient to another team queue or a specific staff member',
-                },
-                {
-                  key: 'tasks',
-                  label: 'Tasks',
-                  icon: <ClipboardList className="w-4 h-4" />,
-                  to: FOCUS_MODE_ROUTES.NURSING_TASKS_FOCUS,
-                  activeWhenPath: NURSING_ROUTES.NURSING_ENCOUNTER_TASKS,
-                  description: 'Encounter tasks in focus mode',
-                },
-                {
-                  key: 'meds',
-                  label: 'Medications',
-                  icon: <Pill className="w-4 h-4" />,
-                  to: FOCUS_MODE_ROUTES.NURSING_MEDS_FOCUS,
-                  activeWhenPath: NURSING_ROUTES.NURSING_ENCOUNTER_MEDS,
-                  description: 'Medication schedule for this visit (focus mode)',
-                },
-                {
-                  key: 'notes',
-                  label: 'Notes',
-                  icon: <Activity className="w-4 h-4" />,
-                  to: FOCUS_MODE_ROUTES.NURSING_NOTES_FOCUS,
-                  activeWhenPath: NURSING_ROUTES.NURSING_ENCOUNTER_NOTES,
-                  description: 'Clinical notes for this visit (focus mode)',
-                },
-                {
-                  key: 'clinical-reports',
-                  label: 'Clinical Reports',
-                  icon: <FileText className="h-4 w-4" />,
-                  to: NURSING_ROUTES.NURSING_ENCOUNTER_CLINICAL_REPORTS,
-                  description: 'View patient clinical reports and documents',
-                },
+                ...(!isReadOnly ? [
+                  { key: 'ward-bed' as const, label: 'Ward & Bed', icon: <BedDouble className="w-4 h-4" />, to: FOCUS_MODE_ROUTES.NURSING_WARD_BED_FOCUS, description: 'Assign or update ward and bed (opens in focus mode)' },
+                  { key: 'forward-patient' as const, label: 'Forward Patient', icon: <ArrowRight className="w-4 h-4" />, to: FOCUS_MODE_ROUTES.FORWARD_PATIENT_FOCUS, activeWhenPath: NURSING_ROUTES.NURSING_ENCOUNTER_FORWARD_PATIENT, navigateState: { cancelTo: NURSING_ROUTES.NURSING_ENCOUNTER_PATIENT_INFO, queueRedirectTo: NURSING_ROUTES.WARDS_PATIENTS_NEW_PATIENTS_UNASSIGNED }, description: 'Send this patient to another team queue or a specific staff member' },
+                  { key: 'tasks' as const, label: 'Tasks', icon: <ClipboardList className="w-4 h-4" />, to: FOCUS_MODE_ROUTES.NURSING_TASKS_FOCUS, activeWhenPath: NURSING_ROUTES.NURSING_ENCOUNTER_TASKS, description: 'Encounter tasks in focus mode' },
+                  { key: 'meds' as const, label: 'Medications', icon: <Pill className="w-4 h-4" />, to: FOCUS_MODE_ROUTES.NURSING_MEDS_FOCUS, activeWhenPath: NURSING_ROUTES.NURSING_ENCOUNTER_MEDS, description: 'Medication schedule for this visit (focus mode)' },
+                  { key: 'notes' as const, label: 'Notes', icon: <Activity className="w-4 h-4" />, to: FOCUS_MODE_ROUTES.NURSING_NOTES_FOCUS, activeWhenPath: NURSING_ROUTES.NURSING_ENCOUNTER_NOTES, description: 'Clinical notes for this visit (focus mode)' },
+                ] : []),
+                { key: 'clinical-reports', label: 'Clinical Reports', icon: <FileText className="h-4 w-4" />, to: NURSING_ROUTES.NURSING_ENCOUNTER_CLINICAL_REPORTS, description: 'View patient clinical reports and documents' },
               ]}
             />
           </div>
