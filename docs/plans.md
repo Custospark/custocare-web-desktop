@@ -539,3 +539,179 @@ If something goes wrong:
 ---
 
 *Plan owner: Mike (orchestrator). Execute Rex in order. Vera after each 2-3 steps. Quill at end.*
+
+---
+
+# Completed Visit Guard — Block Actions on Completed Visits
+
+**Date:** 2026-05-27  
+**Status:** Approved for execution  
+**Scope:** Frontend (`Frontend/`) + Backend (`Backend/`) — Guard completed visits from further actions  
+**Cross-stack:** Yes  
+**Architect (Blue):** Run
+
+---
+
+## 1. What we're doing
+
+When a visit reaches `completed` status, users should not be able to perform clinical/billing actions on it. Currently:
+- **Frontend:** "Take Action" buttons in queues across all modules have no status check. A completed visit loads into action centers.
+- **Backend:** Some operations are blocked (status transitions, ward assignment, billing start) but there's no global HTTP-layer guard.
+
+## 2. Decisions (locked)
+
+| # | Question | Decision |
+|---|----------|----------|
+| 1 | What happens when user clicks Take Action on completed visit? | **Block navigation + show toast** saying visit is completed. Stay in queue. |
+| 2 | Guard layers? | **Frontend first** (Take Action handlers), **Backend middleware** for HTTP-layer write blocking. |
+| 3 | Backend middleware? | **Yes** — `CheckVisitNotCompleted` middleware registered globally, applied to clinical write route groups. |
+| 4 | What actions are allowed on completed visits? | **View only** — viewing records, printing reports, billing history. No new data entry. |
+
+---
+
+## 3. Phase 1 — Frontend Guard
+
+### 3.1 Add utility function
+
+**File:** `src/renderer/modules/pharmacy/api/dispensing/visit-queue/visitTypes.ts`
+
+Add at the end of the file (or alongside `VisitStatus`):
+
+```typescript
+export const isVisitCompleted = (status: VisitStatus | string): boolean =>
+  status === VisitStatus.COMPLETED || status === 'completed';
+```
+
+### 3.2 Guard in Take Action handlers
+
+All Take Action handlers follow the same pattern. Add this check at the top of each handler:
+
+```typescript
+if (isVisitCompleted(visit.status)) {
+  showToast('error', 'This visit has been completed. No further actions can be performed.', 5000);
+  return;
+}
+```
+
+**Files to modify (4):**
+
+| File | Location | Handler Name |
+|------|----------|-------------|
+| `MRPatientQueue.tsx` | `modules/medical-records/ui/patients/views/` | `handleTakeAction` (line ~104) |
+| `PharmacyPatientQueue.tsx` | `modules/pharmacy/ui/patients/views/` | `handleTakeAction` (line ~46) |
+| `DispensingQueue.tsx` | `modules/pharmacy/ui/dispensing/dispensing-medication/views/` | `handleTakeAction` (line ~32) |
+| `MyWardPatientsView.tsx` | `modules/nursing/ui/wards-patients/` | `handleTakeAction` (line ~79) |
+
+### 3.3 Guard in PatientQueue core component
+
+**File:** `modules/pharmacy/ui/dispensing/dispensing-medication/views/PatientQueue.tsx`
+
+- Disable the "Take Action" button row when `isVisitCompleted(visit.status)` 
+- Add `opacity-50 cursor-not-allowed` styling
+- Show a tooltip or small "Completed" badge on the row
+
+---
+
+## 4. Phase 2 — Backend Middleware
+
+### 4.1 Create Middleware
+
+**File:** `app/Http/Middleware/CheckVisitNotCompleted.php`
+
+```php
+<?php
+
+declare(strict_types=1);
+
+namespace App\Http\Middleware;
+
+use App\Models\Visit;
+use Closure;
+use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\Response;
+
+class CheckVisitNotCompleted
+{
+    public function handle(Request $request, Closure $next): Response
+    {
+        $visit = $request->route('visit');
+        
+        if ($visit instanceof Visit && $visit->status === 'completed') {
+            return response()->json([
+                'success' => false,
+                'message' => 'This visit has been completed and cannot be modified.',
+            ], 409);
+        }
+        
+        return $next($request);
+    }
+}
+```
+
+### 4.2 Register middleware alias
+
+**File:** `bootstrap/app.php` (Laravel 11) or `app/Http/Kernel.php` (Laravel 10)
+
+```php
+->withMiddleware(function (Middleware $middleware) {
+    $middleware->alias('visit.not_completed', \App\Http\Middleware\CheckVisitNotCompleted::class);
+})
+```
+
+### 4.3 Apply to route groups
+
+Apply the middleware to route groups that handle clinical writes:
+
+```php
+Route::middleware(['auth:sanctum', 'visit.not_completed'])->group(function () {
+    // Vitals
+    // Lab requests & results
+    // Prescriptions
+    // Clinical notes
+    // Nursing assessments
+    // Discharge (already blocked by service but belt + suspenders)
+});
+```
+
+**Implementation detail:** The middleware relies on route-model binding resolving `{visit}` to a `Visit` model instance. All current clinical write routes already use `{visit}` parameter. Confirm this during Rex.
+
+---
+
+## 5. Files changed
+
+### Frontend (6 files)
+
+| File | Change |
+|------|--------|
+| `visitTypes.ts` | Add `isVisitCompleted()` utility |
+| `MRPatientQueue.tsx` | Guard in `handleTakeAction` |
+| `PharmacyPatientQueue.tsx` | Guard in `handleTakeAction` |
+| `DispensingQueue.tsx` | Guard in `handleTakeAction` |
+| `MyWardPatientsView.tsx` | Guard in `handleTakeAction` |
+| `PatientQueue.tsx` | Disable button + styling for completed rows |
+
+### Backend (3 files)
+
+| File | Change |
+|------|--------|
+| `CheckVisitNotCompleted.php` | New middleware |
+| `bootstrap/app.php` | Register alias |
+| Route files | Apply middleware to clinical write groups |
+
+---
+
+## 6. Implementation order
+
+| Step | Work | Stack |
+|------|------|-------|
+| 1 | Add `isVisitCompleted()` to visitTypes.ts | FE |
+| 2 | Guard Take Action handlers (4 files) | FE |
+| 3 | Guard PatientQueue core component (disable button) | FE |
+| 4 | Create `CheckVisitNotCompleted` middleware | BE |
+| 5 | Register middleware alias | BE |
+| 6 | Apply middleware to clinical write route groups | BE |
+| 7 | Vera fast (FE + BE) + Quill docs | Both |
+
+---
+
+*Plan owner: Mike (orchestrator). Execute Rex in order. Vera after each step. Quill at end.*
