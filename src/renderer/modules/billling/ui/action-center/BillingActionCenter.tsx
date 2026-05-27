@@ -170,6 +170,7 @@ const BillingActionCenter: React.FC<BillingActionCenterProps> = ({ theme }) => {
                   { key: 'forward-patient' as const, label: 'Forward Patient', icon: <ArrowRight className="h-4 w-4" />, to: FOCUS_MODE_ROUTES.FORWARD_PATIENT_FOCUS, navigateState: { cancelTo: BILLING_ROUTES.BILLING_SPACE, queueRedirectTo: BILLING_ROUTES.PATIENT_QUEUE } },
                 ] : []),
                 { key: 'visit-status', label: 'Visit Status', icon: <Activity className="w-4 h-4" />, to: BILLING_ROUTES.VISIT_STATUS },
+                { key: 'patient-bill', label: 'Patient Bill', icon: <FileText className="h-4 w-4" />, to: BILLING_ROUTES.PATIENT_BILL, description: 'View and print the patient bill for this visit' },
                 { key: 'clinical-reports', label: 'Clinical Reports', icon: <FileText className="h-4 w-4" />, to: BILLING_ROUTES.ACTION_CENTER_CLINICAL_REPORTS, description: 'View patient clinical reports and documents' },
               ]}
             />

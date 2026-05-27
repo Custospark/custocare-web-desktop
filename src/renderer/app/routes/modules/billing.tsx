@@ -15,6 +15,7 @@ import { MRBillingReview } from '../../../modules/medical-records/ui/revenue/MRB
 import RevenueStats from '../../../modules/medical-records/ui/revenue/stats/RevenueStats';
 import BillingInvoicesFromReceipts from '../../../modules/billling/ui/revenue/BillingInvoicesFromReceipts';
 import ClinicalReportsView from '../../../modules/medical-records/ui/patients/views/ClinicalReportsView';
+import { PatientBillPage } from '../../../modules/billling/ui/action-center/PatientBillPage';
 
 const billingTablePage = <P extends ThemeProp,>(Component: React.ComponentType<P>): RouteObject['element'] => (
   <SuspenseWrapper variant="table">
@@ -76,6 +77,7 @@ export const billingRoutes = [
     />
     <Route path="billing-space" element={billingTablePage(MRBilling)} />
     <Route path="clinical-reports" element={billingTablePage(ClinicalReportsView)} />
+    <Route path="patient-bill" element={billingTablePage(PatientBillPage)} />
   </Route>,
 
   <Route key="billing-revenue" path="revenue" element={billingTablePage(BillingRevenueWorkspace)}>

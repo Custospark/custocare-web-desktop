@@ -15,6 +15,7 @@ export const BILLING_ROUTES = {
   FORWARD_PATIENT: `${ROUTES.BILLING}/action-center/forward-patient`,
   VISIT_STATUS: `${ROUTES.BILLING}/action-center/visit-status`,
   ACTION_CENTER_CLINICAL_REPORTS: `${ROUTES.BILLING}/action-center/clinical-reports`,
+  PATIENT_BILL: `${ROUTES.BILLING}/action-center/patient-bill`,
 
   // Revenue nested actions
   RECEIPTS_RECONCILIATION: `${ROUTES.BILLING}/revenue/receipts-reconciliation`,
