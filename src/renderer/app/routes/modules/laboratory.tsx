@@ -18,6 +18,7 @@ import { AdminServiceCatalog } from '../../../modules/administration/admin-modul
 import { AdminInventoryItem } from '../../../modules/administration/admin-module/ui/inventory/AdminInventoryItems';
 import { MRBillingReview } from '../../../modules/medical-records/ui/revenue/MRBillingReview';
 import RedirectToForwardPatientFocus from '../../../modules/medical-records/ui/visit-action-center/RedirectToForwardPatientFocus';
+import ClinicalReportsView from '../../../modules/medical-records/ui/patients/views/ClinicalReportsView';
 
 export const laboratoryRoutes = [
   <Route
@@ -161,6 +162,14 @@ export const laboratoryRoutes = [
       element={
         <SuspenseWrapper variant="table">
           <WithThemeProp Component={MRBilling} />
+        </SuspenseWrapper>
+      }
+    />
+    <Route
+      path="clinical-reports"
+      element={
+        <SuspenseWrapper variant="table">
+          <WithThemeProp Component={ClinicalReportsView} />
         </SuspenseWrapper>
       }
     />

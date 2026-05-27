@@ -16,6 +16,7 @@ export const LABORATORY_ROUTES = {
   ACTION_CENTER_REQUEST_FOCUS: `${ROUTES.LABORATORY}/action-center/lab-request/focus`,
   ACTION_CENTER_RESULTS_FOCUS: `${ROUTES.LABORATORY}/action-center/lab-results/focus`,
   ACTION_CENTER_BILLING: `${ROUTES.LABORATORY}/action-center/billing-space`,
+  ACTION_CENTER_CLINICAL_REPORTS: `${ROUTES.LABORATORY}/action-center/clinical-reports`,
 
   CATALOG: `${ROUTES.LABORATORY}/catalog`,
   CATALOG_SERVICES: `${ROUTES.LABORATORY}/catalog/services`,
