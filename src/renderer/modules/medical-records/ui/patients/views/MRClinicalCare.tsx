@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useMemo } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSelector } from 'react-redux';
 import { 
@@ -12,14 +12,12 @@ import {
   X,
   ChevronRight,
   Plus,
-  Eye,
   Heart,
   AlertTriangle,
   Users
 } from 'lucide-react';
 import { FOCUS_MODE_ROUTES } from '../../../../administration/onboarding/routes/focusModeRouteConstants';
 import { selectActiveVisitId, selectActiveVisitPatientId } from '../../../../../app/store/slices/visitSlice';
-import { ClinicalReportsView } from './ClinicalReportsView';
 import { useGetAllergies } from '../../../api/allergies/AllergyQueries';
 import { useGetActiveVisitClinicalNotes } from '../../../api/clinical-notes/clinicalNoteQueries';
 import { useGetActiveVisitVitals } from '../../../api/vitals/vitalQueries';
@@ -40,7 +38,6 @@ interface MRClinicalCareProps {
   theme?: 'light' | 'dark';
 }
 
-type ActiveTab = 'record-care' | 'reports';
 
 interface ActionItem {
   key: string;
@@ -81,11 +78,6 @@ export const MRClinicalCare: React.FC<MRClinicalCareProps> = ({ theme = 'light' 
   const activePatientId = useSelector(selectActiveVisitPatientId);
 
   // Read initial tab from URL search params (e.g. ?tab=reports)
-  const [searchParams] = useSearchParams();
-  const urlTab = searchParams.get('tab');
-  const [activeTab, setActiveTab] = useState<ActiveTab>(
-    urlTab === 'reports' ? 'reports' : 'record-care'
-  );
   const [searchQuery, setSearchQuery] = useState('');
 
   const notesQuery = useGetActiveVisitClinicalNotes({
@@ -355,11 +347,6 @@ export const MRClinicalCare: React.FC<MRClinicalCareProps> = ({ theme = 'light' 
     );
   }, [currentItems, searchQuery]);
 
-  const handleTabChange = useCallback((tab: ActiveTab) => {
-    setActiveTab(tab);
-    setSearchQuery('');
-  }, []);
-
   const clearSearch = useCallback(() => {
     setSearchQuery('');
   }, []);
@@ -380,65 +367,29 @@ export const MRClinicalCare: React.FC<MRClinicalCareProps> = ({ theme = 'light' 
 
   return (
     <div className={`h-full w-full overflow-hidden p-4 sm:p-5 lg:p-6 ${colors.bg.primary}`}>
-      {/* Tabs */}
-      <div className="no-print mb-6">
-        <div className={`flex items-center gap-2 rounded-xl border p-1 ${colors.border.primary} ${colors.bg.elevated}`}>
-          <motion.button
-            whileTap={{ scale: 0.97 }}
-            onClick={() => handleTabChange('record-care')}
-            className={`flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-bold transition-all duration-200 ${
-              activeTab === 'record-care'
-                ? `${colors.active.bg} ${colors.active.text} shadow-sm`
-                : `${colors.inactive.bg} ${colors.inactive.text} cursor-pointer`
-            }`}
-          >
-            <Plus className="h-4 w-4" />
-            Record Care ({formOptions.length})
-          </motion.button>
-
-          <motion.button
-            whileTap={{ scale: 0.97 }}
-            onClick={() => handleTabChange('reports')}
-            className={`flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-bold transition-all duration-200 ${
-              activeTab === 'reports'
-                ? `${colors.active.bg} ${colors.active.text} shadow-sm`
-                : `${colors.inactive.bg} ${colors.inactive.text} cursor-pointer`
-            }`}
-          >
-            <Eye className="h-4 w-4" />
-            Reports
-          </motion.button>
+      {/* Search Bar */}
+      <div className="mb-4">
+        <div className={`relative flex items-center rounded-xl border ${colors.border.primary} ${colors.bg.input}`}>
+          <Search className={`absolute left-3 h-4 w-4 ${colors.text.tertiary}`} />
+          <input
+            type="text"
+            placeholder="Search forms..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className={`w-full cursor-text rounded-xl py-2.5 pl-9 pr-10 text-sm outline-none transition-all ${colors.bg.input} ${colors.text.primary} ${colors.border.focus}`}
+          />
+          {searchQuery && (
+            <button
+              onClick={clearSearch}
+              aria-label="Clear search"
+              title="Clear search"
+              className={`absolute right-3 cursor-pointer rounded-full p-0.5 transition-colors ${colors.bg.hover}`}
+            >
+              <X className={`h-4 w-4 ${colors.text.tertiary}`} />
+            </button>
+          )}
         </div>
       </div>
-
-      {/* Content Area */}
-      {activeTab === 'reports' ? (
-        <ClinicalReportsView theme={theme} />
-      ) : (
-        <>
-          {/* Search Bar */}
-          <div className="mb-4">
-            <div className={`relative flex items-center rounded-xl border ${colors.border.primary} ${colors.bg.input}`}>
-              <Search className={`absolute left-3 h-4 w-4 ${colors.text.tertiary}`} />
-              <input
-                type="text"
-                placeholder="Search forms..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className={`w-full cursor-text rounded-xl py-2.5 pl-9 pr-10 text-sm outline-none transition-all ${colors.bg.input} ${colors.text.primary} ${colors.border.focus}`}
-              />
-              {searchQuery && (
-                <button
-                  onClick={clearSearch}
-                  aria-label="Clear search"
-                  title="Clear search"
-                  className={`absolute right-3 cursor-pointer rounded-full p-0.5 transition-colors ${colors.bg.hover}`}
-                >
-                  <X className={`h-4 w-4 ${colors.text.tertiary}`} />
-                </button>
-              )}
-            </div>
-          </div>
 
           {/* Results count */}
           <div className="mb-3 flex items-center justify-between">
@@ -524,11 +475,7 @@ export const MRClinicalCare: React.FC<MRClinicalCareProps> = ({ theme = 'light' 
               )}
             </AnimatePresence>
           </div>
-
-          {/* Form Modals would render here */}
-        </>
-      )}
-    </div>
+        </div>
   );
 };
 
