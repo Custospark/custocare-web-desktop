@@ -25,9 +25,8 @@ import {
   selectActivePatient,
   selectActiveVisitInfo,
   selectActiveVisitPatientId,
-  selectActiveVisitStatus,
 } from '../../../app/store/slices/visitSlice';
-import { isVisitCompleted } from '../../../modules/pharmacy/api/dispensing/visit-queue/visitTypes';
+import { VisitCompletedGuard } from '../VisitCompletedGuard';
 import { formatText } from '../../../modules/medical-records/ui/revenue/stats/billing-revenue-stats-component/revenueDashboardUtils';
 import LogoImage from '../../assets/LogoImage';
 import { BrandName } from '../../utils/BrandName';
@@ -114,17 +113,14 @@ export const FocusedModeLayout: React.FC<FocusedModeLayoutProps> = ({
     return () => clearInterval(id);
   }, []);
 
-  const { theme, patient, visitInfo, patientId, visitStatus } = useSelector(
+  const { theme, patient, visitInfo, patientId } = useSelector(
     (state: RootState) => ({
       theme: state.ui.theme as ThemeMode,
       patient: selectActivePatient(state),
       visitInfo: selectActiveVisitInfo(state),
       patientId: selectActiveVisitPatientId(state),
-      visitStatus: selectActiveVisitStatus(state),
     })
   );
-
-  const isReadOnly = isVisitCompleted(visitStatus);
 
   const allergyQuery = useGetAllergies(patientId ?? '', {}, { enabled: !!patientId });
 
@@ -714,21 +710,9 @@ export const FocusedModeLayout: React.FC<FocusedModeLayoutProps> = ({
                 bg.card
               )}
             >
-              {isReadOnly ? (
-                <div className="text-center py-12">
-                  <div className={cn('mx-auto mb-4 inline-flex rounded-full p-4', bg.subtle)}>
-                    <AlertTriangle className={cn('h-8 w-8', text.muted)} />
-                  </div>
-                  <h3 className={cn('text-lg font-bold mb-2', text.primary)}>
-                    Visit Completed
-                  </h3>
-                  <p className={cn('text-sm max-w-md mx-auto', text.secondary)}>
-                    This visit has been completed. Clinical forms are not available for modification. You can view patient records, billing history, and reports from the action center tabs.
-                  </p>
-                </div>
-              ) : (
-                children
-              )}
+              <VisitCompletedGuard theme={theme}>
+                {children}
+              </VisitCompletedGuard>
             </div>
           </div>
         </div>

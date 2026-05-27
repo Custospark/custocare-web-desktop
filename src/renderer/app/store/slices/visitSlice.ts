@@ -366,6 +366,12 @@ export const selectActiveVisitDepartment = (state: RootState) =>
 export const selectHasActiveVisit = (state: RootState) => 
   !!state.visits.activeVisit;
 
+/** Whether the active visit has a completed status. */
+export const selectIsVisitCompleted = (state: RootState): boolean => {
+  const status = selectActiveVisitStatus(state);
+  return status === 'completed';
+};
+
 export const selectMedicationEncounterQueueVisitIds = (state: RootState) =>
   state.visits.medicationEncounterQueue?.visitIdsReadyForDispensing ?? [];
 

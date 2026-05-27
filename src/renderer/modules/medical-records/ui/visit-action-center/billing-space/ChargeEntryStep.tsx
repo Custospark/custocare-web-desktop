@@ -4,7 +4,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { motion, AnimatePresence } from 'framer-motion';
 
 import { type RootState } from '../../../../../app/store/rootReducer';
-import { selectActiveVisit } from '../../../../../app/store/slices/visitSlice';
+import { selectActiveVisit, selectIsVisitCompleted } from '../../../../../app/store/slices/visitSlice';
 
 import {
   addChargeItem,
@@ -78,22 +78,20 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
 
   // ---------------------------------------------------------------------------
   // Visit identity - aligned with BillingBottomDisplay
-  // ---------------------------------------------------------------------------
   const activeVisit = useSelector((state: RootState) => selectActiveVisit(state));
   const visitId = activeVisit?.visit_id ? String(activeVisit.visit_id) : '';
   const numericVisitId = activeVisit?.visit_id ? Number(activeVisit.visit_id) : 0;
 
-  // ---------------------------------------------------------------------------
   // Redux state
-  // ---------------------------------------------------------------------------
   const renderableChargeItems = useSelector(selectRenderableChargeItems);
   const draftChargeItems = useSelector(selectDraftChargeItems);
   const backendChargeItems = useSelector(selectBackendChargeItems);
   const billingStatus = useSelector(selectEffectiveBillingStatus);
   const billingState = useSelector(selectBilling);
+  const visitCompleted = useSelector(selectIsVisitCompleted);
 
-  // Once backend says settled, the entire charge-entry becomes view only.
-  const isReadOnly = billingStatus === 'settled';
+  // Once backend says settled or visit is completed, charge entry becomes view only.
+  const isReadOnly = billingStatus === 'settled' || visitCompleted;
 
   // ---------------------------------------------------------------------------
   // UI local state
@@ -462,7 +460,10 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
         setShowSearchResults(false);
 
         if (adjustmentDialogOpen) {
-          closeAdjustmentDialog();
+          setPendingAdjustment(null);
+          setAdjustmentReason('');
+          setAdjustmentNewQuantity(1);
+          setAdjustmentDialogOpen(false);
         }
         
         if (historyModalOpen) {
@@ -803,7 +804,11 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
                   className="w-fit flex items-center gap-2 px-3 py-1.5 bg-blue-600 dark:bg-blue-500 text-white rounded-full shadow-lg border border-blue-400 dark:border-blue-400"
                 >
                   <Lock className="w-3.5 h-3.5" />
-                  <span className="text-xs font-semibold">Payment settled - View only</span>
+                  <span className="text-xs font-semibold">{
+                    isVisitCompleted(activeVisit?.status)
+                      ? 'Visit completed - View only'
+                      : 'Payment settled - View only'
+                  }</span>
                 </motion.div>
               )}
             </AnimatePresence>

@@ -29,11 +29,10 @@ import {
   selectVisitContext,
   selectActiveVisitPhase,
   selectActiveVisitUuid,
-  selectActiveVisitStatus,
+  selectIsVisitCompleted,
   selectHasActiveVisit,
   emergencyClearVisit
 } from '../../../../app/store/slices/visitSlice';
-import { isVisitCompleted } from '../../../../pharmacy/api/dispensing/visit-queue/visitTypes';
 import { clearAll } from '../visit-action-center/billing-space';
 import { useToast } from '../../../../app/store/contexts/toast/useToast';
 import LoadingSkeleton from '../../../../shared/components/Loading/LoadingSkeletons';
@@ -94,8 +93,7 @@ const MRVisitActionCenter: React.FC<MRVisitActionCenterProps> = ({
   const visitPhase = useSelector((state: RootState) => selectActiveVisitPhase(state));
   const visitUuid = useSelector((state: RootState) => selectActiveVisitUuid(state));
   const hasActiveVisit = useSelector((state: RootState) => selectHasActiveVisit(state));
-  const visitStatus = useSelector((state: RootState) => selectActiveVisitStatus(state));
-  const isReadOnly = isVisitCompleted(visitStatus);
+  const isReadOnly = useSelector(selectIsVisitCompleted);
 
   const formatTime = (dateString: string | null): string => {
     if (!dateString) return 'N/A';
