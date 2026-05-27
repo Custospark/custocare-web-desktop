@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSelector } from 'react-redux';
 import { 
@@ -102,7 +102,13 @@ export const MRClinicalCare: React.FC<MRClinicalCareProps> = ({ theme = 'light' 
   const isDark = theme === 'dark';
   const activeVisitId = useSelector(selectActiveVisitId);
   const activePatientId = useSelector(selectActiveVisitPatientId);
-  const [activeTab, setActiveTab] = useState<ActiveTab>('record-care');
+
+  // Read initial tab from URL search params (e.g. ?tab=reports)
+  const [searchParams] = useSearchParams();
+  const urlTab = searchParams.get('tab');
+  const [activeTab, setActiveTab] = useState<ActiveTab>(
+    urlTab === 'reports' ? 'reports' : 'record-care'
+  );
   const [searchQuery, setSearchQuery] = useState('');
   
   // Report modal state
