@@ -292,3 +292,250 @@ Execute in this order to avoid rework:
 ---
 
 *Document owner: Mike (orchestrator). Execute Rex against this plan after Oscar confirms no further edits to §2.*
+
+---
+
+# Facility Plan Limits — Rename & Frontend Guards
+
+**Date:** 2026-05-27  
+**Status:** Approved for execution  
+**Scope:** Frontend (`Frontend/`) + Backend (`Backend/`) — Plan limit column rename and FE guard UI  
+**Cross-stack:** Yes (~20 files)  
+**Architect (Blue):** Run — 3+ files, cross-stack
+
+---
+
+## 1. What we're doing
+
+### A. Rename `max_patients_per_month` → `max_visits_per_month`
+
+The column is semantically wrong: the code counts **total visits** per month (every encounter), not unique patients. We're renaming the column across the full stack to match reality.
+
+### B. Add frontend limit guards
+
+Three components currently hit backend errors because there's no frontend guard:
+
+| Component | Limit to guard | Current state |
+|-----------|---------------|---------------|
+| `StaffCreationForm.tsx` | Staff limit + module filtering | No plan entitlements check |
+| `AdminFacilitySetup.tsx` → `DepartmentFormDrawer` | Department limit | No plan entitlements check |
+| `MRPatientCreate.tsx` / `MRPatientSearch.tsx` | Visit limit | No plan entitlements check |
+
+---
+
+## 2. Implementation order
+
+| Step | Work | Stack | Files |
+|------|------|-------|-------|
+| **1** | New migration: rename column | BE | `1` |
+| **2** | Update PHP model + resources + requests + seeder | BE | `7` |
+| **3** | Update TS types + config + entitlements + hook | FE | `4` |
+| **4** | Update FE display components (labels, formatting) | FE | `8` |
+| **5** | Add staff limit guard to `StaffCreationForm` | FE | `1` |
+| **6** | Add department limit guard to `AdminFacilitySetup` + `DepartmentFormDrawer` | FE | `2` |
+| **7** | Add visit limit guard to `MRPatientCreate` + `MRPatientSearch` | FE | `2` |
+| **8** | Vera fast (FE + BE) + Quill docs | Both | — |
+
+---
+
+## 3. Backend changes (8 files)
+
+### 3.1 New migration
+
+`database/migrations/2026_05_27_000001_rename_max_patients_per_month_on_plans_table.php`
+
+```php
+Schema::table('plans', function (Blueprint $table) {
+    $table->renameColumn('max_patients_per_month', 'max_visits_per_month');
+});
+```
+
+### 3.2 Model: `app/Models/Plan.php`
+
+| Change | Before | After |
+|--------|--------|-------|
+| `@property` docblock | `max_patients_per_month` | `max_visits_per_month` |
+| `$fillable` | `'max_patients_per_month'` | `'max_visits_per_month'` |
+| `$casts` | `'max_patients_per_month' => 'integer'` | `'max_visits_per_month' => 'integer'` |
+
+### 3.3 Interface: `app/Services/Billing/Contracts/PlanLimitServiceInterface.php`
+
+- Docblock return type: `max_patients_per_month` → `max_visits_per_month`
+
+### 3.4 Service: `app/Services/Billing/PlanLimitService.php`
+
+| Line | Before | After |
+|------|--------|-------|
+| 33 | `'max_patients_per_month' => $plan->max_patients_per_month` | `'max_visits_per_month' => $plan->max_visits_per_month` |
+| 117 | `$maxVisits = $limits['max_patients_per_month']` | `$maxVisits = $limits['max_visits_per_month']` |
+
+### 3.5 Resource: `app/Http/Resources/Billing/PlanResource.php`
+
+| Line | Before | After |
+|------|--------|-------|
+| 37 | `'max_patients_per_month' => $this->max_patients_per_month` | `'max_visits_per_month' => $this->max_visits_per_month` |
+
+### 3.6 Requests: `StorePlanRequest.php` + `UpdatePlanRequest.php`
+
+| File | Line | Before | After |
+|------|------|--------|-------|
+| `StorePlanRequest.php` | 33 | `'max_patients_per_month' => 'nullable\|integer\|min:1'` | `'max_visits_per_month' => 'nullable\|integer\|min:1'` |
+| `UpdatePlanRequest.php` | 35 | Same | Same |
+
+### 3.7 Seeder: `database/seeders/PlanSeeder.php`
+
+| Lines | Before | After |
+|-------|--------|-------|
+| 36, 54, 72 | `'max_patients_per_month' => 500/3000/null` | `'max_visits_per_month' => 500/3000/null` |
+
+---
+
+## 4. Frontend changes (15 files)
+
+### 4.1 Types: `SubscriptionTypes.ts`
+
+| Interface | Line | Change |
+|-----------|------|--------|
+| `PlanLimits` | 118 | `max_patients_per_month` → `max_visits_per_month` |
+| `StorePlanRequest` | 506 | Same |
+| `FacilityUsageLimits` | 859 | Same |
+
+### 4.2 Config: `planConfig.ts`
+
+- Line 62: type `max_patients_per_month` → `max_visits_per_month`
+
+### 4.3 Entitlements: `entitlements.ts`
+
+- Add `isDepartmentLimitReached(usage, limits)` utility
+- Add `isVisitLimitReached(usage, limits)` utility
+
+### 4.4 Hook: `usePlanEntitlements.ts`
+
+- Add `departmentLimitReached` and `visitLimitReached` to the return object
+- Both computed via memo from `usage` + `limits`
+
+### 4.5 Display components (rename references)
+
+| File | Change |
+|------|--------|
+| `Subscription.tsx` (navbar) | Lines 230-231: `l.max_patients_per_month` → `l.max_visits_per_month` |
+| `PlanSelectionStep.tsx` | Line 27: type property |
+| `AvailablePlans.tsx` | Line 49: type property |
+| `FacilitySubscriptions.tsx` | Lines 613, 758: labels + data mapping |
+| `PricingPage.tsx` | Line 47: `fmtLimit` call |
+| `PlanDetailsModal.tsx` | Line 16: type property |
+| `PlanCompareModal.tsx` | Line 15: type + Line 184: grid key |
+| `FacilityPlans.tsx` | Lines 91, 124-125, 144, 306, 809, 1007: all references |
+
+### 4.6 Frontend guards (3 new checks)
+
+#### `StaffCreationForm.tsx`
+
+- Import `usePlanEntitlements`
+- Destructure `staffLimitReached`, `limits`, `usage`, `filterModulesForPlan`
+- Add amber warning banner when `staffLimitReached` (same pattern as InvitationManager)
+- Filter module list with `filterModulesForPlan`
+- Disable submit when `staffLimitReached`
+
+#### `AdminFacilitySetup.tsx` + `DepartmentFormDrawer`
+
+- `AdminFacilitySetup`: import `usePlanEntitlements`, pass `departmentLimitReached`, `limits` to drawer
+- `DepartmentFormDrawer`: accept new props `departmentLimitReached?: boolean`, `departmentLimit?: number | null`, `departmentCount?: number`
+- Show amber warning banner when limit reached
+- `canSubmit` amended to include `!departmentLimitReached`
+
+#### `MRPatientCreate.tsx` + `MRPatientSearch.tsx`
+
+- Import `usePlanEntitlements`
+- Destructure `visitLimitReached`, `limits`, `usage`
+- Show amber warning banner when limit reached
+- Disable create/register button when `visitLimitReached`
+
+---
+
+## 5. Guard UI pattern (same across all three)
+
+All follow the `InvitationManager.tsx` pattern (lines 2271-2287):
+
+```tsx
+{limitReached && (
+  <div className="mb-3 p-3 rounded-lg border flex items-start gap-2 text-sm bg-amber-900/20 border-amber-700/40 text-amber-200">
+    <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
+    <span>
+      {label} limit reached ({count}/{max}). Upgrade your plan to add more.
+    </span>
+  </div>
+)}
+```
+
+Submit/create button disabled when `limitReached`.
+
+---
+
+## 6. Files that do NOT change
+
+- `UsageService.php` — no column reference, only queries `visits` table
+- `UsageController.php` — no column reference
+- `UsageResource.php` — uses `visits` key from `getAll()`, not the column
+- `PlanLimitServiceInterface.php` — method signatures stay the same, only docblock changes
+- BE tests — no changes needed (limit behavior is identical)
+
+---
+
+## 7. New utilities
+
+### `entitlements.ts` additions
+
+```ts
+export const isDepartmentLimitReached = (
+  usage?: { departments?: number } | null,
+  limits?: { max_departments?: number | null } | null,
+): boolean => {
+  const max = limits?.max_departments;
+  if (max == null) return false;
+  return (usage?.departments ?? 0) >= max;
+};
+
+export const isVisitLimitReached = (
+  usage?: { visits?: number } | null,
+  limits?: { max_visits_per_month?: number | null } | null,
+): boolean => {
+  const max = limits?.max_visits_per_month;
+  if (max == null) return false;
+  return (usage?.visits ?? 0) >= max;
+};
+```
+
+### `usePlanEntitlements.ts` return additions
+
+```ts
+const departmentLimitReached = useMemo(
+  () => isDepartmentLimitReached(usage, limits),
+  [usage, limits],
+);
+
+const visitLimitReached = useMemo(
+  () => isVisitLimitReached(usage, limits),
+  [usage, limits],
+);
+
+return {
+  // ... existing
+  departmentLimitReached,
+  visitLimitReached,
+};
+```
+
+---
+
+## 8. Rollback
+
+If something goes wrong:
+
+1. **Migration rollback:** `php artisan migrate:rollback --step=1` (drops renamed column)
+2. **Frontend:** Revert changed files from git: `git checkout -- path/to/file`
+3. The old API will still respond with `max_patients_per_month` until rollback is complete
+
+---
+
+*Plan owner: Mike (orchestrator). Execute Rex in order. Vera after each 2-3 steps. Quill at end.*
