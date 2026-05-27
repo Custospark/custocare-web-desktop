@@ -6,7 +6,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { 
   FileText, 
   ArrowRight, 
-  // MessageSquare,
+  AlertTriangle,
   User,
   Calendar,
   Clock,
@@ -23,15 +23,17 @@ import { type RootState } from '../../../../app/store/rootReducer';
 import { CLINICAL_ROUTES, MEDICAL_RECORDS_ROUTES } from '../../../../app/routes/routeConstants';
 import { FOCUS_MODE_ROUTES } from '../../../../app/routes/utils/forwardPatientFocus';
 import { BaseActionWorkspace } from '../../../../shared/components/workspace/BaseActionWorkspace';
-import { 
+import {
   selectActivePatient,
   selectActiveVisitInfo,
   selectVisitContext,
   selectActiveVisitPhase,
   selectActiveVisitUuid,
+  selectActiveVisitStatus,
   selectHasActiveVisit,
   emergencyClearVisit
 } from '../../../../app/store/slices/visitSlice';
+import { isVisitCompleted } from '../../../../pharmacy/api/dispensing/visit-queue/visitTypes';
 import { clearAll } from '../visit-action-center/billing-space';
 import { useToast } from '../../../../app/store/contexts/toast/useToast';
 import LoadingSkeleton from '../../../../shared/components/Loading/LoadingSkeletons';
@@ -92,6 +94,8 @@ const MRVisitActionCenter: React.FC<MRVisitActionCenterProps> = ({
   const visitPhase = useSelector((state: RootState) => selectActiveVisitPhase(state));
   const visitUuid = useSelector((state: RootState) => selectActiveVisitUuid(state));
   const hasActiveVisit = useSelector((state: RootState) => selectHasActiveVisit(state));
+  const visitStatus = useSelector((state: RootState) => selectActiveVisitStatus(state));
+  const isReadOnly = isVisitCompleted(visitStatus);
 
   const formatTime = (dateString: string | null): string => {
     if (!dateString) return 'N/A';
@@ -246,6 +250,18 @@ const MRVisitActionCenter: React.FC<MRVisitActionCenterProps> = ({
   return (
     <div className={`min-h-screen ${theme === 'dark' ? 'bg-gray-900' : 'bg-gray-50'}`}>
       <div className="container mx-auto p-4 lg:p-6">
+        {isReadOnly && (
+          <div className={`mb-4 p-3 rounded-lg border flex items-start gap-2 text-sm ${
+            theme === 'dark'
+              ? 'bg-amber-900/20 border-amber-700/40 text-amber-200'
+              : 'bg-amber-50 border-amber-200 text-amber-800'
+          }`}>
+            <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
+            <span>
+              This visit has been completed — viewing only. No new clinical entries, billing, or forwarding actions can be performed.
+            </span>
+          </div>
+        )}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-6">
           {/* Left Sidebar - Patient Info Card */}
           <div className="lg:col-span-4 xl:col-span-3">
@@ -283,7 +299,9 @@ const MRVisitActionCenter: React.FC<MRVisitActionCenterProps> = ({
                 key: 'clinical-care', 
                 label: 'Clinical Care', 
                 icon: <Stethoscope className="w-4 h-4" />, 
-                to: actionCenterRoutes.clinicalCare
+                to: actionCenterRoutes.clinicalCare,
+                disabled: isReadOnly,
+                disabledReason: isReadOnly ? 'Visit is completed — viewing only' : undefined,
               },
 
               // { 
@@ -298,12 +316,16 @@ const MRVisitActionCenter: React.FC<MRVisitActionCenterProps> = ({
                 icon: <ArrowRight className="w-4 h-4" />, 
                 to: FOCUS_MODE_ROUTES.FORWARD_PATIENT_FOCUS,
                 navigateState: forwardPatientNavigateState,
+                disabled: isReadOnly,
+                disabledReason: isReadOnly ? 'Visit is completed — viewing only' : undefined,
               },
               { 
                 key: 'billing-space', 
                 label: 'Billing Space', 
                 icon: <Receipt className="w-4 h-4" />, 
-                to: actionCenterRoutes.patientBillingSpace
+                to: actionCenterRoutes.patientBillingSpace,
+                disabled: isReadOnly,
+                disabledReason: isReadOnly ? 'Visit is completed — viewing only' : undefined,
               },
               { 
                 key: 'visit-status', 

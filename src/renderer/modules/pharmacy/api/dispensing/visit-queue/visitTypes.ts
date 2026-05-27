@@ -206,6 +206,10 @@ export const formatVisitStageLabel = (phase: string | null | undefined): string 
 export const formatVisitStatusLabel = (status: string | null | undefined): string =>
   status ? status.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()) : '—';
 
+/** Whether a visit is completed and should be read-only. */
+export const isVisitCompleted = (status: VisitStatus | string | null | undefined): boolean =>
+  status === VisitStatus.COMPLETED || status === 'completed';
+
 /**
  * Mode of arrival enumeration
  * Describes how the patient arrived at the facility

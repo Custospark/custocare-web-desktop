@@ -562,53 +562,74 @@ When a visit reaches `completed` status, users should not be able to perform cli
 
 | # | Question | Decision |
 |---|----------|----------|
-| 1 | What happens when user clicks Take Action on completed visit? | **Block navigation + show toast** saying visit is completed. Stay in queue. |
-| 2 | Guard layers? | **Frontend first** (Take Action handlers), **Backend middleware** for HTTP-layer write blocking. |
+| 1 | What happens when user clicks Take Action on completed visit? | **Allow navigation** — action center detects completed status and renders in **read-only mode**. |
+| 2 | Guard layers? | **Frontend action center read-only mode** (detect on mount). **Backend middleware** for HTTP-layer write blocking as a safety net. |
 | 3 | Backend middleware? | **Yes** — `CheckVisitNotCompleted` middleware registered globally, applied to clinical write route groups. |
-| 4 | What actions are allowed on completed visits? | **View only** — viewing records, printing reports, billing history. No new data entry. |
+| 4 | What actions are allowed on completed visits? | **View only** — clinical reports, billing history, patient records. All write actions (prescribe, order labs, vitals, nursing tasks, billing entries) are disabled/hidden. |
 
 ---
 
-## 3. Phase 1 — Frontend Guard
+## 3. Phase 1 — Frontend Action Center Read-Only Mode
 
 ### 3.1 Add utility function
 
 **File:** `src/renderer/modules/pharmacy/api/dispensing/visit-queue/visitTypes.ts`
 
-Add at the end of the file (or alongside `VisitStatus`):
+Add alongside `VisitStatus`:
 
 ```typescript
 export const isVisitCompleted = (status: VisitStatus | string): boolean =>
   status === VisitStatus.COMPLETED || status === 'completed';
 ```
 
-### 3.2 Guard in Take Action handlers
+### 3.2 Action Center — detect completed on mount
 
-All Take Action handlers follow the same pattern. Add this check at the top of each handler:
+Each action center loads the active visit from Redux (`visitSlice`). On mount (or when `activeVisit` changes), check if the visit is completed.
+
+**Pattern (add to every action center):**
 
 ```typescript
-if (isVisitCompleted(visit.status)) {
-  showToast('error', 'This visit has been completed. No further actions can be performed.', 5000);
-  return;
-}
+const activeVisit = useAppSelector(selectActiveVisit);
+const isReadOnly = activeVisit ? isVisitCompleted(activeVisit.status) : false;
 ```
 
-**Files to modify (4):**
+When `isReadOnly` is true:
+- Show an amber/info banner at the top: "This visit is completed — viewing only. No changes can be made."
+- All write action buttons (Prescribe, Order Labs, Record Vitals, Add Diagnosis, Nursing Tasks, Enter Billing) are **disabled or hidden**
+- View-only tabs remain active: Patient Records, Clinical Reports, Billing History, Visit Timeline
 
-| File | Location | Handler Name |
-|------|----------|-------------|
-| `MRPatientQueue.tsx` | `modules/medical-records/ui/patients/views/` | `handleTakeAction` (line ~104) |
-| `PharmacyPatientQueue.tsx` | `modules/pharmacy/ui/patients/views/` | `handleTakeAction` (line ~46) |
-| `DispensingQueue.tsx` | `modules/pharmacy/ui/dispensing/dispensing-medication/views/` | `handleTakeAction` (line ~32) |
-| `MyWardPatientsView.tsx` | `modules/nursing/ui/wards-patients/` | `handleTakeAction` (line ~79) |
+**Files to modify (7 action centers):**
 
-### 3.3 Guard in PatientQueue core component
+| File | Module |
+|------|--------|
+| `MRVisitActionCenter.tsx` | Medical Records |
+| `PharmacyActionCenter.tsx` | Pharmacy |
+| `NursingEncounterWorkspace.tsx` | Nursing |
+| `LaboratoryActionCenter.tsx` | Laboratory |
+| `BillingActionCenter.tsx` | Billing |
+| `AmbulanceActionCenter.tsx` | Ambulance |
+| `ReferralActionCenter.tsx` | Referral |
 
-**File:** `modules/pharmacy/ui/dispensing/dispensing-medication/views/PatientQueue.tsx`
+### 3.3 Clinical form level guard
 
-- Disable the "Take Action" button row when `isVisitCompleted(visit.status)` 
-- Add `opacity-50 cursor-not-allowed` styling
-- Show a tooltip or small "Completed" badge on the row
+Each clinical form component (within action centers) should also check `isReadOnly` and disable its submit/save button. This is a belt-and-suspenders approach.
+
+**Key forms to guard:**
+- `VitalsForm.tsx`
+- `LabRequestForm.tsx`
+- `LabResultForm.tsx`
+- `PrescriptionForm.tsx`
+- `DiagnosisForm.tsx`
+- `ClinicalNotesFocus.tsx`
+- `PharmacyDispenseMedication.tsx`
+- Nursing task forms
+- Billing entry forms
+
+### 3.4 PatientQueue core component (completed tab polish)
+
+**File:** `PatientQueue.tsx`
+
+In the completed tab, add a small "View Only" badge on each row. No need to disable the button — the action center handles read-only mode.
 
 ---
 
@@ -679,16 +700,21 @@ Route::middleware(['auth:sanctum', 'visit.not_completed'])->group(function () {
 
 ## 5. Files changed
 
-### Frontend (6 files)
+### Frontend (9+ files)
 
 | File | Change |
 |------|--------|
 | `visitTypes.ts` | Add `isVisitCompleted()` utility |
-| `MRPatientQueue.tsx` | Guard in `handleTakeAction` |
-| `PharmacyPatientQueue.tsx` | Guard in `handleTakeAction` |
-| `DispensingQueue.tsx` | Guard in `handleTakeAction` |
-| `MyWardPatientsView.tsx` | Guard in `handleTakeAction` |
-| `PatientQueue.tsx` | Disable button + styling for completed rows |
+| `MRVisitActionCenter.tsx` | Detect completed, render read-only |
+| `PharmacyActionCenter.tsx` | Detect completed, render read-only |
+| `NursingEncounterWorkspace.tsx` | Detect completed, render read-only |
+| `LaboratoryActionCenter.tsx` | Detect completed, render read-only |
+| `BillingActionCenter.tsx` | Detect completed, render read-only |
+| `AmbulanceActionCenter.tsx` | Detect completed, render read-only |
+| `ReferralActionCenter.tsx` | Detect completed, render read-only |
+| `PatientQueue.tsx` | "View Only" badge on completed rows |
+
+Plus potentially clinical form components if we add individual guards.
 
 ### Backend (3 files)
 
@@ -705,8 +731,8 @@ Route::middleware(['auth:sanctum', 'visit.not_completed'])->group(function () {
 | Step | Work | Stack |
 |------|------|-------|
 | 1 | Add `isVisitCompleted()` to visitTypes.ts | FE |
-| 2 | Guard Take Action handlers (4 files) | FE |
-| 3 | Guard PatientQueue core component (disable button) | FE |
+| 2 | Read-only detection + banner + disabled actions in 7 action centers | FE |
+| 3 | "View Only" badge on completed rows in PatientQueue.tsx | FE |
 | 4 | Create `CheckVisitNotCompleted` middleware | BE |
 | 5 | Register middleware alias | BE |
 | 6 | Apply middleware to clinical write route groups | BE |
