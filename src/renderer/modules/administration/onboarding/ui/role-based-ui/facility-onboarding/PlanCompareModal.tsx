@@ -32,7 +32,7 @@ interface PlanCompareModalProps {
 }
 
 export const PlanCompareModal: React.FC<PlanCompareModalProps> = ({ plans, onClose, theme }) => {
-  const [annual, setAnnual] = useState(false);
+  const [annual, setAnnual] = useState(true);
   const sorted = [...plans].sort((a, b) => a.pricing.usd - b.pricing.usd);
 
   return (

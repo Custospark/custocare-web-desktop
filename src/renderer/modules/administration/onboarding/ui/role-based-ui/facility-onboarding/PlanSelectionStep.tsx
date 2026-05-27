@@ -13,6 +13,8 @@ import { PlanDetailsModal } from './PlanDetailsModal';
 import { CURRENCIES } from '../../../../../../shared/utils/currencies';
 import { formatCurrencyWithCustomCurrency } from '../../../../../../shared/utils/formatCurrency';
 import { useCurrencyConvert } from '../../../../admin-module/api/subscriptions/CurrencyQueries';
+import { useAppSelector } from '../../../../../../app/store/hooks/useApp';
+import { selectActiveFacilityCurrency } from '../../../../../../app/store/slices/activeContextSlice';
 
 interface PlanPricing {
   usd: number;
@@ -61,8 +63,9 @@ export const PlanSelectionStep: React.FC<PlanSelectionStepProps> = ({
   theme,
 }) => {
   const [detailPlan, setDetailPlan] = useState<Plan | null>(null);
-  const [annual, setAnnual] = useState(false);
-  const [displayCurrency, setDisplayCurrency] = useState('USD');
+  const [annual, setAnnual] = useState(true);
+  const facilityCurrency = useAppSelector(selectActiveFacilityCurrency);
+  const [displayCurrency, setDisplayCurrency] = useState(facilityCurrency ?? 'UGX');
   const { data: rateData } = useCurrencyConvert(1, 'USD', displayCurrency);
   const exchangeRate = rateData?.data?.converted ?? null;
   const convertPrice = (usd: number) =>
@@ -201,7 +204,7 @@ export const PlanSelectionStep: React.FC<PlanSelectionStepProps> = ({
                         </span>
                         {annual && (
                           <p className={cn("text-[10px] mt-0.5", theme === 'dark' ? "text-emerald-400" : "text-emerald-600")}>
-                            ${annualTotal}/yr — save ${monthly * 12 - annualTotal}/yr
+                            ${annualTotal}/yr — save ${(monthly * 12 - annualTotal).toFixed(2)}/yr
                           </p>
                         )}
                         {displayCurrency !== 'USD' && exchangeRate !== null && (
@@ -224,9 +227,9 @@ export const PlanSelectionStep: React.FC<PlanSelectionStepProps> = ({
                 )}>
                   <div className="grid grid-cols-3 gap-1 text-center">
                     {[
-                      { label: 'Staff', value: limitLabels.staff },
-                      { label: 'Depts', value: limitLabels.depts },
-                      { label: 'Patients', value: limitLabels.patients },
+{ label: 'Staff', value: limitLabels.staff },
+                    { label: 'Depts', value: limitLabels.depts },
+                    { label: 'Patient Visits', value: limitLabels.patients },
                     ].map((item) => (
                       <div key={item.label}>
                         <div className={cn('font-bold', theme === 'dark' ? 'text-gray-200' : 'text-gray-800')}>

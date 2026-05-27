@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { CheckCircle2, ArrowRight, Loader2 } from 'lucide-react';
 import { useAppSelector } from '../../../../../app/store/hooks/useApp';
+import { selectActiveFacilityCurrency } from '../../../../../app/store/slices/activeContextSlice';
 import { cn } from '../../../../../shared/types/cn';
 import { LandingLayout } from './LandingLayout';
 import { useGetPlans } from '../../../admin-module/api/subscriptions/SubscriptionQueries';
@@ -64,7 +65,8 @@ const faqItems = [
 export const PricingPage: React.FC = () => {
   const theme = useAppSelector((state) => state.ui.theme);
   const [annual, setAnnual] = useState(true);
-  const [displayCurrency, setDisplayCurrency] = useState('USD');
+  const facilityCurrency = useAppSelector(selectActiveFacilityCurrency);
+  const [displayCurrency, setDisplayCurrency] = useState(facilityCurrency ?? 'UGX');
   const { data: plansResponse, isLoading, error } = useGetPlans();
   const { data: rateData } = useCurrencyConvert(1, 'USD', displayCurrency);
   const exchangeRate = rateData?.data?.converted ?? null;
@@ -210,7 +212,7 @@ export const PricingPage: React.FC = () => {
                             (billed annually)
                           </span>
                           <p className={cn("text-[10px] mt-1", theme === 'dark' ? "text-emerald-400/80" : "text-emerald-600/80")}>
-                            ${tier.annualPrice * 12}/yr — save ${tier.monthlyPrice * 12 - tier.annualPrice * 12}/yr
+                            ${(tier.annualPrice * 12).toFixed(2)}/yr — save ${(tier.monthlyPrice * 12 - tier.annualPrice * 12).toFixed(2)}/yr
                           </p>
                         </>
                       )}

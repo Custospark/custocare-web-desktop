@@ -6,6 +6,7 @@ import {
   Crown, ArrowUp, ArrowDown, RefreshCw, CreditCard, AlertCircle,
 } from 'lucide-react';
 import { useAppSelector } from '../../../../../app/store/hooks/useApp';
+import { selectActiveFacilityCurrency } from '../../../../../app/store/slices/activeContextSlice';
 import { cn } from '../../../../../shared/types/cn';
 import {
   TIER_FEATURES,
@@ -121,12 +122,13 @@ export const AvailablePlans: React.FC<AvailablePlansProps> = ({ theme }) => {
     ? sorted.find((p) => p.id === currentPlan.id) ?? currentPlan
     : null;
   const [annual, setAnnual] = useState(true);
+  const facilityCurrency = useAppSelector(selectActiveFacilityCurrency);
   const currentPlanTrialDays = currentPlanDetails?.trial_days ?? subscription?.plan?.trial_days ?? 0;
   const daysOnTrial = getDaysOnTrial(subscription);
   const canSwitchDuringTrial = canSwitchPlansDuringTrial(subscription, currentPlanTrialDays);
   const daysUntilPlanSwitch = getTrialDaysUntilPlanSwitch(subscription, currentPlanTrialDays);
 
-  const [displayCurrency, setDisplayCurrency] = useState('USD');
+  const [displayCurrency, setDisplayCurrency] = useState(facilityCurrency ?? 'UGX');
   const { data: rateData } = useCurrencyConvert(1, 'USD', displayCurrency);
   const exchangeRate = rateData?.data?.converted ?? null;
   const convertPrice = (usd: number) =>
@@ -514,7 +516,7 @@ export const AvailablePlans: React.FC<AvailablePlansProps> = ({ theme }) => {
                       </span>
                       {annual && (
                         <p className={cn("text-[10px] mt-0.5", theme === 'dark' ? "text-emerald-400" : "text-emerald-600")}>
-                          ${annualTotal}/yr — save ${monthlyPrice * 12 - annualTotal}/yr
+                          ${annualTotal}/yr — save ${(monthlyPrice * 12 - annualTotal).toFixed(2)}/yr
                         </p>
                       )}
                       {displayCurrency !== 'USD' && convertPrice(displayPrice) !== null && (
@@ -539,7 +541,7 @@ export const AvailablePlans: React.FC<AvailablePlansProps> = ({ theme }) => {
                   {[
                     { label: 'Staff', value: limitLabels.staff },
                     { label: 'Depts', value: limitLabels.depts },
-                    { label: 'Visits', value: limitLabels.patients },
+                    { label: 'Patient Visits', value: limitLabels.patients },
                   ].map((item) => (
                     <div key={item.label}>
                       <div className={cn('font-bold', theme === 'dark' ? 'text-gray-200' : 'text-gray-800')}>
