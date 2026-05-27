@@ -286,50 +286,14 @@ const MRVisitActionCenter: React.FC<MRVisitActionCenterProps> = ({
               theme={theme}
               defaultActionTo={actionCenterRoutes.patientRecords}
               actions={[
-          // EXISTING ACTIONS
-            { 
-              key: 'patient-records', 
-              label: 'Patient Records', 
-              icon: <User className="w-4 h-4" />, 
-              to: actionCenterRoutes.patientRecords
-            },
-              { 
-                key: 'clinical-care', 
-                label: 'Clinical Care', 
-                icon: <Stethoscope className="w-4 h-4" />, 
-                to: actionCenterRoutes.clinicalCare,
-              },
-
-              // { 
-              //   key: 'get-complaints', 
-              //   label: 'Get Complaints', 
-              //   icon: <MessageSquare className="w-4 h-4" />, 
-              //   to: MEDICAL_RECORDS_ROUTES.GET_COMPLAINTS 
-              // },
-              { 
-                key: 'forward-patient', 
-                label: 'Forward Patient', 
-                icon: <ArrowRight className="w-4 h-4" />, 
-                to: FOCUS_MODE_ROUTES.FORWARD_PATIENT_FOCUS,
-                navigateState: forwardPatientNavigateState,
-                disabled: isReadOnly,
-                disabledReason: isReadOnly ? 'Visit is completed — viewing only' : undefined,
-              },
-              { 
-                key: 'billing-space', 
-                label: 'Billing Space', 
-                icon: <Receipt className="w-4 h-4" />, 
-                to: actionCenterRoutes.patientBillingSpace,
-                disabled: isReadOnly,
-                disabledReason: isReadOnly ? 'Visit is completed — viewing only' : undefined,
-              },
-              { 
-                key: 'visit-status', 
-                label: 'Visit Status', 
-                icon: <Activity className="w-4 h-4" />, 
-                to: actionCenterRoutes.visitStatus
-              },
-            ]}
+                { key: 'patient-records', label: 'Patient Records', icon: <User className="w-4 h-4" />, to: actionCenterRoutes.patientRecords },
+                { key: 'clinical-care', label: 'Clinical Care', icon: <Stethoscope className="w-4 h-4" />, to: actionCenterRoutes.clinicalCare },
+                ...(!isReadOnly ? [
+                  { key: 'forward-patient' as const, label: 'Forward Patient', icon: <ArrowRight className="w-4 h-4" />, to: FOCUS_MODE_ROUTES.FORWARD_PATIENT_FOCUS, navigateState: forwardPatientNavigateState },
+                  { key: 'billing-space' as const, label: 'Billing Space', icon: <Receipt className="w-4 h-4" />, to: actionCenterRoutes.patientBillingSpace },
+                ] : []),
+                { key: 'visit-status', label: 'Visit Status', icon: <Activity className="w-4 h-4" />, to: actionCenterRoutes.visitStatus },
+              ]}
             />
           </div>
         </div>
