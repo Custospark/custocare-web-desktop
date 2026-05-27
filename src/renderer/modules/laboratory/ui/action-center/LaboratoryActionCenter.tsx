@@ -26,6 +26,7 @@ import {
   selectActivePatient,
   selectActiveVisitInfo,
   selectHasActiveVisit,
+  selectIsVisitCompleted,
   emergencyClearVisit,
 } from '../../../../app/store/slices/visitSlice';
 import { clearAll } from '../../../medical-records/ui/visit-action-center/billing-space';
@@ -51,6 +52,7 @@ const LaboratoryActionCenter: React.FC<LaboratoryActionCenterProps> = ({ theme }
   const patient = useSelector((state: RootState) => selectActivePatient(state));
   const visitInfo = useSelector((state: RootState) => selectActiveVisitInfo(state));
   const hasActiveVisit = useSelector((state: RootState) => selectHasActiveVisit(state));
+  const isReadOnly = useSelector(selectIsVisitCompleted);
 
   const calculateWaitTime = (arrivedAt: string | null): string => {
     if (!arrivedAt) return 'N/A';
@@ -181,52 +183,14 @@ const LaboratoryActionCenter: React.FC<LaboratoryActionCenterProps> = ({ theme }
               theme={theme}
               defaultActionTo={LABORATORY_ROUTES.ACTION_CENTER_REQUEST}
               actions={[
-                {
-                  key: 'patient-info',
-                  label: 'Patient info',
-                  icon: <FileText className="h-4 w-4" />,
-                  to: LABORATORY_ROUTES.ACTION_CENTER_PATIENT_INFO,
-                  description: 'Current visit and medical history options for deeper clinical context',
-                },
-                {
-                  key: 'lab-request',
-                  label: 'Lab request form',
-                  icon: <FlaskConical className="h-4 w-4" />,
-                  to: LABORATORY_ROUTES.ACTION_CENTER_REQUEST,
-                  description: 'Create and manage laboratory test requests for this visit',
-                },
-                {
-                  key: 'forward-patient',
-                  label: 'Forward Patient',
-                  icon: <ArrowRight className="h-4 w-4" />,
-                  to: FOCUS_MODE_ROUTES.FORWARD_PATIENT_FOCUS,
-                  navigateState: {
-                    cancelTo: LABORATORY_ROUTES.ACTION_CENTER_REQUEST,
-                    queueRedirectTo: LABORATORY_ROUTES.PATIENT_QUEUE,
-                  },
-                  description: 'Send this patient to another team queue or a specific staff member',
-                },
-                {
-                  key: 'lab-results',
-                  label: 'Lab results form',
-                  icon: <FileCheck2 className="h-4 w-4" />,
-                  to: LABORATORY_ROUTES.ACTION_CENTER_RESULTS,
-                  description: 'Capture and update result entries for requested tests',
-                },
-                {
-                  key: 'lab-billing',
-                  label: 'Lab billing space',
-                  icon: <Receipt className="h-4 w-4" />,
-                  to: LABORATORY_ROUTES.ACTION_CENTER_BILLING,
-                  description: 'Charge laboratory services and inventory consumables',
-                },
-                {
-                  key: 'clinical-reports',
-                  label: 'Clinical Reports',
-                  icon: <FileText className="h-4 w-4" />,
-                  to: LABORATORY_ROUTES.ACTION_CENTER_CLINICAL_REPORTS,
-                  description: 'View patient clinical reports and documents',
-                },
+                { key: 'patient-info', label: 'Patient info', icon: <FileText className="h-4 w-4" />, to: LABORATORY_ROUTES.ACTION_CENTER_PATIENT_INFO, description: 'Current visit and medical history options for deeper clinical context' },
+                ...(!isReadOnly ? [
+                  { key: 'lab-request' as const, label: 'Lab request form', icon: <FlaskConical className="h-4 w-4" />, to: LABORATORY_ROUTES.ACTION_CENTER_REQUEST, description: 'Create and manage laboratory test requests for this visit' },
+                  { key: 'forward-patient' as const, label: 'Forward Patient', icon: <ArrowRight className="h-4 w-4" />, to: FOCUS_MODE_ROUTES.FORWARD_PATIENT_FOCUS, navigateState: { cancelTo: LABORATORY_ROUTES.ACTION_CENTER_REQUEST, queueRedirectTo: LABORATORY_ROUTES.PATIENT_QUEUE }, description: 'Send this patient to another team queue or a specific staff member' },
+                  { key: 'lab-results' as const, label: 'Lab results form', icon: <FileCheck2 className="h-4 w-4" />, to: LABORATORY_ROUTES.ACTION_CENTER_RESULTS, description: 'Capture and update result entries for requested tests' },
+                  { key: 'lab-billing' as const, label: 'Lab billing space', icon: <Receipt className="h-4 w-4" />, to: LABORATORY_ROUTES.ACTION_CENTER_BILLING, description: 'Charge laboratory services and inventory consumables' },
+                ] : []),
+                { key: 'clinical-reports', label: 'Clinical Reports', icon: <FileText className="h-4 w-4" />, to: LABORATORY_ROUTES.ACTION_CENTER_CLINICAL_REPORTS, description: 'View patient clinical reports and documents' },
               ]}
             />
           </div>
