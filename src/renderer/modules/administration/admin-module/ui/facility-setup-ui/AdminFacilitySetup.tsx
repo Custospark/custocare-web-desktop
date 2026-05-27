@@ -122,7 +122,7 @@ export const AdminFacilitySetup: React.FC<AdminFacilitySetupProps> = ({ theme })
     }
   );
 
-  const departments = departmentsResponse?.data || [];
+  const departments = useMemo(() => departmentsResponse?.data ?? [], [departmentsResponse]);
 
   const filteredDepartments = useMemo(() => {
     return departments.filter((dept) => {

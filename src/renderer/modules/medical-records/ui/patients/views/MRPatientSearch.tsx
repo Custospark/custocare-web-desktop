@@ -22,7 +22,7 @@ import {
   hasCompleteStaffContext
 } from '../../../../../app/store/utils/contextSelectors';
 import { setActiveVisit,emergencyClearVisit } from '../../../../../app/store/slices/visitSlice';
-import { VisitPhase, VisitType } from '../../../../pharmacy/api/dispensing/visit-queue/visitTypes';
+import { VisitPhase, VisitType, VisitStatus } from '../../../../pharmacy/api/dispensing/visit-queue/visitTypes';
 import { useToast } from '../../../../../app/store/contexts/toast/useToast';
 import { usePlanEntitlements } from '../../../../../shared/entitlements/usePlanEntitlements';
 import { AlertTriangle } from 'lucide-react';
@@ -340,7 +340,7 @@ const handleTakeAction = useCallback(
         registered_at: formattedDateTime,
         current_phase: VisitPhase.REGISTRATION,
         is_walk_in: true,
-        status: 'active' as any,
+        status: VisitStatus.ACTIVE,
         acuity_score: 3,
       };
       
@@ -398,24 +398,22 @@ const handleTakeAction = useCallback(
       } else {
         throw new Error('Visit creation failed: Invalid response from server');
       }
-    } catch (error: any) {
-      console.error('Failed to create visit:', error);
-      
-      // Clear processing overlay
-      setProcessingStage(null);
-      
-      // Extract detailed error message
-      let errorMessage = 'Failed to create visit. ';
-      
-      if (error.response?.data?.message) {
-        errorMessage = error.response.data.message;
-      } else if (error.response?.data?.errors) {
-        const errors = error.response.data.errors;
-        const errorDetails = Object.values(errors).flat().join(', ');
-        errorMessage = `${errorMessage} ${errorDetails}`;
-      } else if (error.message) {
-        errorMessage = error.message;
-      }
+    } catch (error: unknown) {
+        console.error('Failed to create visit:', error);
+        
+        setProcessingStage(null);
+        
+        let errorMessage = 'Failed to create visit. ';
+        const err = error as { response?: { data?: { message?: string; errors?: Record<string, string[]> } }; message?: string };
+        
+        if (err.response?.data?.message) {
+          errorMessage = err.response.data.message;
+        } else if (err.response?.data?.errors) {
+          const errorDetails = Object.values(err.response.data.errors).flat().join(', ');
+          errorMessage = `${errorMessage} ${errorDetails}`;
+        } else if (err.message) {
+          errorMessage = err.message;
+        }
       
       // Check for specific foreign key errors
       if (errorMessage.includes('foreign key') || errorMessage.includes('staff_id')) {
@@ -432,18 +430,18 @@ const handleTakeAction = useCallback(
       });
     }
   },
-  [
-    navigate,
-    dispatch,
-    facilityId,
-    staffId,
-    hasCompleteStaff,
-    createVisitMutation,
-    showToast,
-    routes,
-    intakeModule,
-    visitLimitReached,
-  ]
+    [
+      navigate,
+      dispatch,
+      facilityId,
+      staffId,
+      hasCompleteStaff,
+      createVisitMutation,
+      showToast,
+      routes,
+      moduleCopy,
+      visitLimitReached,
+    ]
 );
 
   const renderQuickActions = () => {
