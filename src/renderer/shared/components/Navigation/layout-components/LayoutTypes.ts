@@ -18,10 +18,10 @@ export const STORAGE_KEYS = {
   TOP_BARS_VISIBLE: 'layout-topbars-visible',
 } as const;
 
-/** Classic (icon-based) sidebar is the default; localStorage 'true' selects nested. */
+/** Nested (collapsible) sidebar is the default; only explicit `false` in localStorage selects classic. */
 export function readNestedSidebarPreference(): boolean {
-  if (typeof window === 'undefined') return false;
-  return window.localStorage.getItem(STORAGE_KEYS.SIDEBAR_NESTED) === 'true';
+  if (typeof window === 'undefined') return true;
+  return window.localStorage.getItem(STORAGE_KEYS.SIDEBAR_NESTED) !== 'false';
 }
 
 export const ANIMATION_CONFIG = {
