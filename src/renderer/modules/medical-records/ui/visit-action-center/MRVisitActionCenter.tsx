@@ -298,8 +298,6 @@ const MRVisitActionCenter: React.FC<MRVisitActionCenterProps> = ({
                 label: 'Clinical Care', 
                 icon: <Stethoscope className="w-4 h-4" />, 
                 to: actionCenterRoutes.clinicalCare,
-                disabled: isReadOnly,
-                disabledReason: isReadOnly ? 'Visit is completed — viewing only' : undefined,
               },
 
               // { 
