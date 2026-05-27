@@ -27,6 +27,7 @@ export const MEDICAL_RECORDS_ROUTES = {
   PATIENT_HISTORY: `${ROUTES.MEDICAL_RECORDS}/visit-action-center/patient-history`,
   PATIENT_BILLING_SPACE: `${ROUTES.MEDICAL_RECORDS}/visit-action-center/billing-space`,
   CLINICAL_CARE: `${ROUTES.MEDICAL_RECORDS}/visit-action-center/clinical-care`,
+  CLINICAL_REPORTS: `${ROUTES.MEDICAL_RECORDS}/visit-action-center/clinical-reports`,
   PATIENT_RECORDS: `${ROUTES.MEDICAL_RECORDS}/visit-action-center/patient-records`,
 } as const;
 

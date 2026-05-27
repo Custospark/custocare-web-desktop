@@ -8,7 +8,6 @@ import {
   Pill, 
   Microscope, 
   ClipboardList,
-  FileOutput,
   Search,
   X,
   ChevronRight,
@@ -20,6 +19,7 @@ import {
 } from 'lucide-react';
 import { FOCUS_MODE_ROUTES } from '../../../../administration/onboarding/routes/focusModeRouteConstants';
 import { selectActiveVisitId, selectActiveVisitPatientId } from '../../../../../app/store/slices/visitSlice';
+import { ClinicalReportsView } from './ClinicalReportsView';
 import { useGetAllergies } from '../../../api/allergies/AllergyQueries';
 import { useGetActiveVisitClinicalNotes } from '../../../api/clinical-notes/clinicalNoteQueries';
 import { useGetActiveVisitVitals } from '../../../api/vitals/vitalQueries';
@@ -36,16 +36,6 @@ import { pickPrimaryVitals } from '../../visit-action-center/clinical-forms/vita
 import { pickPrimaryDiagnosis } from '../../visit-action-center/clinical-forms/diagnoses-form-components/diagnosesForm.utils';
 import { pickPrimaryConsultation } from '../../visit-action-center/clinical-forms/consultations-form-components/consultationsForm.utils';
 
-import {
-  AllergyReportLauncher,
-  ClinicalNoteReportLauncher,
-  ConsultationReportLauncher,
-  DiagnosisReportLauncher,
-  LabRequestReportLauncher,
-  LabResultReportLauncher,
-  PrescriptionReportLauncher,
-  VitalsReportLauncher,
-} from '../../visit-action-center/clinical-forms/clinical-reports/launchers';
 interface MRClinicalCareProps {
   theme?: 'light' | 'dark';
 }
@@ -66,24 +56,11 @@ interface ActionItem {
   handler: () => void;
 }
 
-interface ReportModalState {
-  isOpen: boolean;
-  module: 'allergies' | 'clinical-notes' | 'vitals' | 'diagnoses' | 'consultations' | 'prescriptions' | 'lab-requests' | 'lab-results' | null;
-  action: 'preview' | 'print' | 'download';
-}
-
 const getStatusInfo = (hasData: boolean, documentedNoun: string, ctaVerb: string) => ({
   hasData,
   message: hasData
     ? `${documentedNoun} documented - review/update`
     : `Not documented - ${ctaVerb}`,
-});
-
-const getReportStatusInfo = (hasData: boolean, reportNoun: string, ctaHint: string) => ({
-  hasData,
-  message: hasData
-    ? `${reportNoun} ready - view report`
-    : `No report data yet - ${ctaHint}`,
 });
 
 const resolveRequestFromApiPayload = (payload: unknown): LabRequest | null => {
@@ -110,13 +87,6 @@ export const MRClinicalCare: React.FC<MRClinicalCareProps> = ({ theme = 'light' 
     urlTab === 'reports' ? 'reports' : 'record-care'
   );
   const [searchQuery, setSearchQuery] = useState('');
-  
-  // Report modal state
-  const [reportModal, setReportModal] = useState<ReportModalState>({
-    isOpen: false,
-    module: null,
-    action: 'preview',
-  });
 
   const notesQuery = useGetActiveVisitClinicalNotes({
     enabled: !!activeVisitId,
@@ -277,24 +247,6 @@ export const MRClinicalCare: React.FC<MRClinicalCareProps> = ({ theme = 'light' 
     vitalsQuery.data,
   ]);
 
-  // Open report modal
-  const openReport = useCallback((module: ReportModalState['module'], action: 'preview' | 'print' | 'download' = 'preview') => {
-    setReportModal({
-      isOpen: true,
-      module,
-      action,
-    });
-  }, []);
-
-  // Close report modal
-  const closeReport = useCallback(() => {
-    setReportModal({
-      isOpen: false,
-      module: null,
-      action: 'preview',
-    });
-  }, []);
-
   // Record Care Form Options
   const formOptions: ActionItem[] = useMemo(() => [
     { 
@@ -389,123 +341,7 @@ export const MRClinicalCare: React.FC<MRClinicalCareProps> = ({ theme = 'light' 
     },
   ], [moduleStatus, navigate]);
 
-  // Report Options - Opens modals instead of navigation
-  const reportOptions: ActionItem[] = useMemo(() => [
-    { 
-      key: 'allergy-report', 
-      label: 'Allergy Report', 
-      icon: <FileOutput className="w-5 h-5" />, 
-      description: 'Complete allergy documentation for this patient',
-      category: 'Clinical',
-      actionPrefix: 'View',
-      statusInfo: getReportStatusInfo(
-        moduleStatus.allergies.hasData,
-        'Allergy report',
-        'record allergy details first'
-      ),
-      handler: () => openReport('allergies', 'preview')
-    },
-    { 
-      key: 'clinical-notes-report', 
-      label: 'Clinical Notes Report', 
-      icon: <FileOutput className="w-5 h-5" />, 
-      description: 'Complete clinical notes documentation',
-      category: 'Documentation',
-      actionPrefix: 'View',
-      statusInfo: getReportStatusInfo(
-        moduleStatus.clinicalNotes.hasData,
-        'Clinical notes report',
-        'document clinical notes first'
-      ),
-      handler: () => openReport('clinical-notes', 'preview')
-    },
-    { 
-      key: 'vitals-report', 
-      label: 'Vitals Report', 
-      icon: <FileOutput className="w-5 h-5" />, 
-      description: 'Vital signs summary report',
-      category: 'Clinical',
-      actionPrefix: 'View',
-      statusInfo: getReportStatusInfo(
-        moduleStatus.vitals.hasData,
-        'Vitals report',
-        'record vitals first'
-      ),
-      handler: () => openReport('vitals', 'preview')
-    },
-    { 
-      key: 'diagnosis-report', 
-      label: 'Diagnosis Report', 
-      icon: <FileOutput className="w-5 h-5" />, 
-      description: 'Diagnosis documentation report',
-      category: 'Clinical',
-      actionPrefix: 'View',
-      statusInfo: getReportStatusInfo(
-        moduleStatus.diagnoses.hasData,
-        'Diagnosis report',
-        'add diagnosis entries first'
-      ),
-      handler: () => openReport('diagnoses', 'preview')
-    },
-    { 
-      key: 'consultation-report', 
-      label: 'Consultation Report', 
-      icon: <FileOutput className="w-5 h-5" />, 
-      description: 'Consultation notes and recommendations',
-      category: 'Clinical',
-      actionPrefix: 'View',
-      statusInfo: getReportStatusInfo(
-        moduleStatus.consultations.hasData,
-        'Consultation report',
-        'capture consultation notes first'
-      ),
-      handler: () => openReport('consultations', 'preview')
-    },
-    { 
-      key: 'prescription-report', 
-      label: 'Prescription Report', 
-      icon: <FileOutput className="w-5 h-5" />, 
-      description: 'Printable prescription document',
-      category: 'Treatment',
-      actionPrefix: 'View',
-      statusInfo: getReportStatusInfo(
-        moduleStatus.prescriptions.hasData,
-        'Prescription report',
-        'enter prescription orders first'
-      ),
-      handler: () => openReport('prescriptions', 'preview')
-    },
-    { 
-      key: 'lab-request-report', 
-      label: 'Lab Request Report', 
-      icon: <FileOutput className="w-5 h-5" />, 
-      description: 'Laboratory request document',
-      category: 'Diagnostics',
-      actionPrefix: 'View',
-      statusInfo: getReportStatusInfo(
-        moduleStatus.labRequests.hasData,
-        'Lab request report',
-        'create a lab request first'
-      ),
-      handler: () => openReport('lab-requests', 'preview')
-    },
-    { 
-      key: 'lab-results-report', 
-      label: 'Lab Results Report', 
-      icon: <FileOutput className="w-5 h-5" />, 
-      description: 'Laboratory test results report',
-      category: 'Diagnostics',
-      actionPrefix: 'View',
-      statusInfo: getReportStatusInfo(
-        moduleStatus.labResults.hasData,
-        'Lab results report',
-        'enter lab results first'
-      ),
-      handler: () => openReport('lab-results', 'preview')
-    },
-  ], [moduleStatus, openReport]);
-
-  const currentItems = activeTab === 'record-care' ? formOptions : reportOptions;
+  const currentItems = formOptions;
 
   const filteredItems = useMemo(() => {
     if (!searchQuery.trim()) return currentItems;
@@ -570,174 +406,128 @@ export const MRClinicalCare: React.FC<MRClinicalCareProps> = ({ theme = 'light' 
             }`}
           >
             <Eye className="h-4 w-4" />
-            Reports ({reportOptions.length})
+            Reports
           </motion.button>
         </div>
       </div>
 
-      {/* Search Bar */}
-      <div className="mb-4">
-        <div className={`relative flex items-center rounded-xl border ${colors.border.primary} ${colors.bg.input}`}>
-          <Search className={`absolute left-3 h-4 w-4 ${colors.text.tertiary}`} />
-          <input
-            type="text"
-            placeholder={`Search ${activeTab === 'record-care' ? 'forms' : 'reports'}...`}
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className={`w-full cursor-text rounded-xl py-2.5 pl-9 pr-10 text-sm outline-none transition-all ${colors.bg.input} ${colors.text.primary} ${colors.border.focus}`}
-          />
-          {searchQuery && (
-            <button
-              onClick={clearSearch}
-              aria-label="Clear search"
-              title="Clear search"
-              className={`absolute right-3 cursor-pointer rounded-full p-0.5 transition-colors ${colors.bg.hover}`}
-            >
-              <X className={`h-4 w-4 ${colors.text.tertiary}`} />
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* Results count */}
-      <div className="mb-3 flex items-center justify-between">
-        <p className={`text-xs ${colors.text.tertiary}`}>
-          {filteredItems.length} {filteredItems.length === 1 ? 'item' : 'items'} found
-        </p>
-      </div>
-
-      {/* Content Area - Scrollable List */}
-      <div className="h-[calc(100%-7rem)] overflow-y-auto pr-1">
-        <AnimatePresence mode="wait">
-          {filteredItems.length === 0 ? (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className={`flex flex-col items-center justify-center rounded-xl border p-12 text-center ${colors.border.primary} ${colors.bg.card}`}
-            >
-              {activeTab === 'record-care' ? (
-                <Plus className={`mb-3 h-12 w-12 ${colors.text.tertiary}`} />
-              ) : (
-                <Eye className={`mb-3 h-12 w-12 ${colors.text.tertiary}`} />
-              )}
-              <h3 className={`mb-1 font-medium ${colors.text.primary}`}>
-                No {activeTab === 'record-care' ? 'forms' : 'reports'} found
-              </h3>
-              <p className={`text-sm ${colors.text.tertiary}`}>
-                Try adjusting your search term
-              </p>
-            </motion.div>
-          ) : (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="space-y-2"
-            >
-              {filteredItems.map((option, index) => (
-                <motion.div
-                  key={option.key}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ duration: 0.15, delay: index * 0.02 }}
-                  onClick={option.handler}
-                  className={`group flex cursor-pointer items-center justify-between rounded-xl border p-4 transition-all duration-200 ${colors.border.primary} ${colors.bg.card} ${colors.bg.hover}`}
+      {/* Content Area */}
+      {activeTab === 'reports' ? (
+        <ClinicalReportsView theme={theme} />
+      ) : (
+        <>
+          {/* Search Bar */}
+          <div className="mb-4">
+            <div className={`relative flex items-center rounded-xl border ${colors.border.primary} ${colors.bg.input}`}>
+              <Search className={`absolute left-3 h-4 w-4 ${colors.text.tertiary}`} />
+              <input
+                type="text"
+                placeholder="Search forms..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className={`w-full cursor-text rounded-xl py-2.5 pl-9 pr-10 text-sm outline-none transition-all ${colors.bg.input} ${colors.text.primary} ${colors.border.focus}`}
+              />
+              {searchQuery && (
+                <button
+                  onClick={clearSearch}
+                  aria-label="Clear search"
+                  title="Clear search"
+                  className={`absolute right-3 cursor-pointer rounded-full p-0.5 transition-colors ${colors.bg.hover}`}
                 >
-                  <div className="flex items-center gap-4">
-                    <div className={`rounded-lg p-2 ${isDark ? 'bg-gray-700' : 'bg-gray-100'} group-hover:scale-105 transition-transform duration-200`}>
-                      {option.icon}
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        {option.actionPrefix && (
-                          <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${getActionColor(option.actionPrefix)}`}>
-                            {option.actionPrefix}:
-                          </span>
-                        )}
-                        <h3 className={`font-semibold ${colors.text.primary}`}>
-                          {option.label}
-                        </h3>
-                      </div>
-                      {option.description && (
-                        <p className={`text-sm ${colors.text.secondary}`}>
-                          {option.description}
-                        </p>
-                      )}
-                      {option.category && (
-                        <span className={`mt-1 inline-block text-xs ${colors.text.tertiary}`}>
-                          {option.category}
-                        </span>
-                      )}
-                      {option.statusInfo && (
-                        <div className="mt-2">
-                          <span
-                            className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${getStatusColor(option.statusInfo.hasData)}`}
-                          >
-                            {option.statusInfo.message}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  <ChevronRight className={`h-5 w-5 ${colors.text.tertiary} opacity-0 transition-opacity group-hover:opacity-100`} />
+                  <X className={`h-4 w-4 ${colors.text.tertiary}`} />
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Results count */}
+          <div className="mb-3 flex items-center justify-between">
+            <p className={`text-xs ${colors.text.tertiary}`}>
+              {filteredItems.length} {filteredItems.length === 1 ? 'item' : 'items'} found
+            </p>
+          </div>
+
+          {/* Scrollable List */}
+          <div className="h-[calc(100%-7rem)] overflow-y-auto pr-1">
+            <AnimatePresence mode="wait">
+              {filteredItems.length === 0 ? (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className={`flex flex-col items-center justify-center rounded-xl border p-12 text-center ${colors.border.primary} ${colors.bg.card}`}
+                >
+                  <Plus className={`mb-3 h-12 w-12 ${colors.text.tertiary}`} />
+                  <h3 className={`mb-1 font-medium ${colors.text.primary}`}>
+                    No forms found
+                  </h3>
+                  <p className={`text-sm ${colors.text.tertiary}`}>
+                    Try adjusting your search term
+                  </p>
                 </motion.div>
-              ))}
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
+              ) : (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="space-y-2"
+                >
+                  {filteredItems.map((option, index) => (
+                    <motion.div
+                      key={option.key}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ duration: 0.15, delay: index * 0.02 }}
+                      onClick={option.handler}
+                      className={`group flex cursor-pointer items-center justify-between rounded-xl border p-4 transition-all duration-200 ${colors.border.primary} ${colors.bg.card} ${colors.bg.hover}`}
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className={`rounded-lg p-2 ${isDark ? 'bg-gray-700' : 'bg-gray-100'} group-hover:scale-105 transition-transform duration-200`}>
+                          {option.icon}
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            {option.actionPrefix && (
+                              <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${getActionColor(option.actionPrefix)}`}>
+                                {option.actionPrefix}:
+                              </span>
+                            )}
+                            <h3 className={`font-semibold ${colors.text.primary}`}>
+                              {option.label}
+                            </h3>
+                          </div>
+                          {option.description && (
+                            <p className={`text-sm ${colors.text.secondary}`}>
+                              {option.description}
+                            </p>
+                          )}
+                          {option.category && (
+                            <span className={`mt-1 inline-block text-xs ${colors.text.tertiary}`}>
+                              {option.category}
+                            </span>
+                          )}
+                          {option.statusInfo && (
+                            <div className="mt-2">
+                              <span
+                                className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${getStatusColor(option.statusInfo.hasData)}`}
+                              >
+                                {option.statusInfo.message}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <ChevronRight className={`h-5 w-5 ${colors.text.tertiary} opacity-0 transition-opacity group-hover:opacity-100`} />
+                    </motion.div>
+                  ))}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
 
-      {/* Report Modals */}
-      <AllergyReportLauncher
-        isOpen={reportModal.isOpen && reportModal.module === 'allergies'}
-        onClose={closeReport}
-        initialAction={reportModal.action}
-        theme={theme}
-      />
-
-      <ClinicalNoteReportLauncher
-        isOpen={reportModal.isOpen && reportModal.module === 'clinical-notes'}
-        onClose={closeReport}
-        initialAction={reportModal.action}
-        theme={theme}
-      />
-      <VitalsReportLauncher
-        isOpen={reportModal.isOpen && reportModal.module === 'vitals'}
-        onClose={closeReport}
-        initialAction={reportModal.action}
-        theme={theme}
-      />
-      <DiagnosisReportLauncher
-        isOpen={reportModal.isOpen && reportModal.module === 'diagnoses'}
-        onClose={closeReport}
-        initialAction={reportModal.action}
-        theme={theme}
-      />
-      <ConsultationReportLauncher
-        isOpen={reportModal.isOpen && reportModal.module === 'consultations'}
-        onClose={closeReport}
-        initialAction={reportModal.action}
-        theme={theme}
-      />
-      <PrescriptionReportLauncher
-        isOpen={reportModal.isOpen && reportModal.module === 'prescriptions'}
-        onClose={closeReport}
-        initialAction={reportModal.action}
-        theme={theme}
-      />
-      <LabRequestReportLauncher
-        isOpen={reportModal.isOpen && reportModal.module === 'lab-requests'}
-        onClose={closeReport}
-        initialAction={reportModal.action}
-        theme={theme}
-      />
-      <LabResultReportLauncher
-        isOpen={reportModal.isOpen && reportModal.module === 'lab-results'}
-        onClose={closeReport}
-        initialAction={reportModal.action}
-        theme={theme}
-      />
+          {/* Form Modals would render here */}
+        </>
+      )}
     </div>
   );
 };

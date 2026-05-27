@@ -11,6 +11,7 @@ import MRPatientWalkIn from '../../../modules/medical-records/ui/patients/views/
 import MRVisitActionCenter from '../../../modules/medical-records/ui/visit-action-center/MRVisitActionCenter';
 import MRPatientRecords from '../../../modules/medical-records/ui/patients/views/MRPatientRecords';
 import MRClinicalCare from '../../../modules/medical-records/ui/patients/views/MRClinicalCare';
+import ClinicalReportsView from '../../../modules/medical-records/ui/patients/views/ClinicalReportsView';
 import RedirectToForwardPatientFocus from '../../../modules/medical-records/ui/visit-action-center/RedirectToForwardPatientFocus';
 import VisitStatus from '../../../modules/medical-records/ui/visit-action-center/VisitStatus';
 import MRBilling from '../../../modules/medical-records/ui/visit-action-center/billing-space/MRBilling';
@@ -96,6 +97,14 @@ export const clinicalRoutes = [
       element={
         <SuspenseWrapper variant="table">
           <WithThemeProp Component={MRClinicalCare} />
+        </SuspenseWrapper>
+      }
+    />
+    <Route
+      path="clinical-reports"
+      element={
+        <SuspenseWrapper variant="table">
+          <WithThemeProp Component={ClinicalReportsView} />
         </SuspenseWrapper>
       }
     />

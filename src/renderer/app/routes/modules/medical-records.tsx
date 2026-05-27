@@ -19,6 +19,7 @@ import RevenueStats from "../../../modules/medical-records/ui/revenue/stats/Reve
 import MedicalRecordsDashboard from "../../../modules/medical-records/ui/overview/MedicalRecordsDashboard";
 import MRPatientRecords from "../../../modules/medical-records/ui/patients/views/MRPatientRecords";
 import MRClinicalCare from "../../../modules/medical-records/ui/patients/views/MRClinicalCare";
+import ClinicalReportsView from "../../../modules/medical-records/ui/patients/views/ClinicalReportsView";
 export const medicalRecordsRoutes = [
   <Route
     key="overview"
@@ -78,6 +79,11 @@ export const medicalRecordsRoutes = [
     <Route path={MEDICAL_RECORDS_ROUTES.CLINICAL_CARE} element={
         <SuspenseWrapper variant="table">
           <WithThemeProp Component={MRClinicalCare} />
+        </SuspenseWrapper>
+      } />
+    <Route path={MEDICAL_RECORDS_ROUTES.CLINICAL_REPORTS} element={
+        <SuspenseWrapper variant="table">
+          <WithThemeProp Component={ClinicalReportsView} />
         </SuspenseWrapper>
       } />
     <Route path={MEDICAL_RECORDS_ROUTES.FORWARD_PATIENT} element={

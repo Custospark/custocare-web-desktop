@@ -23,6 +23,7 @@ export const CLINICAL_ROUTES = {
   PATIENT_HISTORY: `${ROUTES.CLINICAL}/visit-action-center/patient-history`,
   PATIENT_BILLING_SPACE: `${ROUTES.CLINICAL}/visit-action-center/billing-space`,
   CLINICAL_CARE: `${ROUTES.CLINICAL}/visit-action-center/clinical-care`,
+  CLINICAL_REPORTS: `${ROUTES.CLINICAL}/visit-action-center/clinical-reports`,
   PATIENT_RECORDS: `${ROUTES.CLINICAL}/visit-action-center/patient-records`,
 
   // Legacy clinical module aliases

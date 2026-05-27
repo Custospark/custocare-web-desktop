@@ -56,12 +56,14 @@ const MRVisitActionCenter: React.FC<MRVisitActionCenterProps> = ({
       ? {
           patientRecords: CLINICAL_ROUTES.PATIENT_RECORDS,
           clinicalCare: CLINICAL_ROUTES.CLINICAL_CARE,
+          clinicalReports: CLINICAL_ROUTES.CLINICAL_REPORTS,
           patientBillingSpace: CLINICAL_ROUTES.PATIENT_BILLING_SPACE,
           visitStatus: CLINICAL_ROUTES.VISIT_STATUS,
         }
       : {
           patientRecords: MEDICAL_RECORDS_ROUTES.PATIENT_RECORDS,
           clinicalCare: MEDICAL_RECORDS_ROUTES.CLINICAL_CARE,
+          clinicalReports: MEDICAL_RECORDS_ROUTES.CLINICAL_REPORTS,
           patientBillingSpace: MEDICAL_RECORDS_ROUTES.PATIENT_BILLING_SPACE,
           visitStatus: MEDICAL_RECORDS_ROUTES.VISIT_STATUS,
         };
@@ -288,11 +290,12 @@ const MRVisitActionCenter: React.FC<MRVisitActionCenterProps> = ({
               actions={[
                 { key: 'patient-records', label: 'Patient Records', icon: <User className="w-4 h-4" />, to: actionCenterRoutes.patientRecords },
                 { key: 'clinical-care', label: 'Clinical Care', icon: <Stethoscope className="w-4 h-4" />, to: actionCenterRoutes.clinicalCare },
-                { key: 'clinical-reports', label: 'Clinical Reports', icon: <FileText className="w-4 h-4" />, to: `${actionCenterRoutes.clinicalCare}?tab=reports` },
-                ...(!isReadOnly ? [
+                ...(isReadOnly ? [
+                  { key: 'clinical-reports' as const, label: 'Clinical Reports', icon: <FileText className="w-4 h-4" />, to: actionCenterRoutes.clinicalReports },
+                ] : [
                   { key: 'forward-patient' as const, label: 'Forward Patient', icon: <ArrowRight className="w-4 h-4" />, to: FOCUS_MODE_ROUTES.FORWARD_PATIENT_FOCUS, navigateState: forwardPatientNavigateState },
                   { key: 'billing-space' as const, label: 'Billing Space', icon: <Receipt className="w-4 h-4" />, to: actionCenterRoutes.patientBillingSpace },
-                ] : []),
+                ]),
                 { key: 'visit-status', label: 'Visit Status', icon: <Activity className="w-4 h-4" />, to: actionCenterRoutes.visitStatus },
               ]}
             />
