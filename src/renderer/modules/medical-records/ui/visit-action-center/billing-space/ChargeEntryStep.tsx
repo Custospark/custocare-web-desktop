@@ -805,7 +805,7 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
                 >
                   <Lock className="w-3.5 h-3.5" />
                   <span className="text-xs font-semibold">{
-                    isVisitCompleted(activeVisit?.status)
+                    visitCompleted
                       ? 'Visit completed - View only'
                       : 'Payment settled - View only'
                   }</span>

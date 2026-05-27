@@ -1,5 +1,5 @@
 // store/slices/visitSlice.ts
-import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
+import { createSelector, createSlice, type PayloadAction } from '@reduxjs/toolkit';
 import type { RootState } from '../store';
 import { type QueueVisitItem, VisitPhase, VisitStatus } from '../../../modules/pharmacy/api/dispensing/visit-queue/visitTypes';
 
@@ -375,20 +375,21 @@ export const selectIsVisitCompleted = (state: RootState): boolean => {
 export const selectMedicationEncounterQueueVisitIds = (state: RootState) =>
   state.visits.medicationEncounterQueue?.visitIdsReadyForDispensing ?? [];
 
-// Get visit info for display - FIXED VERSION
-export const selectActiveVisitInfo = (state: RootState) => {
-  const visit = state.visits.activeVisit;
-  if (!visit) return null;
-  
-  return {
-    uuid: visit.visit_uuid,
-    patientName: visit.patient?.name || 'Unknown Patient',
-    patientNumber: visit.patient?.patient_number || 'N/A',
-    phase: visit.current_phase,
-    type: visit.visit_type,
-    status: visit.status,
-    acuity: visit.acuity_score,
-    waitTime: visit.waiting_since,
-    arrivedAt: visit.arrived_at,
-  };
-};
+// Get visit info for display - memoized
+export const selectActiveVisitInfo = createSelector(
+  selectActiveVisit,
+  (visit) => {
+    if (!visit) return null;
+    return {
+      uuid: visit.visit_uuid,
+      patientName: visit.patient?.name || 'Unknown Patient',
+      patientNumber: visit.patient?.patient_number || 'N/A',
+      phase: visit.current_phase,
+      type: visit.visit_type,
+      status: visit.status,
+      acuity: visit.acuity_score,
+      waitTime: visit.waiting_since,
+      arrivedAt: visit.arrived_at,
+    };
+  }
+);

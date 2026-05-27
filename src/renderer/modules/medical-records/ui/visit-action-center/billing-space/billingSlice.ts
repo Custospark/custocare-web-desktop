@@ -756,10 +756,13 @@ export const selectChargeItems = (state: RootState) => state.billing.chargeItems
 export const selectDraftChargeItems = (state: RootState) => state.billing.chargeItems;
 export const selectBackendChargeItems = (state: RootState) => state.billing.backendChargeItems;
 
-export const selectRenderableChargeItems = (state: RootState): RenderableChargeItem[] => [
-  ...state.billing.backendChargeItems,
-  ...state.billing.chargeItems,
-];
+export const selectRenderableChargeItems = createSelector(
+  [selectBackendChargeItems, selectChargeItems],
+  (backendItems, draftItems): RenderableChargeItem[] => [
+    ...backendItems,
+    ...draftItems,
+  ]
+);
 
 /* ----------------------- PERSISTED BALANCE SELECTOR ----------------------- */
 export const selectPersistedBalance = createSelector(
