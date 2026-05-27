@@ -27,6 +27,7 @@ import {
   selectActivePatient,
   selectActiveVisitInfo,
   selectHasActiveVisit,
+  selectIsVisitCompleted,
   emergencyClearVisit,
 } from '../../../../app/store/slices/visitSlice';
 import { clearAll } from '../../../medical-records/ui/visit-action-center/billing-space';
@@ -52,6 +53,7 @@ const PharmacyActionCenter: React.FC<PharmacyActionCenterProps> = ({ theme }) =>
   const patient = useSelector((state: RootState) => selectActivePatient(state));
   const visitInfo = useSelector((state: RootState) => selectActiveVisitInfo(state));
   const hasActiveVisit = useSelector((state: RootState) => selectHasActiveVisit(state));
+  const isReadOnly = useSelector(selectIsVisitCompleted);
 
   const calculateWaitTime = (arrivedAt: string | null): string => {
     if (!arrivedAt) return 'N/A';
@@ -180,47 +182,16 @@ const PharmacyActionCenter: React.FC<PharmacyActionCenterProps> = ({ theme }) =>
               title="Medication encounter workflow"
               icon={<Pill className="h-6 w-6" />}
               theme={theme}
-              defaultActionTo={PHARMACY_ROUTES.ACTION_CENTER_DISPENSING}
+              defaultActionTo={isReadOnly ? PHARMACY_ROUTES.ACTION_CENTER_PRESCRIPTION_REVIEW : PHARMACY_ROUTES.ACTION_CENTER_DISPENSING}
               additionalWorkflowPathPrefixes={[PHARMACY_ROUTES.ACTION_CENTER_PRESCRIPTION_NOTES]}
               actions={[
-                {
-                  key: 'dispensing',
-                  label: 'Dispense & fulfill',
-                  icon: <Pill className="h-4 w-4" />,
-                  to: PHARMACY_ROUTES.ACTION_CENTER_DISPENSING,
-                },
-                {
-                  key: 'prescription-search',
-                  label: 'Prescriptions',
-                  icon: <List className="h-4 w-4" />,
-                  to: PHARMACY_ROUTES.ACTION_CENTER_PRESCRIPTION_SEARCH,
-                  description: 'All medications prescribed for this visit — open dispense to fulfill',
-                },
-                {
-                  key: 'forward-patient',
-                  label: 'Forward Patient',
-                  icon: <ArrowRight className="h-4 w-4" />,
-                  to: FOCUS_MODE_ROUTES.FORWARD_PATIENT_FOCUS,
-                  navigateState: {
-                    cancelTo: PHARMACY_ROUTES.ACTION_CENTER_DISPENSING,
-                    queueRedirectTo: PHARMACY_ROUTES.PATIENT_QUEUE,
-                  },
-                  description: 'Send this patient to another team queue or a specific staff member',
-                },
-                {
-                  key: 'prescription-review',
-                  label: 'Review prescriptions',
-                  icon: <ClipboardList className="h-4 w-4" />,
-                  to: PHARMACY_ROUTES.ACTION_CENTER_PRESCRIPTION_REVIEW,
-                  description: 'See what has been dispensed vs still pending for this visit',
-                },
-                {
-                  key: 'clinical-reports',
-                  label: 'Clinical Reports',
-                  icon: <FileText className="h-4 w-4" />,
-                  to: PHARMACY_ROUTES.ACTION_CENTER_CLINICAL_REPORTS,
-                  description: 'View patient clinical reports and documents',
-                },
+                ...(!isReadOnly ? [
+                  { key: 'dispensing' as const, label: 'Dispense & fulfill', icon: <Pill className="h-4 w-4" />, to: PHARMACY_ROUTES.ACTION_CENTER_DISPENSING },
+                  { key: 'prescription-search' as const, label: 'Prescriptions', icon: <List className="h-4 w-4" />, to: PHARMACY_ROUTES.ACTION_CENTER_PRESCRIPTION_SEARCH, description: 'All medications prescribed for this visit — open dispense to fulfill' },
+                  { key: 'forward-patient' as const, label: 'Forward Patient', icon: <ArrowRight className="h-4 w-4" />, to: FOCUS_MODE_ROUTES.FORWARD_PATIENT_FOCUS, navigateState: { cancelTo: PHARMACY_ROUTES.ACTION_CENTER_DISPENSING, queueRedirectTo: PHARMACY_ROUTES.PATIENT_QUEUE }, description: 'Send this patient to another team queue or a specific staff member' },
+                ] : []),
+                { key: 'prescription-review', label: 'Review prescriptions', icon: <ClipboardList className="h-4 w-4" />, to: PHARMACY_ROUTES.ACTION_CENTER_PRESCRIPTION_REVIEW, description: 'See what has been dispensed vs still pending for this visit' },
+                { key: 'clinical-reports', label: 'Clinical Reports', icon: <FileText className="h-4 w-4" />, to: PHARMACY_ROUTES.ACTION_CENTER_CLINICAL_REPORTS, description: 'View patient clinical reports and documents' },
               ]}
             />
           </div>
