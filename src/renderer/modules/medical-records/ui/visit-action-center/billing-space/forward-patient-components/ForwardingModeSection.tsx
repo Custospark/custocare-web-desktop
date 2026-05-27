@@ -5,9 +5,10 @@ import type { UseFormReset, UseFormWatch } from 'react-hook-form';
 import {
   CARE_DELIVERY_WORKFLOW_LABELS,
   ENCOUNTER_WORKFLOW_STAGE_HINTS,
-  ENCOUNTER_WORKFLOW_STAGE_ORDER,
   type CareDeliveryWorkflow,
 } from '../../../../../pharmacy/api/dispensing/visit-queue/visitTypes';
+
+import { useAccessibleWorkflows } from '../../../../../../shared/hooks/useAccessibleWorkflows';
 
 import type { ForwardPatientFormData } from './schema';
 import type { ForwardPatientColors } from './constants';
@@ -30,6 +31,7 @@ export const ForwardingModeSection: React.FC<ForwardingModeSectionProps> = ({
   const mode = watch('forwarding_mode');
   const selectedWorkflow =
     mode === 'workflow' ? watch('care_delivery_workflow') : undefined;
+  const accessibleWorkflows = useAccessibleWorkflows();
 
   const switchToWorkflow = () => {
     const note = watch('note');
@@ -125,7 +127,7 @@ export const ForwardingModeSection: React.FC<ForwardingModeSectionProps> = ({
         <div className="space-y-2">
           <p className={`text-xs font-medium ${colors.text.secondary}`}>Care step</p>
           <div className="grid gap-2 sm:grid-cols-2">
-            {ENCOUNTER_WORKFLOW_STAGE_ORDER.map((wf) => {
+            {accessibleWorkflows.map((wf) => {
               const selected = selectedWorkflow === wf;
               const isCurrentStep = wf === currentWorkflow;
               const hint =

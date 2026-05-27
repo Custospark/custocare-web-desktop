@@ -36,10 +36,10 @@ import {
   ACUITY_SCORE_DESCRIPTIONS,
   CARE_DELIVERY_WORKFLOW_LABELS,
   CareDeliveryWorkflow,
-  ENCOUNTER_WORKFLOW_STAGE_ORDER,
 } from '../../../../api/dispensing/visit-queue/visitTypes';
 import LoadingSkeleton from '../../../../../../shared/components/Loading/LoadingSkeletons';
 import { cn } from '../../../../../../shared/utils/classNameUtils';
+import { useAccessibleWorkflows } from '../../../../../../shared/hooks/useAccessibleWorkflows';
 
 /* -------------------------------------------------------------------------- */
 /*                                   TYPES                                    */
@@ -354,6 +354,7 @@ const PatientQueue: React.FC<PatientQueueProps> = ({
   className = '',
 }) => {
   const isDark = theme === 'dark';
+  const accessibleWorkflows = useAccessibleWorkflows();
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [isManualRefreshing, setIsManualRefreshing] = useState(false);
   const [selectedVisitUuid, setSelectedVisitUuid] = useState<string | null>(null);
@@ -1398,7 +1399,7 @@ const PatientQueue: React.FC<PatientQueueProps> = ({
                   : 'border-gray-300 bg-white text-gray-900 hover:bg-gray-50'
               )}
             >
-              {ENCOUNTER_WORKFLOW_STAGE_ORDER.map((wf) => (
+              {accessibleWorkflows.map((wf) => (
                 <option key={wf} value={wf}>
                   {CARE_DELIVERY_WORKFLOW_LABELS[wf]}
                 </option>

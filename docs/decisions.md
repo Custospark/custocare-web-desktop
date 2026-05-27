@@ -1087,3 +1087,38 @@ Separately, inventory ledger entries for refund/void stock restorations used the
 - Optimistic updates assume the mutation will succeed. On server failure, the UI briefly shows the approved/rejected state then reverts — the toast error notification helps users understand the rollback.
 - The confirm dialog adds one extra click to approval. Given the consequence (activating a paid subscription for a facility), the guard is warranted.
 - `refreshing` state is local to the component; if multiple callers need refresh status, it would need lifting. Single-caller pattern keeps it simple.
+
+---
+
+## 2026-05-27: Plan-Scoped Workflow Stage Filtering (Facility Enabled Modules)
+
+**Context:** The “Forward Patient” care-step picker and queue workflow stage dropdowns must align with the active facility’s plan/subscription modules. Without filtering, the UI could show workflows (e.g. Clinical) that the facility plan does not include, causing users to forward to queues they cannot access.
+
+**Decisions:**
+
+- **FE mapping (workflow → module code):**
+  - Added `WORKFLOW_TO_MODULE_CODE` in `src/renderer/modules/pharmacy/api/dispensing/visit-queue/visitTypes.ts`.
+  - Handles the existing singular/plural mismatch (`referral` → module code `referrals`).
+
+- **FE hook (plan filtering using active facility context):**
+  - Added `useAccessibleWorkflows` in `src/renderer/shared/hooks/useAccessibleWorkflows.ts`.
+  - Filters `ENCOUNTER_WORKFLOW_STAGE_ORDER` by the active facility’s `selectAccessibleModuleCodes` from `activeContextSlice`.
+
+- **Forward Patient UI:**
+  - Updated `src/renderer/modules/medical-records/ui/visit-action-center/billing-space/forward-patient-components/ForwardingModeSection.tsx` to render care-step buttons using `useAccessibleWorkflows()` (instead of always rendering all stages).
+
+- **Queue stage dropdown:**
+  - Updated `src/renderer/modules/pharmacy/ui/dispensing/dispensing-medication/views/PatientQueue.tsx` workflow stage dropdown options to use `useAccessibleWorkflows()` (only show queues enabled by the facility plan).
+
+- **Backend:** No changes required. Module access is already resolved in Redux for the active facility context.
+
+**Trade-offs:**
+
+- Workflows with no mapping would remain visible as a safety fallback (though the current stages are fully mapped through this ADR).
+
+**Files changed (FE):**
+- `src/renderer/modules/pharmacy/api/dispensing/visit-queue/visitTypes.ts` (added mapping constant)
+- `src/renderer/shared/hooks/useAccessibleWorkflows.ts` (new hook)
+- `src/renderer/modules/medical-records/ui/visit-action-center/billing-space/forward-patient-components/ForwardingModeSection.tsx`
+- `src/renderer/modules/pharmacy/ui/dispensing/dispensing-medication/views/PatientQueue.tsx`
+

@@ -162,6 +162,27 @@ export const ENCOUNTER_WORKFLOW_STAGE_ORDER: CareDeliveryWorkflow[] = [
   CareDeliveryWorkflow.BILLING,
 ];
 
+/**
+ * Bridges "care delivery workflow" values shown in the Forward Patient UI
+ * to "module codes" enabled for the active facility plan/subscription.
+ *
+ * Used to filter workflow options and queue stage dropdowns so the UI
+ * never offers workflows a facility plan doesn't include.
+ */
+export const WORKFLOW_TO_MODULE_CODE: Partial<
+  Record<CareDeliveryWorkflow, string>
+> = {
+  [CareDeliveryWorkflow.MEDICAL_RECORDS]: 'medical_records',
+  [CareDeliveryWorkflow.CLINICAL]: 'clinical',
+  [CareDeliveryWorkflow.PHARMACY]: 'pharmacy',
+  [CareDeliveryWorkflow.LABORATORY]: 'laboratory',
+  [CareDeliveryWorkflow.NURSING]: 'nursing',
+  [CareDeliveryWorkflow.AMBULANCE]: 'ambulance',
+  // Backend module is plural (`referrals`) while workflow bucket is singular (`referral`).
+  [CareDeliveryWorkflow.REFERRAL]: 'referrals',
+  [CareDeliveryWorkflow.BILLING]: 'billing',
+};
+
 export const DEFAULT_ENCOUNTER_WORKFLOW_STAGE: CareDeliveryWorkflow =
   ENCOUNTER_WORKFLOW_STAGE_ORDER[0] ?? CareDeliveryWorkflow.MEDICAL_RECORDS;
 
