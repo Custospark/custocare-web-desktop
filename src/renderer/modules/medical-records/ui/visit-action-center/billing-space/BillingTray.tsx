@@ -25,7 +25,6 @@ import {
 import {
   clearActiveVisit,
   selectActiveVisitInfo,
-  selectIsVisitCompleted,
 } from '../../../../../app/store/slices/visitSlice';
 import { VisitCompletedGuard } from '../../../../../shared/components/VisitCompletedGuard';
 import { selectTheme } from '../../../../../app/store/slices/uiSlice';
@@ -68,7 +67,6 @@ export const BillingTray: React.FC<BillingTrayProps> = ({
 
   const theme = useSelector(selectTheme);
   const isDark = theme === 'dark';
-  const visitCompleted = useSelector(selectIsVisitCompleted);
 
   const activeVisitInfo = useSelector(selectActiveVisitInfo);
   const isTrayOpen = useSelector(selectIsTrayOpen);
