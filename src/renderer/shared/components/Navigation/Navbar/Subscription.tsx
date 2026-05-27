@@ -227,8 +227,8 @@ const lims = (l: Plan['limits']) => [
   l.max_departments !== null
     ? `Up to ${l.max_departments} departments`
     : 'Unlimited departments',
-  l.max_patients_per_month !== null
-    ? `Up to ${l.max_patients_per_month} patients per month`
+  l.max_visits_per_month !== null
+    ? `Up to ${l.max_visits_per_month} patients per month`
     : 'Unlimited patients per month',
 ];
 

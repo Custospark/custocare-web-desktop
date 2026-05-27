@@ -23,6 +23,8 @@ import { setActiveVisit, emergencyClearVisit } from '../../../../../app/store/sl
 import { clearAll } from '../../visit-action-center/billing-space';
 import { VisitPhase, VisitType } from '../../../../pharmacy/api/dispensing/visit-queue/visitTypes';
 import { useToast } from '../../../../../app/store/contexts/toast/useToast';
+import { usePlanEntitlements } from '../../../../../shared/entitlements/usePlanEntitlements';
+import { AlertTriangle } from 'lucide-react';
 
 interface MRPatientCreateProps {
   theme: 'light' | 'dark';
@@ -248,6 +250,12 @@ const MRPatientCreate: React.FC<MRPatientCreateProps> = ({
   const createVisitMutation = useCreateVisit();
   const moduleCopy = useMemo(() => getCreateModuleCopy(intakeModule), [intakeModule]);
 
+  const {
+    visitLimitReached,
+    usage: facilityUsage,
+    limits: facilityLimits,
+  } = usePlanEntitlements();
+
   const handleSuccess = useCallback(
     (patient: PatientSearchResult) => {
       console.log('Patient created successfully:', patient.patient_number);
@@ -428,6 +436,20 @@ const MRPatientCreate: React.FC<MRPatientCreateProps> = ({
   return (
     <>
       <div className={cn(className)}>
+        {visitLimitReached && (
+          <div className={`mb-3 p-3 rounded-lg border flex items-start gap-2 text-sm ${
+            theme === 'dark'
+              ? 'bg-amber-900/20 border-amber-700/40 text-amber-200'
+              : 'bg-amber-50 border-amber-200 text-amber-800'
+          }`}>
+            <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
+            <span>
+              Monthly visit limit reached
+              {facilityLimits?.max_visits_per_month != null ? ` (${facilityUsage?.visits ?? 0}/${facilityLimits.max_visits_per_month})` : ''}.
+              Upgrade your plan to register more patient visits this month.
+            </span>
+          </div>
+        )}
         <PatientCreate
           theme={theme}
           title="Register new patient"

@@ -28,6 +28,7 @@ import DepartmentFormDrawer, {
   type DepartmentFormData,
 } from './department-components/DepartmentFormDrawer';
 import DepartmentList from './department-components/DepartmentList';
+import { usePlanEntitlements } from '../../../../../shared/entitlements/usePlanEntitlements';
 
 interface AdminFacilitySetupProps {
   theme: 'light' | 'dark';
@@ -78,6 +79,12 @@ export const AdminFacilitySetup: React.FC<AdminFacilitySetupProps> = ({ theme })
   const [showDeleted, setShowDeleted] = useState(false);
   const [formData, setFormData] = useState<DepartmentFormData>(getInitialFormData());
   const [isRefreshAnimating, setIsRefreshAnimating] = useState(false);
+
+  const {
+    departmentLimitReached,
+    usage: facilityUsage,
+    limits: facilityLimits,
+  } = usePlanEntitlements();
 
   const departmentTypeOptions: { value: DepartmentType; label: string }[] = [
     { value: DepartmentType.EMERGENCY, label: 'Emergency' },
@@ -280,7 +287,8 @@ export const AdminFacilitySetup: React.FC<AdminFacilitySetupProps> = ({ theme })
   };
 
   const isSubmitting = createMutation.isPending || updateMutation.isPending;
-  const canSubmit = Boolean(formData.department_name.trim());
+  const isCreating = drawerMode === 'create';
+  const canSubmit = Boolean(formData.department_name.trim()) && (!isCreating || !departmentLimitReached);
 
   if (!activeFacilityId) {
     return (
@@ -352,6 +360,9 @@ export const AdminFacilitySetup: React.FC<AdminFacilitySetupProps> = ({ theme })
         onSubmit={handleSubmit}
         isSubmitting={isSubmitting}
         canSubmit={canSubmit}
+        departmentLimitReached={isCreating ? departmentLimitReached : false}
+        departmentLimit={facilityLimits?.max_departments ?? null}
+        departmentCount={facilityUsage?.departments ?? 0}
       />
     </>
   );

@@ -13,7 +13,7 @@ interface PlanPricing {
 interface PlanLimits {
   max_staff: number | null;
   max_departments: number | null;
-  max_patients_per_month: number | null;
+  max_visits_per_month: number | null;
 }
 
 interface PlanDetail {

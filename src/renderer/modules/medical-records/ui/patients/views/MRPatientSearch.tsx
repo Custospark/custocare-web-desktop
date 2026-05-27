@@ -24,6 +24,8 @@ import {
 import { setActiveVisit,emergencyClearVisit } from '../../../../../app/store/slices/visitSlice';
 import { VisitPhase, VisitType } from '../../../../pharmacy/api/dispensing/visit-queue/visitTypes';
 import { useToast } from '../../../../../app/store/contexts/toast/useToast';
+import { usePlanEntitlements } from '../../../../../shared/entitlements/usePlanEntitlements';
+import { AlertTriangle } from 'lucide-react';
 
 interface MRPatientSearchProps {
   theme: 'light' | 'dark';
@@ -259,6 +261,12 @@ const MRPatientSearch: React.FC<MRPatientSearchProps> = ({
   
   const createVisitMutation = useCreateVisit();
 
+  const {
+    visitLimitReached,
+    usage: facilityUsage,
+    limits: facilityLimits,
+  } = usePlanEntitlements();
+
   const handleCreateNewPatient = useCallback(
     (searchText: string) => {
       navigate(routes.register, {
@@ -270,6 +278,12 @@ const MRPatientSearch: React.FC<MRPatientSearchProps> = ({
 
 const handleTakeAction = useCallback(
   async (patient: PatientSearchResult) => {
+    // Check visit limit
+    if (visitLimitReached) {
+      showToast('error', 'Monthly visit limit reached. Upgrade your plan to register more patient visits this month.', 5000);
+      return;
+    }
+
     // Validate staff context
     if (!hasCompleteStaff) {
       showToast('error', 'Complete staff context required. Please ensure you are logged in as staff with an active facility.', 5000);
@@ -428,6 +442,7 @@ const handleTakeAction = useCallback(
     showToast,
     routes,
     intakeModule,
+    visitLimitReached,
   ]
 );
 
@@ -642,6 +657,20 @@ const handleTakeAction = useCallback(
   return (
     <>
       <div className={cn(className)}>
+        {visitLimitReached && (
+          <div className={`mb-3 p-3 rounded-lg border flex items-start gap-2 text-sm ${
+            theme === 'dark'
+              ? 'bg-amber-900/20 border-amber-700/40 text-amber-200'
+              : 'bg-amber-50 border-amber-200 text-amber-800'
+          }`}>
+            <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
+            <span>
+              Monthly visit limit reached
+              {facilityLimits?.max_visits_per_month != null ? ` (${facilityUsage?.visits ?? 0}/${facilityLimits.max_visits_per_month})` : ''}.
+              Upgrade your plan to register more patient visits this month.
+            </span>
+          </div>
+        )}
         <PatientSearch
           theme={theme}
           title={moduleCopy.title}

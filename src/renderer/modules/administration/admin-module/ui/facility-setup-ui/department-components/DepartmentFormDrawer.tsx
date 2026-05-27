@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef } from 'react';
 import {
+  AlertTriangle,
   Bed,
   Building2,
   DoorOpen,
@@ -42,6 +43,9 @@ interface DepartmentFormDrawerProps {
   onSubmit: () => void;
   isSubmitting: boolean;
   canSubmit: boolean;
+  departmentLimitReached?: boolean;
+  departmentLimit?: number | null;
+  departmentCount?: number;
 }
 
 export const DepartmentFormDrawer: React.FC<DepartmentFormDrawerProps> = ({
@@ -55,6 +59,9 @@ export const DepartmentFormDrawer: React.FC<DepartmentFormDrawerProps> = ({
   onSubmit,
   isSubmitting,
   canSubmit,
+  departmentLimitReached = false,
+  departmentLimit,
+  departmentCount = 0,
 }) => {
   const isDark = theme === 'dark';
   const title = mode === 'edit' ? 'Edit Department' : 'Create New Department';
@@ -143,6 +150,21 @@ export const DepartmentFormDrawer: React.FC<DepartmentFormDrawerProps> = ({
             <X className="w-5 h-5" />
           </button>
         </div>
+
+        {departmentLimitReached && mode === 'create' && (
+          <div className={`mb-4 p-3 rounded-lg border flex items-start gap-2 text-sm ${
+            isDark
+              ? 'bg-amber-900/20 border-amber-700/40 text-amber-200'
+              : 'bg-amber-50 border-amber-200 text-amber-800'
+          }`}>
+            <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
+            <span>
+              Department limit reached
+              {departmentLimit != null ? ` (${departmentCount}/${departmentLimit})` : ''}.
+              Upgrade your plan to add more departments.
+            </span>
+          </div>
+        )}
 
         <div className="p-5 space-y-5">
           <div className={`rounded-xl border ${sectionCard}`}>

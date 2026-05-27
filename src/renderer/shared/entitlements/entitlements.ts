@@ -157,3 +157,21 @@ export const isStaffLimitReached = (
   }
   return (usage?.staff ?? 0) >= maxStaff;
 };
+
+export const isDepartmentLimitReached = (
+  usage?: { departments?: number } | null,
+  limits?: { max_departments?: number | null } | null,
+): boolean => {
+  const max = limits?.max_departments;
+  if (max == null) return false;
+  return (usage?.departments ?? 0) >= max;
+};
+
+export const isVisitLimitReached = (
+  usage?: { visits?: number } | null,
+  limits?: { max_visits_per_month?: number | null } | null,
+): boolean => {
+  const max = limits?.max_visits_per_month;
+  if (max == null) return false;
+  return (usage?.visits ?? 0) >= max;
+};

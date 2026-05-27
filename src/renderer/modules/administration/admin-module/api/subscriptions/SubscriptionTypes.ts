@@ -115,7 +115,7 @@ export interface PlanOnboardingFee {
 export interface PlanLimits {
   max_staff: number | null;              // null = unlimited
   max_departments: number | null;
-  max_patients_per_month: number | null;
+  max_visits_per_month: number | null;
 }
 
 /**
@@ -503,7 +503,7 @@ export interface StorePlanRequest {
   features?: Record<string, boolean | unknown> | null;
   max_staff?: number | null;
   max_departments?: number | null;
-  max_patients_per_month?: number | null;
+  max_visits_per_month?: number | null;
   sort_order?: number | null;
   is_popular?: boolean | null;
   is_active?: boolean | null;
@@ -856,7 +856,7 @@ export interface AdminCancelInvoiceParams {
 export interface FacilityUsageLimits {
   max_staff: number | null;
   max_departments: number | null;
-  max_patients_per_month: number | null;
+  max_visits_per_month: number | null;
 }
 
 export interface FacilityUsage {

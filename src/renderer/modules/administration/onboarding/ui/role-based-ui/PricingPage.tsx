@@ -44,7 +44,7 @@ const buildTiers = (plans: Plan[]): DisplayTier[] => {
         limits: [
           fmtLimit(plan.limits.max_staff, 'Staff'),
           fmtLimit(plan.limits.max_departments, 'Departments'),
-          fmtLimit(plan.limits.max_patients_per_month, 'Patients/mo'),
+          fmtLimit(plan.limits.max_visits_per_month, 'Patients/mo'),
         ],
         highlighted: plan.is_popular,
         badge: plan.is_popular ? 'Most Popular' : undefined,

@@ -21,6 +21,8 @@ import { useGetFacilityRoles } from '../../api/team-management/queries/useFacili
 import { useGetModules } from '../../api/team-management/queries/useModuleQueries';
 import type { GlobalRoleLevel, EmploymentType } from '../../api/team-management/types/staffTypes';
 import { DepartmentStatus } from '../../api/department-managment/departmentTypes';
+import { usePlanEntitlements } from '../../../../../shared/entitlements/usePlanEntitlements';
+import { AlertTriangle } from 'lucide-react';
 
 interface StaffCreationFormProps {
   theme: 'light' | 'dark';
@@ -100,6 +102,15 @@ export const StaffCreationForm: React.FC<StaffCreationFormProps> = ({
   const departments = departmentsResponse?.data || [];
   const roles = rolesResponse?.data || [];
   const modules = modulesResponse?.data || [];
+  
+  const {
+    staffLimitReached,
+    usage: facilityUsage,
+    limits: facilityLimits,
+    filterModulesForPlan,
+  } = usePlanEntitlements();
+  
+  const planFilteredModules = modules.length > 0 ? filterModulesForPlan(modules) : modules;
   
   // Create mutation
   const createMutation = useCreateStaffByAdmin({
@@ -658,8 +669,23 @@ export const StaffCreationForm: React.FC<StaffCreationFormProps> = ({
                 Select the modules this staff member can access
               </p>
               
+              {staffLimitReached && (
+                <div className={`mb-3 p-3 rounded-lg border flex items-start gap-2 text-sm ${
+                  isDark
+                    ? 'bg-amber-900/20 border-amber-700/40 text-amber-200'
+                    : 'bg-amber-50 border-amber-200 text-amber-800'
+                }`}>
+                  <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
+                  <span>
+                    Staff limit reached
+                    {facilityLimits?.max_staff != null ? ` (${facilityUsage?.staff ?? 0}/${facilityLimits.max_staff})` : ''}.
+                    Upgrade your plan or cancel pending invitations before creating new staff.
+                  </span>
+                </div>
+              )}
+              
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {modules.map(module => (
+                {planFilteredModules.map(module => (
                   <label
                     key={module.id}
                     className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
@@ -742,7 +768,7 @@ export const StaffCreationForm: React.FC<StaffCreationFormProps> = ({
             ) : (
               <button
                 onClick={handleSubmit}
-                disabled={createMutation.isPending}
+                disabled={createMutation.isPending || staffLimitReached}
                 type="button"
                 className="inline-flex items-center gap-2 px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >

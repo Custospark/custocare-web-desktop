@@ -88,7 +88,7 @@ interface PlanFormState {
   sort_order: string;
   max_staff: string;
   max_departments: string;
-  max_patients_per_month: string;
+  max_visits_per_month: string;
   features: Record<string, boolean>;
 }
 
@@ -121,8 +121,8 @@ const planToFormState = (plan: Plan): PlanFormState => ({
   sort_order: String(plan.sort_order),
   max_staff: plan.limits.max_staff !== null ? String(plan.limits.max_staff) : '',
   max_departments: plan.limits.max_departments !== null ? String(plan.limits.max_departments) : '',
-  max_patients_per_month:
-    plan.limits.max_patients_per_month !== null ? String(plan.limits.max_patients_per_month) : '',
+  max_visits_per_month:
+    plan.limits.max_visits_per_month !== null ? String(plan.limits.max_visits_per_month) : '',
   features: planFeaturesToFormState(plan.features),
 });
 
@@ -141,7 +141,7 @@ const emptyForm = (): PlanFormState => ({
   sort_order: '0',
   max_staff: '',
   max_departments: '',
-  max_patients_per_month: '',
+  max_visits_per_month: '',
   features: createEmptyPlanFeaturesFormState(),
 });
 
@@ -303,7 +303,7 @@ const FacilityPlans: React.FC<FacilityPlansProps> = () => {
       sort_order:      formState.sort_order !== '' ? Number(formState.sort_order) : null,
       max_staff:              formState.max_staff !== '' ? Number(formState.max_staff) : null,
       max_departments:        formState.max_departments !== '' ? Number(formState.max_departments) : null,
-      max_patients_per_month: formState.max_patients_per_month !== '' ? Number(formState.max_patients_per_month) : null,
+      max_visits_per_month: formState.max_visits_per_month !== '' ? Number(formState.max_visits_per_month) : null,
       features:        buildPlanFeaturesPayload(formState.features),
     };
 
@@ -806,7 +806,7 @@ const FacilityPlans: React.FC<FacilityPlansProps> = () => {
                     <FormField label="Max Patients / Month" hint="Blank = unlimited" isDark={isDark}>
                       <div className="relative">
                         <Activity className={cn('absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4', isDark ? 'text-gray-500' : 'text-gray-400')} />
-                        <input type="number" min="1" placeholder="Unlimited" value={formState.max_patients_per_month} onChange={e => updateField('max_patients_per_month', e.target.value)} disabled={isMutating} className={cn(inputClass(isDark, false, isMutating), 'pl-10')} />
+                        <input type="number" min="1" placeholder="Unlimited" value={formState.max_visits_per_month} onChange={e => updateField('max_visits_per_month', e.target.value)} disabled={isMutating} className={cn(inputClass(isDark, false, isMutating), 'pl-10')} />
                       </div>
                     </FormField>
                   </div>
@@ -1004,7 +1004,7 @@ const PlanCard: React.FC<PlanCardProps> = ({ plan, index, isDark, isMutating, on
             <Users className="w-3 h-3" /> {plan.limits.max_staff !== null ? `${plan.limits.max_staff} staff` : '∞ staff'}
           </span>
           <span className={cn('inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium border', isDark ? 'bg-gray-800 text-gray-400 border-gray-700' : 'bg-gray-100 text-gray-600 border-gray-200')}>
-            <Activity className="w-3 h-3" /> {plan.limits.max_patients_per_month !== null ? `${plan.limits.max_patients_per_month} pts/mo` : '∞ patients'}
+            <Activity className="w-3 h-3" /> {plan.limits.max_visits_per_month !== null ? `${plan.limits.max_visits_per_month} pts/mo` : '∞ patients'}
           </span>
           {enabledFeatureCount > 0 && (
             <span className={cn('inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium border', isDark ? 'bg-blue-900/20 text-blue-400 border-blue-500/30' : 'bg-blue-50 text-blue-700 border-blue-200')}>

@@ -10,6 +10,8 @@ import { getActiveFacilityId } from '../../app/store/utils/contextSelectors';
 import {
   getPlanEnabledModuleCodesFromPlan,
   isStaffLimitReached,
+  isDepartmentLimitReached,
+  isVisitLimitReached,
   OWNER_RESTRICTED_MODULES,
 } from './entitlements';
 
@@ -54,6 +56,16 @@ export const usePlanEntitlements = (options?: { enabled?: boolean }) => {
     [usage, limits],
   );
 
+  const departmentLimitReached = useMemo(
+    () => isDepartmentLimitReached(usage, limits),
+    [usage, limits],
+  );
+
+  const visitLimitReached = useMemo(
+    () => isVisitLimitReached(usage, limits),
+    [usage, limits],
+  );
+
   const filterModulesForPlan = useMemo(
     () =>
       (modules: Module[]): Module[] =>
@@ -70,6 +82,8 @@ export const usePlanEntitlements = (options?: { enabled?: boolean }) => {
     limits,
     allowedModuleCodes,
     staffLimitReached,
+    departmentLimitReached,
+    visitLimitReached,
     hasSubscriptionAccess,
     isActiveFacilityOwner,
     filterModulesForPlan,

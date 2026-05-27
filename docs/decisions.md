@@ -2,6 +2,24 @@
 
 ---
 
+## 2026-05-27: Rename `max_patients_per_month` → `max_visits_per_month` + Frontend Limit Guards
+
+**Context:** The column `max_patients_per_month` on the `plans` table was semantically misleading — the actual enforcement in `UsageService::getVisitsCount()` counts **all visits** (every encounter), not unique patients. Additionally, the frontend had plan limit guards only on the Staff Invitation flow; Department creation, Visit creation, and `StaffCreationForm` all lacked frontend enforcement, relying solely on backend validation errors.
+
+**Decisions:**
+
+- **Column renamed** `max_patients_per_month` → `max_visits_per_month` across the full stack (migration, model, service, resource, requests, seeder, TS types, config, display components)
+- **New utilities** `isDepartmentLimitReached()` and `isVisitLimitReached()` added to `entitlements.ts`
+- **`usePlanEntitlements` hook** now returns `departmentLimitReached` and `visitLimitReached`
+- **Frontend guards added to 3 components:**
+  - `StaffCreationForm.tsx` — staff limit banner + plan-filtered modules + submit disabled at capacity
+  - `AdminFacilitySetup.tsx` / `DepartmentFormDrawer.tsx` — department limit banner + submit disabled
+  - `MRPatientCreate.tsx` / `MRPatientSearch.tsx` — visit limit banner + create disabled
+
+**Counting unchanged:** Visits still count total encounters (not unique patients). The rename aligns the column name with the actual counting logic.
+
+---
+
 ## 2026-05-26: Facility Receipts & Invoices (billing documents)
 
 **Context:** Facilities need formal invoices (amount due) and receipts (proof after admin approval), issued by Custospark Company Ltd for the Custocare product.
@@ -176,7 +194,7 @@
 
 ## 2026-05-24: Plan Limit Enforcement (Staff, Departments, Visits)
 
-**Context:** Subscription plans define `max_staff`, `max_departments`, and `max_patients_per_month` but limits were not enforced when inviting staff, creating departments, or registering visits. Invitation UI also listed all modules regardless of plan tier.
+**Context:** Subscription plans define `max_staff`, `max_departments`, and `max_visits_per_month` but limits were not enforced when inviting staff, creating departments, or registering visits. Invitation UI also listed all modules regardless of plan tier.
 
 **Decisions:**
 

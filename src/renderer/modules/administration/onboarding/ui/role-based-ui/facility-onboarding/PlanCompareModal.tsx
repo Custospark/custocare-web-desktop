@@ -12,7 +12,7 @@ interface PlanPricing {
 interface PlanLimits {
   max_staff: number | null;
   max_departments: number | null;
-  max_patients_per_month: number | null;
+  max_visits_per_month: number | null;
 }
 
 interface PlanCompareItem {
@@ -181,7 +181,7 @@ export const PlanCompareModal: React.FC<PlanCompareModalProps> = ({ plans, onClo
               {[
                 { label: 'Staff Limit', key: 'max_staff' as const },
                 { label: 'Departments', key: 'max_departments' as const },
-                { label: 'Patients / Month', key: 'max_patients_per_month' as const },
+                { label: 'Patients / Month', key: 'max_visits_per_month' as const },
               ].map((row, ri) => (
                 <React.Fragment key={row.key}>
                   <div className={cn(

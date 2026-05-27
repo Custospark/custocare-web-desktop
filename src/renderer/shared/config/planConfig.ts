@@ -59,7 +59,7 @@ export const TIER_LIMIT_LABELS: Record<string, PlanLimitLabels> = {
 export interface PlanLimitsShape {
   max_staff: number | null;
   max_departments: number | null;
-  max_patients_per_month: number | null;
+  max_visits_per_month: number | null;
 }
 
 /** Display labels for plan cards/modals (tier catalog first, then API limits). */
