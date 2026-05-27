@@ -22,6 +22,7 @@ import {
   selectActivePatient,
   selectActiveVisitInfo,
   selectHasActiveVisit,
+  selectIsVisitCompleted,
 } from '../../../../app/store/slices/visitSlice';
 import { clearAll } from '../../../medical-records/ui/visit-action-center/billing-space';
 import { useToast } from '../../../../app/store/contexts/toast/useToast';
@@ -46,6 +47,7 @@ const BillingActionCenter: React.FC<BillingActionCenterProps> = ({ theme }) => {
   const patient = useSelector((state: RootState) => selectActivePatient(state));
   const visitInfo = useSelector((state: RootState) => selectActiveVisitInfo(state));
   const hasActiveVisit = useSelector((state: RootState) => selectHasActiveVisit(state));
+  const isReadOnly = useSelector(selectIsVisitCompleted);
 
   const calculateWaitTime = (arrivedAt: string | null): string => {
     if (!arrivedAt) return 'N/A';
@@ -161,38 +163,14 @@ const BillingActionCenter: React.FC<BillingActionCenterProps> = ({ theme }) => {
               title="Billing Encounter"
               icon={<FileText className="h-6 w-6" />}
               theme={theme}
-              defaultActionTo={BILLING_ROUTES.BILLING_SPACE}
+              defaultActionTo={isReadOnly ? BILLING_ROUTES.VISIT_STATUS : BILLING_ROUTES.BILLING_SPACE}
               actions={[
-                {
-                  key: 'billing-space',
-                  label: 'Charge Entry Workspace',
-                  icon: <Receipt className="h-4 w-4" />,
-                  to: BILLING_ROUTES.BILLING_SPACE,
-                  description: 'Capture, review, and settle encounter charges',
-                },
-                {
-                  key: 'visit-status',
-                  label: 'Visit Status',
-                  icon: <Activity className="h-4 w-4" />,
-                  to: BILLING_ROUTES.VISIT_STATUS,
-                },
-                {
-                  key: 'forward-patient',
-                  label: 'Forward Patient',
-                  icon: <ArrowRight className="h-4 w-4" />,
-                  to: FOCUS_MODE_ROUTES.FORWARD_PATIENT_FOCUS,
-                  navigateState: {
-                    cancelTo: BILLING_ROUTES.BILLING_SPACE,
-                    queueRedirectTo: BILLING_ROUTES.PATIENT_QUEUE,
-                  },
-                },
-                {
-                  key: 'clinical-reports',
-                  label: 'Clinical Reports',
-                  icon: <FileText className="h-4 w-4" />,
-                  to: BILLING_ROUTES.ACTION_CENTER_CLINICAL_REPORTS,
-                  description: 'View patient clinical reports and documents',
-                },
+                ...(!isReadOnly ? [
+                  { key: 'billing-space' as const, label: 'Charge Entry Workspace', icon: <Receipt className="h-4 w-4" />, to: BILLING_ROUTES.BILLING_SPACE, description: 'Capture, review, and settle encounter charges' },
+                  { key: 'forward-patient' as const, label: 'Forward Patient', icon: <ArrowRight className="h-4 w-4" />, to: FOCUS_MODE_ROUTES.FORWARD_PATIENT_FOCUS, navigateState: { cancelTo: BILLING_ROUTES.BILLING_SPACE, queueRedirectTo: BILLING_ROUTES.PATIENT_QUEUE } },
+                ] : []),
+                { key: 'visit-status', label: 'Visit Status', icon: <Activity className="w-4 h-4" />, to: BILLING_ROUTES.VISIT_STATUS },
+                { key: 'clinical-reports', label: 'Clinical Reports', icon: <FileText className="h-4 w-4" />, to: BILLING_ROUTES.ACTION_CENTER_CLINICAL_REPORTS, description: 'View patient clinical reports and documents' },
               ]}
             />
           </div>
