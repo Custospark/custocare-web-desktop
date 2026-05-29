@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import { AllergySeverity, type Allergy } from '../../../../api/allergies/AllergyTypes';
 import type { RootState } from '../../../../../../app/store/rootReducer';
-import custocareLogo from '../../../../../../shared/assets/continousLogoDark.png';
+import custocareLogo from '../../../../../../shared/assets/continuousLogoLight.png';
 import { useGetFacilityIdentity } from '../../../../api/facility/FacilityQueries';
 import { cn } from '../../../../../../shared/utils/classNameUtils';
 import {
