@@ -487,7 +487,7 @@ export const Payments: React.FC<PaymentsProps> = ({ theme }) => {
                   className={cn(
                     'w-full py-3 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2',
                     'bg-gradient-to-r from-blue-600 to-emerald-600 text-white shadow-lg hover:shadow-xl hover:scale-[1.02]',
-                    (recordPayment.isPending || !canSubmitProof) && 'opacity-60 cursor-not-allowed',
+                    (!file || recordPayment.isPending || !canSubmitProof) && 'opacity-60 cursor-not-allowed',
                   )}
                 >
                   {recordPayment.isPending ? (
