@@ -10,7 +10,6 @@ import {
   User,
   Fingerprint,
   ShieldCheck,
-  Sparkles,
   AlertTriangle,
   Shield,
   Activity,
@@ -18,6 +17,7 @@ import {
 } from 'lucide-react';
 import { AllergySeverity, type Allergy } from '../../../../api/allergies/AllergyTypes';
 import type { RootState } from '../../../../../../app/store/rootReducer';
+import custocareLogo from '../../../../../../shared/assets/continousLogoDark.png';
 import { useGetFacilityIdentity } from '../../../../api/facility/FacilityQueries';
 import { cn } from '../../../../../../shared/utils/classNameUtils';
 import {
@@ -348,10 +348,10 @@ export const AllergiesPreviewDocument: React.FC<AllergiesPreviewDocumentProps> =
         </p>
 
         <div className="mt-3 flex items-center justify-center gap-2">
-          <Sparkles className="h-3.5 w-3.5 text-blue-500" />
-          <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-blue-600">
-            Safe Care • Informed Decisions
-          </p>
+          <span className="text-[10px] font-medium tracking-wide text-gray-400 uppercase">Powered by</span>
+          <img src={custocareLogo} alt="Custocare" className="h-5 w-auto" />
+          <span className="text-[10px] text-gray-400">—</span>
+          <span className="text-[10px] text-gray-400">Continuous Care. Clinical Excellence.</span>
         </div>
 
         <p className="mt-3 text-[10px] font-mono text-gray-500">
