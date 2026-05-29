@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import { AllergySeverity, type Allergy } from '../../../../api/allergies/AllergyTypes';
 import type { RootState } from '../../../../../../app/store/rootReducer';
-
+import { useGetFacilityIdentity } from '../../../../api/facility/FacilityQueries';
 
 // Helper component for info rows
 const InfoRow: React.FC<{
