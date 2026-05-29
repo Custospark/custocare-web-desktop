@@ -246,56 +246,37 @@ export const PrescriptionPreviewDocument: React.FC<PrescriptionPreviewDocumentPr
       {/* Medications Table */}
       <div className="mt-6 print:mt-4">
         <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-700">
-          Prescribed Medications
+          Prescribed Medications ({previewItems.length})
         </h3>
-        
+
         <div className="overflow-x-auto">
-          <table className="w-full border-collapse border border-slate-200">
-            <thead className="bg-slate-100">
-              <tr>
-                <th className="border border-slate-200 px-3 py-2 text-left text-xs font-semibold text-slate-700">Medication</th>
-                <th className="border border-slate-200 px-3 py-2 text-left text-xs font-semibold text-slate-700">Dose / Form</th>
-                <th className="border border-slate-200 px-3 py-2 text-left text-xs font-semibold text-slate-700">Frequency</th>
-                <th className="border border-slate-200 px-3 py-2 text-left text-xs font-semibold text-slate-700">Duration</th>
-                <th className="border border-slate-200 px-3 py-2 text-left text-xs font-semibold text-slate-700">Route</th>
-                <th className="border border-slate-200 px-3 py-2 text-left text-xs font-semibold text-slate-700">Refills</th>
-                <th className="border border-slate-200 px-3 py-2 text-left text-xs font-semibold text-slate-700">Instructions</th>
+          <table className="w-full text-sm border-collapse">
+            <thead>
+              <tr className="bg-slate-50">
+                <th className="border border-slate-200 px-3 py-2 text-left text-xs font-semibold text-slate-600">Medication</th>
+                <th className="border border-slate-200 px-3 py-2 text-left text-xs font-semibold text-slate-600">Dosage</th>
+                <th className="border border-slate-200 px-3 py-2 text-left text-xs font-semibold text-slate-600">Frequency</th>
+                <th className="border border-slate-200 px-3 py-2 text-left text-xs font-semibold text-slate-600">Route</th>
+                <th className="border border-slate-200 px-3 py-2 text-left text-xs font-semibold text-slate-600">Duration</th>
               </tr>
             </thead>
             <tbody>
               {previewItems.map((med, index) => (
                 <tr key={med.id} className={index % 2 === 0 ? 'bg-white' : 'bg-slate-50'}>
-                  <td className="border border-slate-200 px-3 py-3 align-top">
-                    <div className="font-medium text-slate-800">{med.medication_name}</div>
-                    {med.strength && <div className="mt-1 text-xs text-slate-500">{med.strength}</div>}
-                    {med.brand_name && <div className="text-xs text-slate-500">{med.brand_name}</div>}
+                  <td className="border border-slate-200 px-3 py-2.5 text-sm font-medium text-slate-800">
+                    {med.medication_name}
                   </td>
-                  <td className="border border-slate-200 px-3 py-3 align-top text-sm text-slate-700">
+                  <td className="border border-slate-200 px-3 py-2.5 text-sm text-slate-700">
                     {formatDosage(med.dosage_quantity, med.dosage_unit)}
-                    {med.dosage_form && <div className="text-xs text-slate-500">{med.dosage_form}</div>}
                   </td>
-                  <td className="border border-slate-200 px-3 py-3 align-top text-sm text-slate-700">
+                  <td className="border border-slate-200 px-3 py-2.5 text-sm text-slate-700">
                     {med.frequency || '—'}
                   </td>
-                  <td className="border border-slate-200 px-3 py-3 align-top text-sm text-slate-700">
-                    {med.duration_value && med.duration_unit ? formatDuration(med.duration_value, med.duration_unit) : '—'}
-                  </td>
-                  <td className="border border-slate-200 px-3 py-3 align-top text-sm text-slate-700">
+                  <td className="border border-slate-200 px-3 py-2.5 text-sm text-slate-700">
                     {med.route || '—'}
                   </td>
-                  <td className="border border-slate-200 px-3 py-3 align-top text-sm text-slate-700">
-                    {med.refills ?? 0}
-                    {med.substitution && <div className="text-xs text-slate-500">{med.substitution}</div>}
-                  </td>
-                  <td className="border border-slate-200 px-3 py-3 align-top text-sm text-slate-700">
-                    {med.organizedInstructions ? (
-                      <div className="whitespace-pre-wrap">{med.organizedInstructions}</div>
-                    ) : '—'}
-                    {med.as_needed && (
-                      <div className="mt-1 text-xs font-medium text-amber-600">
-                        PRN{med.as_needed_reason ? `: ${med.as_needed_reason}` : ''}
-                      </div>
-                    )}
+                  <td className="border border-slate-200 px-3 py-2.5 text-sm text-slate-700">
+                    {med.duration_value && med.duration_unit ? formatDuration(med.duration_value, med.duration_unit) : '—'}
                   </td>
                 </tr>
               ))}
