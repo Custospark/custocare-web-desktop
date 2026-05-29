@@ -78,15 +78,17 @@ const getIcon = (slug: string, className = 'w-3.5 h-3.5') =>
 
 const formatShortDate = (iso: string | null | undefined): string => {
   if (!iso) return '';
-  return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
 };
 
-/** Compact date for navbar, e.g. "16 Jul". */
+/** Compact date for navbar, e.g. "Jul 10, 2026". */
 const formatNavbarDate = (iso: string | null | undefined): string => {
   if (!iso) return '';
-  return new Date(iso).toLocaleDateString(undefined, {
-    day: 'numeric',
+  return new Date(iso).toLocaleDateString('en-US', {
     month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    timeZone: 'UTC',
   });
 };
 

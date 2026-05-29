@@ -102,7 +102,9 @@ export const DischargePreviewDocument: React.FC<DischargePreviewDocumentProps> =
         address: 'Address not available',
       };
 
-  const patientName = patientNameProp || 'Unknown Patient';
+  const activePatient = useSelector((state: RootState) => state.visits.activeVisit?.patient);
+  const patientName = patientNameProp || activePatient?.name || 'Unknown Patient';
+  const patientNumber = activePatient?.patient_number || `#${dischargeData?.patient_id || ''}`;
 
   const hasMedications = dischargeData?.discharge_medications && dischargeData.discharge_medications.length > 0;
   const hasDisposition = !!dischargeData?.discharge_disposition;
@@ -222,8 +224,8 @@ export const DischargePreviewDocument: React.FC<DischargePreviewDocumentProps> =
         />
         <InfoRow
           icon={<Fingerprint className="h-3.5 w-3.5" />}
-          label="Patient"
-          value={`ID: ${dischargeData.patient_id || 'N/A'}`}
+          label="Patient Number"
+          value={patientNumber}
         />
         <InfoRow
           icon={<Calendar className="h-3.5 w-3.5" />}
@@ -235,7 +237,7 @@ export const DischargePreviewDocument: React.FC<DischargePreviewDocumentProps> =
           label="Discharged By"
           value={dischargeData.discharged_by?.staff_name
             ? `Dr. ${dischargeData.discharged_by.staff_name}`
-            : 'N/A'}
+            : 'Pending'}
         />
       </div>
 

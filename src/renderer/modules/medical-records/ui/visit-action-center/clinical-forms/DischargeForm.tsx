@@ -383,7 +383,7 @@ export const DischargeForm: React.FC<DischargeFormProps> = ({
         isOpen={previewOpen}
         onClose={closePreview}
         dischargeData={dischargeData}
-        patientName={activePatient?.full_name || 'this patient'}
+        patientName={activePatient?.name || activePatient?.full_name || 'Unknown Patient'}
         initialAction={previewAction}
       />
     </>

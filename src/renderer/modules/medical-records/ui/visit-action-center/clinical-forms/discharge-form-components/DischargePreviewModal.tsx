@@ -19,7 +19,7 @@ export const DischargePreviewModal: React.FC<DischargePreviewModalProps> = ({
   isOpen,
   onClose,
   dischargeData,
-  patientName = 'this patient',
+  patientName = 'Unknown Patient',
   initialAction = 'preview',
   isLoading = false,
 }) => {
