@@ -154,7 +154,7 @@ export const Payments: React.FC<PaymentsProps> = ({ theme }) => {
   };
 
   const handleSubmitPayment = () => {
-    if (!reference.trim() || hasPendingProof || quoteLoading || !quote) return;
+    if (!file || hasPendingProof || quoteLoading || !quote) return;
     recordPayment.mutate({
       data: {
         amount: total,
