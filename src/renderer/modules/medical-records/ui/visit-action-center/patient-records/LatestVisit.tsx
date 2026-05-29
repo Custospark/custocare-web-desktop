@@ -11,7 +11,7 @@ import {
   Stethoscope,
   FileSpreadsheet,
 } from 'lucide-react';
-import { selectActiveVisitId, selectActiveVisitPatientId } from '../../../../../app/store/slices/visitSlice';
+import { selectActiveVisitId, selectActiveVisitPatientId, selectActiveVisitUuid } from '../../../../../app/store/slices/visitSlice';
 import AllergyForm from '../clinical-forms/AllergyForm';
 import ClinicalNotesForm from '../clinical-forms/ClinicalNotesForm';
 import VitalsForm from '../clinical-forms/VitalsForm';
@@ -21,7 +21,9 @@ import PrescriptionForm from '../clinical-forms/PrescriptionForm';
 import LabRequestForm from '../clinical-forms/LabRequestForm';
 import LabResultForm from '../clinical-forms/LabResultForm';
 import ClinicalTemplateForm from '../clinical-forms/ClinicalTemplateForm';
+import DischargeForm from '../clinical-forms/DischargeForm';
 import { CLINICAL_FORM_GRID_DEFINITIONS, type ClinicalFormModuleId } from './clinicalFormGridDefinitions';
+import { useGetDischargeData } from '../../../api/discharge/DischargeQueries';
 import { useGetAllergies } from '../../../api/allergies/AllergyQueries';
 import { useGetActiveVisitClinicalNotes } from '../../../api/clinical-notes/clinicalNoteQueries';
 import { useGetActiveVisitVitals } from '../../../api/vitals/vitalQueries';
@@ -60,6 +62,7 @@ interface FormOption {
     | typeof LabRequestForm
     | typeof LabResultForm
     | typeof ClinicalTemplateForm
+    | typeof DischargeForm
     | null;
   isAvailable: boolean;
   statusInfo?: {
@@ -99,6 +102,7 @@ const FORM_COMPONENT_BY_ID: Record<
   'lab-requests': LabRequestForm,
   'lab-results': LabResultForm,
   'clinical-template': ClinicalTemplateForm,
+  'discharge': DischargeForm,
 };
 
 /** Staff encounter forms — metadata shared with Patient Portal read-only grid via {@link CLINICAL_FORM_GRID_DEFINITIONS}. */
@@ -112,6 +116,7 @@ export const CurrentVisit: React.FC<CurrentVisitProps> = ({ theme = 'light' }) =
   const isDark = theme === 'dark';
   const activeVisitId = useSelector(selectActiveVisitId);
   const activePatientId = useSelector(selectActiveVisitPatientId);
+  const activeVisitUuid = useSelector(selectActiveVisitUuid);
 
   // State for selected form
   const [selectedForm, setSelectedForm] = useState<FormModule>(null);
@@ -174,6 +179,10 @@ export const CurrentVisit: React.FC<CurrentVisitProps> = ({ theme = 'light' }) =
     }
   );
 
+  const dischargeQuery = useGetDischargeData(activeVisitUuid, {
+    enabled: !!activeVisitUuid,
+  });
+
   const resolvedExistingPrescription = useMemo<Prescription | null>(() => {
     const prescriptions = prescriptionsQuery.data?.data ?? [];
     if (!prescriptions.length) return null;
@@ -232,6 +241,7 @@ export const CurrentVisit: React.FC<CurrentVisitProps> = ({ theme = 'light' }) =
       labRequests: getStatusInfo(!!activeLabRequestForOrders, 'Lab request', 'order lab tests'),
       labResults: getStatusInfo(labResultCount > 0, 'Lab result', 'enter lab results'),
       clinicalTemplate: getStatusInfo(hasClinicalNote, 'Clinical template', 'complete template notes'),
+      discharge: getStatusInfo(dischargeQuery.data?.data?.is_discharged ?? false, 'Discharge', 'process discharge'),
     };
   }, [
     activeLabRequestForOrders,
@@ -239,6 +249,7 @@ export const CurrentVisit: React.FC<CurrentVisitProps> = ({ theme = 'light' }) =
     allergiesQuery.data,
     consultationsQuery.data,
     diagnosesQuery.data,
+    dischargeQuery.data,
     labResultRequestQuery.data,
     notesQuery.data,
     resolvedExistingPrescription,
@@ -269,6 +280,8 @@ export const CurrentVisit: React.FC<CurrentVisitProps> = ({ theme = 'light' }) =
             return { ...form, statusInfo: moduleStatus.labResults };
           case 'clinical-template':
             return { ...form, statusInfo: moduleStatus.clinicalTemplate };
+          case 'discharge':
+            return { ...form, statusInfo: moduleStatus.discharge };
           default:
             return form;
         }

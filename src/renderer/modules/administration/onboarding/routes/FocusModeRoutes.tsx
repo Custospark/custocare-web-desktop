@@ -30,6 +30,9 @@ const LabRequestFocus = React.lazy(
 const LabResultFocus = React.lazy(
   () => import('../../../medical-records/ui/visit-action-center/clinical-forms/form-wrappers/LabResultFocus')
 );
+const DischargeFocus = React.lazy(
+  () => import('../../../medical-records/ui/visit-action-center/clinical-forms/form-wrappers/DischargeFocus')
+);
 const LatestVisit = React.lazy(
   () => import('../../../medical-records/ui/visit-action-center/patient-records/LatestVisit')
 );
@@ -87,6 +90,17 @@ export const FocusModeRoutes = ({ theme = 'light', patientName }: FocusModeRoute
       <FocusedModeLayout title={withPatientTitle('Patient Vitals')}>
         <Suspense fallback={<LoadingSkeleton variant="dashboard" theme={theme} />}>
           <VitalsFocus theme={theme} />
+        </Suspense>
+      </FocusedModeLayout>
+    }
+  />,
+  <Route
+    key="discharge-focus"
+    path={FOCUS_MODE_ROUTES.DISCHARGE_FOCUS}
+    element={
+      <FocusedModeLayout title={withPatientTitle('Discharge Summary')}>
+        <Suspense fallback={<LoadingSkeleton variant="dashboard" theme={theme} />}>
+          <DischargeFocus theme={theme} />
         </Suspense>
       </FocusedModeLayout>
     }

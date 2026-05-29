@@ -1140,3 +1140,37 @@ Separately, inventory ledger entries for refund/void stock restorations used the
 - `src/renderer/modules/medical-records/ui/visit-action-center/billing-space/forward-patient-components/ForwardingModeSection.tsx`
 - `src/renderer/modules/pharmacy/ui/dispensing/dispensing-medication/views/PatientQueue.tsx`
 
+---
+
+## ADR-2026-05-29-1: Discharge Form — Clinical Form Pattern, No Separate Entity
+
+**Status:** Accepted
+
+**Context:** Need a discharge form UI for clinicians to process patient discharges and generate discharge summaries.
+
+**Decision:**
+1. **No separate Discharge entity** — discharge data lives on the existing `visits` table. No new table, model, or relationships needed.
+2. **Frontend follows existing clinical form pattern** — Mode-based (idle/create/edit) with React Query hooks, BaseFormWrapper, BaseFormActions, sub-component directory, report launcher, and form grid tile registration.
+3. **New column** `discharge_diagnosis` (TEXT, nullable) added to `visits` table.
+
+**New Frontend Files:**
+- `api/discharge/DischargeTypes.ts` — Types and enums
+- `api/discharge/DischargeQueries.ts` — React Query hooks (useGetDischargeData, useCreateDischarge, useUpdateDischarge)
+- `DischargeForm.tsx` — Main orchestrator component
+- `DischargeEditor.tsx` — Form editor with all fields
+- `DischargeSummaryCard.tsx` — Read-only summary view
+- `DischargeEmptyState.tsx` — Empty/not-yet-discharged state
+- `DischargeHeader.tsx` — Status header
+- `DischargePreviewModal.tsx` / `DischargePreviewDocument.tsx` — Report preview
+- `DischargeFocus.tsx` — Focus mode wrapper
+- `DischargeReportLauncher.tsx` — Report launcher for discharge
+
+**Modified Frontend Files:**
+- `clinicalFormGridDefinitions.tsx` — Added 'discharge' tile
+- `clinical-reports/launchers/index.ts` — Added launcher export
+
+**Consequences:**
+- Discharge data is always accessible via the Visit model without joins
+- Follows same BaseFormWrapper/BaseFormActions pattern as other clinical forms
+- Registered in the clinical form grid and report launcher system
+

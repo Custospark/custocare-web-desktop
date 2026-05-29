@@ -10,7 +10,7 @@ export const FOCUS_MODE_ROUTES = {
   ALLERGY_FOCUS: '/clinical-care-focus/allergy',  
   VITALS_FOCUS: '/clinical-care-focus/vitals',  
   CONSULTATION_FOCUS: '/clinical-care-focus/consultations',  
-  
+  DISCHARGE_FOCUS: '/clinical-care-focus/discharge',
 
   CLINICAL_TEMPLATE_FOCUS: '/clinical-care-focus/clinical-template-focus',  
 

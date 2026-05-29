@@ -12,4 +12,5 @@ export { ConsultationReportLauncher } from './ConsultationReportLauncher';
 export { PrescriptionReportLauncher } from './PrescriptionReportLauncher';
 export { LabRequestReportLauncher } from './LabRequestReportLauncher';
 export { LabResultReportLauncher } from './LabResultReportLauncher';
+export { DischargeReportLauncher } from './DischargeReportLauncher';
 export type { ClinicalReportPortalContext } from './clinicalReportPortalContext';

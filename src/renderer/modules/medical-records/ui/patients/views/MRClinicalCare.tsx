@@ -14,10 +14,11 @@ import {
   Plus,
   Heart,
   AlertTriangle,
-  Users
+  Users,
+  UserMinus
 } from 'lucide-react';
 import { FOCUS_MODE_ROUTES } from '../../../../administration/onboarding/routes/focusModeRouteConstants';
-import { selectActiveVisitId, selectActiveVisitPatientId } from '../../../../../app/store/slices/visitSlice';
+import { selectActiveVisitId, selectActiveVisitPatientId, selectActiveVisitUuid } from '../../../../../app/store/slices/visitSlice';
 import { useGetAllergies } from '../../../api/allergies/AllergyQueries';
 import { useGetActiveVisitClinicalNotes } from '../../../api/clinical-notes/clinicalNoteQueries';
 import { useGetActiveVisitVitals } from '../../../api/vitals/vitalQueries';
@@ -28,6 +29,7 @@ import { PrescriptionStatus, type Prescription } from '../../../api/prescription
 import { useGetPrescriptionItems } from '../../../api/prescription-items/PrescriptionItemsQueries';
 import { useGetRequestWithItems, useGetRequestsByVisit } from '../../../api/lab/LabQueries';
 import { LabRequestStatus, type LabRequest } from '../../../api/lab/LabTypes';
+import { useGetDischargeData } from '../../../api/discharge/DischargeQueries';
 import { normalizeAllergyResponse } from '../../visit-action-center/clinical-forms/allergies-form-components';
 import { pickPrimaryClinicalNote } from '../../visit-action-center/clinical-forms/clinical-notes-form-components/clinicalNotesForm.utils';
 import { pickPrimaryVitals } from '../../visit-action-center/clinical-forms/vitals-form-components/vitalsForm.utils';
@@ -76,6 +78,7 @@ export const MRClinicalCare: React.FC<MRClinicalCareProps> = ({ theme = 'light' 
   const isDark = theme === 'dark';
   const activeVisitId = useSelector(selectActiveVisitId);
   const activePatientId = useSelector(selectActiveVisitPatientId);
+  const activeVisitUuid = useSelector(selectActiveVisitUuid);
 
   // Read initial tab from URL search params (e.g. ?tab=reports)
   const [searchQuery, setSearchQuery] = useState('');
@@ -135,6 +138,10 @@ export const MRClinicalCare: React.FC<MRClinicalCareProps> = ({ theme = 'light' 
       staleTime: 0,
     }
   );
+
+  const dischargeQuery = useGetDischargeData(activeVisitUuid, {
+    enabled: !!activeVisitUuid,
+  });
 
   const resolvedExistingPrescription = useMemo<Prescription | null>(() => {
     const prescriptions = prescriptionsQuery.data?.data ?? [];
@@ -224,6 +231,7 @@ export const MRClinicalCare: React.FC<MRClinicalCareProps> = ({ theme = 'light' 
       labRequests: getStatusInfo(!!activeLabRequestForOrders, 'Lab request', 'order lab tests'),
       labResults: getStatusInfo(labResultCount > 0, 'Lab result', 'enter lab results'),
       clinicalTemplates: getStatusInfo(hasClinicalNote, 'Clinical template', 'complete template notes'),
+      discharge: getStatusInfo(dischargeQuery.data?.data?.is_discharged ?? false, 'Discharge', 'process discharge'),
     };
   }, [
     activeLabRequestForOrders,
@@ -231,6 +239,7 @@ export const MRClinicalCare: React.FC<MRClinicalCareProps> = ({ theme = 'light' 
     allergiesQuery.data,
     consultationsQuery.data,
     diagnosesQuery.data,
+    dischargeQuery.data,
     labResultRequestQuery.data,
     notesQuery.data,
     resolvedExistingPrescription,
@@ -330,6 +339,16 @@ export const MRClinicalCare: React.FC<MRClinicalCareProps> = ({ theme = 'light' 
       actionPrefix: 'Add',
       statusInfo: moduleStatus.labResults,
       handler: () => navigate(FOCUS_MODE_ROUTES.LAB_RESULT_FOCUS)
+    },
+    { 
+      key: 'discharge', 
+      label: 'Discharge', 
+      icon: <UserMinus className="w-5 h-5" />, 
+      description: 'Process patient discharge and generate discharge summary',
+      category: 'Documentation',
+      actionPrefix: 'Add',
+      statusInfo: moduleStatus.discharge,
+      handler: () => navigate(FOCUS_MODE_ROUTES.DISCHARGE_FOCUS)
     },
   ], [moduleStatus, navigate]);
 

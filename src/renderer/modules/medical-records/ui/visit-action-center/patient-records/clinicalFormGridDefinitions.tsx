@@ -7,6 +7,7 @@ import {
   Heart,
   Microscope,
   Pill,
+  UserMinus,
   Users,
 } from 'lucide-react';
 
@@ -19,7 +20,8 @@ export type ClinicalFormModuleId =
   | 'prescriptions'
   | 'lab-requests'
   | 'lab-results'
-  | 'clinical-template';
+  | 'clinical-template'
+  | 'discharge';
 
 export interface ClinicalFormGridDefinition {
   id: ClinicalFormModuleId;
@@ -95,6 +97,13 @@ export const CLINICAL_FORM_GRID_DEFINITIONS: ClinicalFormGridDefinition[] = [
     label: 'Clinical Template',
     icon: <FileText className="h-5 w-5 text-slate-600 dark:text-slate-400" />,
     description: 'Fill out a predefined clinical template for quick patient documentation',
+    category: 'Documentation',
+  },
+  {
+    id: 'discharge',
+    label: 'Discharge',
+    icon: <UserMinus className="h-5 w-5 text-teal-600 dark:text-teal-400" />,
+    description: 'Process discharge and generate discharge summary',
     category: 'Documentation',
   },
 ];

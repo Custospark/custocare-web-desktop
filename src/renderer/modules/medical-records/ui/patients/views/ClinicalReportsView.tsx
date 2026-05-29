@@ -5,7 +5,7 @@ import {
   FileOutput, Eye, Search, X, ChevronRight,
 } from 'lucide-react';
 import { cn } from '../../../../../shared/utils/classNameUtils';
-import { selectActiveVisitId, selectActiveVisitPatientId } from '../../../../../app/store/slices/visitSlice';
+import { selectActiveVisitId, selectActiveVisitPatientId, selectActiveVisitUuid } from '../../../../../app/store/slices/visitSlice';
 import { useGetAllergies } from '../../../api/allergies/AllergyQueries';
 import { useGetActiveVisitClinicalNotes } from '../../../api/clinical-notes/clinicalNoteQueries';
 import { useGetActiveVisitVitals } from '../../../api/vitals/vitalQueries';
@@ -13,6 +13,7 @@ import { useGetActiveVisitDiagnoses } from '../../../api/diagnosis/diagnosisQuer
 import { useGetActiveVisitConsultations } from '../../../api/consultations/consultationQueries';
 import { useGetPatientPrescriptions } from '../../../api/prescription/PrescriptionQueries';
 import { useGetRequestsByVisit } from '../../../api/lab/LabQueries';
+import { useGetDischargeData } from '../../../api/discharge/DischargeQueries';
 import {
   AllergyReportLauncher,
   ClinicalNoteReportLauncher,
@@ -22,6 +23,7 @@ import {
   LabResultReportLauncher,
   PrescriptionReportLauncher,
   VitalsReportLauncher,
+  DischargeReportLauncher,
 } from '../../visit-action-center/clinical-forms/clinical-reports/launchers';
 
 interface ClinicalReportsViewProps {
@@ -44,7 +46,7 @@ interface ActionItem {
 
 interface ReportModalState {
   isOpen: boolean;
-  module: 'allergies' | 'clinical-notes' | 'vitals' | 'diagnoses' | 'consultations' | 'prescriptions' | 'lab-requests' | 'lab-results' | null;
+  module: 'allergies' | 'clinical-notes' | 'vitals' | 'diagnoses' | 'consultations' | 'prescriptions' | 'lab-requests' | 'lab-results' | 'discharge' | null;
   action: 'preview' | 'print' | 'download';
 }
 
@@ -59,6 +61,7 @@ export const ClinicalReportsView: React.FC<ClinicalReportsViewProps> = ({ theme 
   const isDark = theme === 'dark';
   const activeVisitId = useSelector(selectActiveVisitId);
   const activePatientId = useSelector(selectActiveVisitPatientId);
+  const activeVisitUuid = useSelector(selectActiveVisitUuid);
 
   const [reportModal, setReportModal] = useState<ReportModalState>({
     isOpen: false,
@@ -94,6 +97,10 @@ export const ClinicalReportsView: React.FC<ClinicalReportsViewProps> = ({ theme 
     enabled: labRequestsQuery.isFetched && !!activePatientId,
   });
 
+  const dischargeQuery = useGetDischargeData(activeVisitUuid, {
+    enabled: prescriptionsQuery.isFetched && !!activeVisitUuid,
+  });
+
   const moduleStatus = useMemo(() => ({
     vitals: { hasData: (vitalsQuery.data?.data ?? []).length > 0 },
     diagnoses: { hasData: (diagnosesQuery.data?.data ?? []).length > 0 },
@@ -103,7 +110,8 @@ export const ClinicalReportsView: React.FC<ClinicalReportsViewProps> = ({ theme 
     prescriptions: { hasData: (prescriptionsQuery.data?.data ?? []).length > 0 },
     labRequests: { hasData: (labRequestsQuery.data ?? []).length > 0 },
     labResults: { hasData: (labRequestsQuery.data ?? []).filter((r: { status: string }) => r.status === 'completed').length > 0 },
-  }), [vitalsQuery.data, diagnosesQuery.data, consultationsQuery.data, notesQuery.data, allergiesQuery.data, prescriptionsQuery.data, labRequestsQuery.data]);
+    discharge: { hasData: dischargeQuery.data?.data?.is_discharged ?? false },
+  }), [vitalsQuery.data, diagnosesQuery.data, consultationsQuery.data, notesQuery.data, allergiesQuery.data, prescriptionsQuery.data, labRequestsQuery.data, dischargeQuery.data]);
 
   const openReport = useCallback((
     module: ReportModalState['module'],
@@ -164,6 +172,12 @@ export const ClinicalReportsView: React.FC<ClinicalReportsViewProps> = ({ theme 
       description: 'Laboratory test results report', category: 'Diagnostics', actionPrefix: 'View',
       statusInfo: getReportStatusInfo(moduleStatus.labResults.hasData, 'Lab results report', 'enter lab results first'),
       handler: () => openReport('lab-results', 'preview'),
+    },
+    {
+      key: 'discharge-report', label: 'Discharge Report', icon: <FileOutput className="w-5 h-5" />,
+      description: 'Discharge summary document', category: 'Documentation', actionPrefix: 'View',
+      statusInfo: getReportStatusInfo(moduleStatus.discharge.hasData, 'Discharge report', 'process discharge first'),
+      handler: () => openReport('discharge', 'preview'),
     },
   ], [moduleStatus, openReport]);
 
@@ -313,6 +327,7 @@ export const ClinicalReportsView: React.FC<ClinicalReportsViewProps> = ({ theme 
       <PrescriptionReportLauncher isOpen={reportModal.isOpen && reportModal.module === 'prescriptions'} onClose={closeReport} initialAction={reportModal.action} theme={theme} />
       <LabRequestReportLauncher isOpen={reportModal.isOpen && reportModal.module === 'lab-requests'} onClose={closeReport} initialAction={reportModal.action} theme={theme} />
       <LabResultReportLauncher isOpen={reportModal.isOpen && reportModal.module === 'lab-results'} onClose={closeReport} initialAction={reportModal.action} theme={theme} />
+      <DischargeReportLauncher isOpen={reportModal.isOpen && reportModal.module === 'discharge'} onClose={closeReport} initialAction={reportModal.action} theme={theme} />
     </div>
   );
 };
