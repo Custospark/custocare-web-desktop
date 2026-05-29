@@ -1,11 +1,6 @@
 import {
-  CheckCircle2,
-  Clock3,
-  FileText,
   Pencil,
   Pill,
-  Route as RouteIcon,
-  ShieldAlert,
   Trash2,
 } from 'lucide-react';
 import { cn } from '../../../../../../shared/utils/classNameUtils';
@@ -78,15 +73,14 @@ export function PrescriptionMedicationsDataTable({
   return (
     <>
       <div className="hidden overflow-x-auto md:block">
-        <table className="w-full min-w-[980px] border-collapse">
+        <table className="w-full border-collapse">
           <thead>
             <tr className={cn('border-b', colors.border.primary)}>
               <th className={tableHeaderClass}>Medication</th>
-              <th className={tableHeaderClass}>Dose / Form</th>
-              <th className={tableHeaderClass}>Frequency / Duration</th>
+              <th className={tableHeaderClass}>Dosage</th>
+              <th className={tableHeaderClass}>Frequency</th>
               <th className={tableHeaderClass}>Route</th>
-              <th className={tableHeaderClass}>Refills / Substitution</th>
-              <th className={tableHeaderClass}>Clinical Instructions</th>
+              <th className={tableHeaderClass}>Duration</th>
               {allowMedicationMutations && (
                 <th className={cn(tableHeaderClass, 'text-center')}>Actions</th>
               )}
@@ -96,137 +90,35 @@ export function PrescriptionMedicationsDataTable({
           <tbody>
             {medications.map((med) => (
               <tr key={med.id} className={rowClass}>
-                <td className="px-4 py-4">
-                  <div className="flex flex-col gap-2">
-                    <div className="flex items-start gap-2">
-                      <span className="mt-0.5 text-lg" aria-hidden="true">
-                        {getDosageFormIcon(med.dosage_form)}
-                      </span>
-
-                      <div className="min-w-0">
-                        <div className={cn('font-semibold', colors.text.primary)}>
-                          {med.medication_name}
-                        </div>
-
-                        <div className="mt-1 flex flex-wrap gap-1.5">
-                          {med.strength && <span className={badgeClass}>{med.strength}</span>}
-                          {med.brand_name && <span className={badgeClass}>{med.brand_name}</span>}
-                        </div>
-                      </div>
-                    </div>
+                <td className="px-4 py-3">
+                  <div className={cn('font-medium', colors.text.primary)}>
+                    {med.medication_name}
                   </div>
                 </td>
-
-                <td className="px-4 py-4">
-                  <div className="space-y-1.5">
-                    <div className="flex items-center gap-2">
-                      <Pill
-                        className={cn(
-                          'h-4 w-4 flex-shrink-0',
-                          isDark ? 'text-emerald-300' : 'text-emerald-700'
-                        )}
-                      />
-                      <span className={cn('text-sm font-medium', colors.text.primary)}>
-                        {formatDosage(med.dosage_quantity, med.dosage_unit)}
-                      </span>
-                    </div>
-
-                    {med.dosage_form && (
-                      <div className={cn('text-sm', colors.text.secondary)}>
-                        Form: {med.dosage_form}
-                      </div>
-                    )}
-                  </div>
+                <td className="px-4 py-3">
+                  <span className={cn('text-sm', colors.text.primary)}>
+                    {formatDosage(med.dosage_quantity, med.dosage_unit)}
+                  </span>
                 </td>
-
-                <td className="px-4 py-4">
-                  <div className="space-y-1.5">
-                    <div className="flex items-center gap-2">
-                      <Clock3
-                        className={cn(
-                          'h-4 w-4 flex-shrink-0',
-                          isDark ? 'text-amber-300' : 'text-amber-700'
-                        )}
-                      />
-                      <span className={cn('text-sm font-medium', colors.text.primary)}>
-                        {med.frequency || '—'}
-                      </span>
-                    </div>
-
-                    <div className={cn('text-sm', colors.text.secondary)}>
-                      {med.duration_value && med.duration_unit
-                        ? formatDuration(med.duration_value, med.duration_unit)
-                        : '—'}
-                    </div>
-                  </div>
+                <td className="px-4 py-3">
+                  <span className={cn('text-sm', colors.text.primary)}>
+                    {med.frequency || '—'}
+                  </span>
                 </td>
-
-                <td className="px-4 py-4">
-                  <div className="flex items-center gap-2">
-                    <RouteIcon
-                      className={cn(
-                        'h-4 w-4 flex-shrink-0',
-                        isDark ? 'text-cyan-300' : 'text-cyan-700'
-                      )}
-                    />
-                    <span className={cn('text-sm font-medium', colors.text.primary)}>
-                      {med.route || '—'}
-                    </span>
-                  </div>
+                <td className="px-4 py-3">
+                  <span className={cn('text-sm', colors.text.primary)}>
+                    {med.route || '—'}
+                  </span>
                 </td>
-
-                <td className="px-4 py-4">
-                  <div className="space-y-1.5">
-                    <div className="flex items-center gap-2">
-                      <CheckCircle2
-                        className={cn(
-                          'h-4 w-4 flex-shrink-0',
-                          isDark ? 'text-violet-300' : 'text-violet-700'
-                        )}
-                      />
-                      <span className={cn('text-sm font-medium', colors.text.primary)}>
-                        {med.refills ?? 0}
-                      </span>
-                    </div>
-
-                    <div className={cn('text-sm', colors.text.secondary)}>
-                      {med.substitution || '—'}
-                    </div>
-                  </div>
+                <td className="px-4 py-3">
+                  <span className={cn('text-sm', colors.text.primary)}>
+                    {med.duration_value && med.duration_unit
+                      ? formatDuration(med.duration_value, med.duration_unit)
+                      : '—'}
+                  </span>
                 </td>
-
-                <td className="px-4 py-4">
-                  <div className="max-w-sm space-y-2">
-                    {med.instructions ? (
-                      <div className="flex items-start gap-2">
-                        <FileText
-                          className={cn(
-                            'mt-0.5 h-4 w-4 flex-shrink-0',
-                            isDark ? 'text-indigo-300' : 'text-indigo-700'
-                          )}
-                        />
-                        <span className={cn('text-sm leading-5', colors.text.primary)}>
-                          {med.instructions}
-                        </span>
-                      </div>
-                    ) : (
-                      <span className={cn('text-sm', colors.text.secondary)}>—</span>
-                    )}
-
-                    {med.as_needed && (
-                      <div className="flex items-start gap-2">
-                        <ShieldAlert className="mt-0.5 h-4 w-4 flex-shrink-0 text-amber-500" />
-                        <span className={cn('text-sm leading-5', colors.text.primary)}>
-                          PRN
-                          {med.as_needed_reason ? ` — ${med.as_needed_reason}` : ''}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                </td>
-
                 {allowMedicationMutations && (
-                  <td className="px-4 py-4 text-center">
+                  <td className="px-4 py-3 text-center">
                     <div className="flex items-center justify-center gap-1">
                       <button
                         type="button"
