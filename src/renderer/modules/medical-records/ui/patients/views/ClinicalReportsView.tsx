@@ -11,9 +11,17 @@ import { useGetActiveVisitClinicalNotes } from '../../../api/clinical-notes/clin
 import { useGetActiveVisitVitals } from '../../../api/vitals/vitalQueries';
 import { useGetActiveVisitDiagnoses } from '../../../api/diagnosis/diagnosisQueries';
 import { useGetActiveVisitConsultations } from '../../../api/consultations/consultationQueries';
-import { useGetPatientPrescriptions } from '../../../api/prescription/PrescriptionQueries';
-import { useGetRequestsByVisit } from '../../../api/lab/LabQueries';
+import { useGetPatientPrescriptions, useGetPrescriptionById } from '../../../api/prescription/PrescriptionQueries';
+import { useGetPrescriptionItems } from '../../../api/prescription-items/PrescriptionItemsQueries';
+import { useGetRequestWithItems, useGetRequestsByVisit } from '../../../api/lab/LabQueries';
+import { LabRequestStatus, type LabRequest } from '../../../api/lab/LabTypes';
+import { PrescriptionStatus, type Prescription } from '../../../api/prescription/PrescriptionTypes';
 import { useGetDischargeData } from '../../../api/discharge/DischargeQueries';
+import { normalizeAllergyResponse } from '../../visit-action-center/clinical-forms/allergies-form-components';
+import { pickPrimaryClinicalNote } from '../../visit-action-center/clinical-forms/clinical-notes-form-components/clinicalNotesForm.utils';
+import { pickPrimaryVitals } from '../../visit-action-center/clinical-forms/vitals-form-components/vitalsForm.utils';
+import { pickPrimaryDiagnosis } from '../../visit-action-center/clinical-forms/diagnoses-form-components/diagnosesForm.utils';
+import { pickPrimaryConsultation } from '../../visit-action-center/clinical-forms/consultations-form-components/consultationsForm.utils';
 import {
   AllergyReportLauncher,
   ClinicalNoteReportLauncher,
@@ -72,19 +80,9 @@ export const ClinicalReportsView: React.FC<ClinicalReportsViewProps> = ({ theme 
   const [searchQuery, setSearchQuery] = useState('');
 
   const vitalsQuery = useGetActiveVisitVitals();
-
-  const notesQuery = useGetActiveVisitClinicalNotes({
-    enabled: vitalsQuery.isFetched,
-  });
-
-  const diagnosesQuery = useGetActiveVisitDiagnoses({
-    enabled: notesQuery.isFetched,
-  });
-
-  const consultationsQuery = useGetActiveVisitConsultations({
-    enabled: diagnosesQuery.isFetched,
-  });
-
+  const notesQuery = useGetActiveVisitClinicalNotes({ enabled: vitalsQuery.isFetched });
+  const diagnosesQuery = useGetActiveVisitDiagnoses({ enabled: notesQuery.isFetched });
+  const consultationsQuery = useGetActiveVisitConsultations({ enabled: diagnosesQuery.isFetched });
   const allergiesQuery = useGetAllergies(activePatientId ?? '', {}, {
     enabled: consultationsQuery.isFetched && !!activePatientId,
   });
@@ -97,21 +95,94 @@ export const ClinicalReportsView: React.FC<ClinicalReportsViewProps> = ({ theme 
     enabled: labRequestsQuery.isFetched && !!activePatientId,
   });
 
-  const dischargeQuery = useGetDischargeData(activeVisitUuid, {
-    enabled: prescriptionsQuery.isFetched && !!activeVisitUuid,
+  const visitRequests = useMemo(() => labRequestsQuery.data ?? [], [labRequestsQuery.data]);
+
+  const activeLabRequestForOrders = useMemo<LabRequest | null>(() => {
+    if (!visitRequests.length) return null;
+    const pool = visitRequests.filter((r) =>
+      [LabRequestStatus.PENDING, LabRequestStatus.IN_PROGRESS].includes(r.status)
+    );
+    return (pool.length ? pool : visitRequests).sort(
+      (a, b) => new Date(b.updated_at ?? b.created_at).getTime() - new Date(a.updated_at ?? a.created_at).getTime()
+    )[0] ?? null;
+  }, [visitRequests]);
+
+  const activeLabRequestForResults = useMemo<LabRequest | null>(() => {
+    if (!visitRequests.length) return null;
+    const pool = visitRequests.filter((r) =>
+      [LabRequestStatus.IN_PROGRESS, LabRequestStatus.COMPLETED].includes(r.status)
+    );
+    return (pool.length ? pool : visitRequests).sort(
+      (a, b) => new Date(b.updated_at ?? b.created_at).getTime() - new Date(a.updated_at ?? a.created_at).getTime()
+    )[0] ?? null;
+  }, [visitRequests]);
+
+  const labResultRequestQuery = useGetRequestWithItems(activeLabRequestForResults?.request_uuid ?? '', {
+    enabled: !!activeLabRequestForResults?.request_uuid,
+    refetchOnMount: 'always', refetchOnWindowFocus: false, staleTime: 0,
   });
 
-  const moduleStatus = useMemo(() => ({
-    vitals: { hasData: (vitalsQuery.data?.data ?? []).length > 0 },
-    diagnoses: { hasData: (diagnosesQuery.data?.data ?? []).length > 0 },
-    consultations: { hasData: (consultationsQuery.data?.data ?? []).length > 0 },
-    clinicalNotes: { hasData: (notesQuery.data?.data ?? []).length > 0 },
-    allergies: { hasData: ((allergiesQuery.data as { data?: unknown[] })?.data?.length ?? 0) > 0 },
-    prescriptions: { hasData: (prescriptionsQuery.data?.data ?? []).length > 0 },
-    labRequests: { hasData: (labRequestsQuery.data ?? []).length > 0 },
-    labResults: { hasData: (labRequestsQuery.data ?? []).filter((r: { status: string }) => r.status === 'completed').length > 0 },
-    discharge: { hasData: dischargeQuery.data?.data?.is_discharged ?? false },
-  }), [vitalsQuery.data, diagnosesQuery.data, consultationsQuery.data, notesQuery.data, allergiesQuery.data, prescriptionsQuery.data, labRequestsQuery.data, dischargeQuery.data]);
+  const resolvedExistingPrescription = useMemo<Prescription | null>(() => {
+    const list = prescriptionsQuery.data?.data ?? [];
+    if (!list.length) return null;
+    const drafts = list.filter((item) => item.status === PrescriptionStatus.DRAFT);
+    return (drafts.length ? drafts : list).sort(
+      (a, b) => new Date(b.updated_at || b.created_at).getTime() - new Date(a.updated_at || a.created_at).getTime()
+    )[0] ?? null;
+  }, [prescriptionsQuery.data]);
+
+  const selectedPrescriptionId = resolvedExistingPrescription?.id ?? 0;
+  const selectedPrescriptionQuery = useGetPrescriptionById(selectedPrescriptionId, {
+    enabled: !!selectedPrescriptionId, refetchOnMount: true, refetchOnWindowFocus: false, staleTime: 0,
+  });
+  const selectedPrescriptionItemsQuery = useGetPrescriptionItems(selectedPrescriptionId, {
+    enabled: !!selectedPrescriptionId, refetchOnMount: true, refetchOnWindowFocus: false, staleTime: 0,
+  });
+
+  const dischargeQuery = useGetDischargeData(activeVisitUuid, {
+    enabled: !!activeVisitUuid,
+  });
+
+  const moduleStatus = useMemo(() => {
+    const normalizedAllergies = normalizeAllergyResponse(allergiesQuery.data);
+    const notesList = notesQuery.data?.data ?? [];
+    const vitalsList = vitalsQuery.data?.data ?? [];
+    const diagnosesList = diagnosesQuery.data?.data ?? [];
+    const consultationsList = consultationsQuery.data?.data ?? [];
+    const currentPrescription = selectedPrescriptionQuery.data?.data ?? resolvedExistingPrescription;
+    const prescriptionItems = selectedPrescriptionItemsQuery.data?.data ?? [];
+    const raw = labResultRequestQuery.data;
+    const labResultRequest = raw && typeof raw === 'object' && 'request_uuid' in raw
+      ? (raw as LabRequest)
+      : activeLabRequestForResults;
+    const labResultCount = labResultRequest?.items?.reduce(
+      (sum, item) => sum + (Array.isArray(item.results) ? item.results.length : 0), 0
+    ) ?? 0;
+
+    const hasClinicalNote = !!pickPrimaryClinicalNote(notesList);
+    const hasVitals = !!pickPrimaryVitals(vitalsList);
+    const hasDiagnosis = !!pickPrimaryDiagnosis(diagnosesList);
+    const hasConsultation = !!pickPrimaryConsultation(consultationsList);
+    const hasPrescription = !!currentPrescription || prescriptionItems.length > 0;
+
+    return {
+      allergies: { hasData: normalizedAllergies.allergies.length > 0 },
+      clinicalNotes: { hasData: hasClinicalNote },
+      vitals: { hasData: hasVitals },
+      diagnoses: { hasData: hasDiagnosis },
+      consultations: { hasData: hasConsultation },
+      prescriptions: { hasData: hasPrescription },
+      labRequests: { hasData: !!activeLabRequestForOrders },
+      labResults: { hasData: labResultCount > 0 },
+      discharge: { hasData: dischargeQuery.data?.data?.is_discharged ?? false },
+    };
+  }, [
+    allergiesQuery.data, consultationsQuery.data, diagnosesQuery.data,
+    notesQuery.data, vitalsQuery.data, resolvedExistingPrescription,
+    selectedPrescriptionItemsQuery.data?.data, selectedPrescriptionQuery.data?.data,
+    activeLabRequestForOrders, activeLabRequestForResults, labResultRequestQuery.data,
+    dischargeQuery.data,
+  ]);
 
   const openReport = useCallback((
     module: ReportModalState['module'],
