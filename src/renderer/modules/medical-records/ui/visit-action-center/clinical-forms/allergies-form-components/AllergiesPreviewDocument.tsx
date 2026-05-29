@@ -17,13 +17,7 @@ import {
 } from 'lucide-react';
 import { AllergySeverity, type Allergy } from '../../../../api/allergies/AllergyTypes';
 import type { RootState } from '../../../../../../app/store/rootReducer';
-import custocareLogo from '../../../../../../shared/assets/continuousLogoLight.png';
-import { useGetFacilityIdentity } from '../../../../api/facility/FacilityQueries';
-import { cn } from '../../../../../../shared/utils/classNameUtils';
-import {
-  formatDate,
-  getSeverityLabel,
-} from './allergiesForm.utils';
+
 
 // Helper component for info rows
 const InfoRow: React.FC<{
@@ -347,12 +341,12 @@ export const AllergiesPreviewDocument: React.FC<AllergiesPreviewDocumentProps> =
           in the full clinical context by an authorized healthcare professional.
         </p>
 
-        <div className="mt-3 flex items-center justify-center gap-2">
-          <span className="text-[10px] font-medium tracking-wide text-gray-400 uppercase">Powered by</span>
-          <img src={custocareLogo} alt="Custocare" className="h-5 w-auto" />
-          <span className="text-[10px] text-gray-400">—</span>
-          <span className="text-[10px] text-gray-400">Continuous Care. Clinical Excellence.</span>
-        </div>
+        <p className="mt-3 text-[11px] font-semibold text-gray-700">
+          Custocare
+        </p>
+        <p className="text-[10px] italic text-gray-400">
+          &ldquo;Continuous Care. Clinical Excellence.&rdquo;
+        </p>
 
         <p className="mt-3 text-[10px] font-mono text-gray-500">
           PRINT TIME:{' '}
