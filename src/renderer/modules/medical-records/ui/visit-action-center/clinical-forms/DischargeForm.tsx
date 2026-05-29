@@ -205,25 +205,23 @@ export const DischargeForm: React.FC<DischargeFormProps> = ({
 
   const handleApplyTemplateSelection = useCallback(
     (template: ClinicalTemplate) => {
+      if (!template) return;
       setFormData((prev) => ({
         ...prev,
         dischargeDiagnosis: template.default_diagnosis || prev.dischargeDiagnosis,
         dischargeInstructions: template.patient_instructions || prev.dischargeInstructions,
+        dischargeMedications: [
+          ...prev.dischargeMedications,
+          ...(template.default_medications || []).map((med, idx) => ({
+            tempId: `${Date.now()}-${idx}`,
+            name: med.medication_name || '',
+            dosage: med.dosage_quantity ? String(med.dosage_quantity) + (med.dosage_unit ? ' ' + med.dosage_unit : '') : '',
+            frequency: med.frequency || '',
+            route: med.route || 'oral',
+            durationDays: med.duration_value || null,
+          })),
+        ],
       }));
-      if (template.default_medications?.length) {
-        const newMeds = template.default_medications.map((med, idx) => ({
-          tempId: `${Date.now()}-${idx}`,
-          name: med.medication_name,
-          dosage: med.dosage_quantity ? `${med.dosage_quantity} ${med.dosage_unit}` : '',
-          frequency: med.frequency,
-          route: med.route || 'oral',
-          durationDays: med.duration_value || null,
-        }));
-        setFormData((prev) => ({
-          ...prev,
-          dischargeMedications: [...prev.dischargeMedications, ...newMeds],
-        }));
-      }
       setShowTemplateModal(false);
       setTemplateSearch('');
     },
