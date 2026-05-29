@@ -424,7 +424,7 @@ export const Payments: React.FC<PaymentsProps> = ({ theme }) => {
             </div>
 
             <div className={cn('px-6 py-4 border-t', isDark ? 'border-gray-800' : 'border-gray-200')}>
-              <h3 className={cn('font-semibold text-sm mb-3', isDark ? 'text-gray-200' : 'text-gray-800')}>Upload Proof of Payment</h3>
+              <h3 className={cn('font-semibold text-sm mb-3', isDark ? 'text-gray-200' : 'text-gray-800')}>Upload Proof of Payment <span className="text-red-500">*</span></h3>
               {hasPendingProof && (
                 <div className={cn('mb-3 rounded-lg border px-4 py-3 text-sm', isDark ? 'border-amber-800 bg-amber-900/20 text-amber-200' : 'border-amber-200 bg-amber-50 text-amber-900')}>
                   A payment proof is already pending review. You can submit again only after it is approved or rejected.
@@ -483,7 +483,7 @@ export const Payments: React.FC<PaymentsProps> = ({ theme }) => {
                 <button
                   type="button"
                   onClick={handleSubmitPayment}
-                  disabled={!reference.trim() || recordPayment.isPending || !canSubmitProof || quoteLoading || !quote}
+                  disabled={!file || recordPayment.isPending || !canSubmitProof || quoteLoading || !quote}
                   className={cn(
                     'w-full py-3 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2',
                     'bg-gradient-to-r from-blue-600 to-emerald-600 text-white shadow-lg hover:shadow-xl hover:scale-[1.02]',
