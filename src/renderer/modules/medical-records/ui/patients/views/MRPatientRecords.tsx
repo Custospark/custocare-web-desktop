@@ -5,16 +5,21 @@ import { useSelector } from 'react-redux';
 import { motion } from 'framer-motion';
 import { Clock, History, Eye, FileText, ChevronRight, Activity, Stethoscope, AlertCircle } from 'lucide-react';
 import { FOCUS_MODE_ROUTES } from '../../../../administration/onboarding/routes/focusModeRouteConstants';
-import { selectActiveVisitId, selectActiveVisitPatientId } from '../../../../../app/store/slices/visitSlice';
+import { selectActiveVisitId, selectActiveVisitPatientId, selectActiveVisitUuid } from '../../../../../app/store/slices/visitSlice';
 
-// Import queries for status indicators
-import { usePatientMedicalHistory } from '../../../api/patient-medical-history/patientMedicalHistoryQueries';
-import {
-  pickLatestVisitId,
-  filterMedicalHistoryPayloadByVisitId,
-} from '../../../api/patient-medical-history/patientMedicalHistoryVisitFilter';
 import { useGetAllergies } from '../../../api/allergies/AllergyQueries';
+import { useGetActiveVisitClinicalNotes } from '../../../api/clinical-notes/clinicalNoteQueries';
+import { useGetActiveVisitVitals } from '../../../api/vitals/vitalQueries';
+import { useGetActiveVisitDiagnoses } from '../../../api/diagnosis/diagnosisQueries';
+import { useGetActiveVisitConsultations } from '../../../api/consultations/consultationQueries';
+import { useGetVisitPrescriptions } from '../../../api/prescription/PrescriptionQueries';
+import { useGetRequestsByVisit } from '../../../api/lab/LabQueries';
+import { useGetDischargeData } from '../../../api/discharge/DischargeQueries';
 import { normalizeAllergyResponse } from '../../visit-action-center/clinical-forms/allergies-form-components';
+import { pickPrimaryClinicalNote } from '../../visit-action-center/clinical-forms/clinical-notes-form-components/clinicalNotesForm.utils';
+import { pickPrimaryVitals } from '../../visit-action-center/clinical-forms/vitals-form-components/vitalsForm.utils';
+import { pickPrimaryDiagnosis } from '../../visit-action-center/clinical-forms/diagnoses-form-components/diagnosesForm.utils';
+import { pickPrimaryConsultation } from '../../visit-action-center/clinical-forms/consultations-form-components/consultationsForm.utils';
 
 export type MRPatientRecordsPresentation = 'clinical-encounter' | 'nursing' | 'laboratory' | 'ambulance' | 'referral';
 
@@ -267,16 +272,17 @@ export const MRPatientRecords: React.FC<MRPatientRecordsProps> = ({
   const copy = presentationCopy[presentation];
   const activeVisitId = useSelector(selectActiveVisitId);
   const activePatientId = useSelector(selectActiveVisitPatientId);
+  const activeVisitUuid = useSelector(selectActiveVisitUuid);
 
-  // Fetch data for status indicators
-  const patientIdNum = Number(activePatientId);
-  const medicalHistoryQuery = usePatientMedicalHistory(patientIdNum, {
-    enabled: patientIdNum > 0,
-  });
-
-  const allergiesQuery = useGetAllergies(activePatientId ?? '', {}, {
-    enabled: !!activePatientId,
-  });
+  // Fetch live data matching the form grid in LatestVisit
+  const notesQuery = useGetActiveVisitClinicalNotes({ enabled: !!activeVisitId });
+  const vitalsQuery = useGetActiveVisitVitals({ enabled: !!activeVisitId });
+  const diagnosesQuery = useGetActiveVisitDiagnoses({ enabled: !!activeVisitId });
+  const consultationsQuery = useGetActiveVisitConsultations({ enabled: !!activeVisitId });
+  const allergiesQuery = useGetAllergies(activePatientId ?? '', {}, { enabled: !!activePatientId });
+  const prescriptionsQuery = useGetVisitPrescriptions(Number(activeVisitId ?? 0), Number(activePatientId ?? 0), { enabled: !!activeVisitId });
+  const labRequestsQuery = useGetRequestsByVisit(Number(activeVisitId ?? 0), { enabled: !!activeVisitId });
+  const dischargeQuery = useGetDischargeData(activeVisitUuid, { enabled: !!activeVisitUuid });
 
   const colors = {
     bg: {
@@ -288,26 +294,36 @@ export const MRPatientRecords: React.FC<MRPatientRecordsProps> = ({
     },
   };
 
-  // Determine latest visit status — scoped to latest visit only (allergies patient-scoped)
+  // Determine latest visit status — using same detection as the form grid in LatestVisit
   const latestVisitStatus = useMemo(() => {
-    const mh = medicalHistoryQuery.data;
-    if (!mh) return { hasData: false, message: 'No clinical data recorded' };
-
-    const latestId = pickLatestVisitId(mh.visits);
-    const visitScoped = latestId != null ? filterMedicalHistoryPayloadByVisitId(mh, latestId) : null;
-
+    const notesList = notesQuery.data?.data ?? [];
+    const vitalsList = vitalsQuery.data?.data ?? [];
+    const diagnosesList = diagnosesQuery.data?.data ?? [];
+    const consultationsList = consultationsQuery.data?.data ?? [];
     const normalizedAllergies = normalizeAllergyResponse(allergiesQuery.data);
+    const prescriptionsList = prescriptionsQuery.data?.data ?? [];
+    const labRequestsList = labRequestsQuery.data ?? [];
+    const isDischarged = dischargeQuery.data?.data?.is_discharged ?? false;
+
+    const hasClinicalNote = !!pickPrimaryClinicalNote(notesList);
+    const hasVitals = !!pickPrimaryVitals(vitalsList);
+    const hasDiagnosis = !!pickPrimaryDiagnosis(diagnosesList);
+    const hasConsultation = !!pickPrimaryConsultation(consultationsList);
     const hasAllergies = normalizedAllergies.allergies.length > 0;
+    const hasPrescription = prescriptionsList.length > 0;
+    const hasLabRequest = labRequestsList.length > 0;
+    const hasLabResult = labRequestsList.filter((r: { status: string }) => r.status === 'completed').length > 0;
 
     const categories = [
-      { name: 'Clinical Notes',    hasData: (visitScoped?.clinical_notes?.length  || 0) > 0 },
-      { name: 'Diagnoses',         hasData: (visitScoped?.diagnoses?.length      || 0) > 0 },
-      { name: 'Consultations',     hasData: (visitScoped?.consultations?.length  || 0) > 0 },
-      { name: 'Vitals',            hasData: (visitScoped?.vitals?.length         || 0) > 0 },
       { name: 'Allergies',         hasData: hasAllergies },
-      { name: 'Prescriptions',     hasData: (visitScoped?.prescriptions?.length  || 0) > 0 },
-      { name: 'Lab Requests',      hasData: (visitScoped?.lab_requests?.length   || 0) > 0 },
-      { name: 'Lab Results',       hasData: (visitScoped?.lab_results?.length    || 0) > 0 },
+      { name: 'Clinical Notes',    hasData: hasClinicalNote },
+      { name: 'Vitals',            hasData: hasVitals },
+      { name: 'Diagnoses',         hasData: hasDiagnosis },
+      { name: 'Consultations',     hasData: hasConsultation },
+      { name: 'Prescriptions',     hasData: hasPrescription },
+      { name: 'Lab Requests',      hasData: hasLabRequest },
+      { name: 'Lab Results',       hasData: hasLabResult },
+      { name: 'Discharge',         hasData: isDischarged },
     ];
     const documentedCount = categories.filter(c => c.hasData).length;
     const total = categories.length;
@@ -322,30 +338,19 @@ export const MRPatientRecords: React.FC<MRPatientRecordsProps> = ({
       return { hasData: false, message: 'No clinical data recorded' };
     }
     return { hasData: false, message: 'No patient selected' };
-  }, [activePatientId, medicalHistoryQuery.data, allergiesQuery.data]);
+  }, [
+    activePatientId, notesQuery.data, vitalsQuery.data, diagnosesQuery.data,
+    consultationsQuery.data, allergiesQuery.data, prescriptionsQuery.data,
+    labRequestsQuery.data, dischargeQuery.data,
+  ]);
 
   // Determine medical history status
   const medicalHistoryStatus = useMemo(() => {
-    const mh = medicalHistoryQuery.data;
-    const hasAnyData = [
-      (mh?.clinical_notes?.length  || 0) > 0,
-      (mh?.diagnoses?.length       || 0) > 0,
-      (mh?.consultations?.length   || 0) > 0,
-      (mh?.vitals?.length          || 0) > 0,
-      (mh?.allergies?.length       || 0) > 0,
-      (mh?.prescriptions?.length   || 0) > 0,
-      (mh?.lab_requests?.length    || 0) > 0,
-      (mh?.lab_results?.length     || 0) > 0,
-    ].some(Boolean);
-
     if (activePatientId) {
-      if (hasAnyData) {
-        return { hasData: true, message: 'Historical data exists' };
-      }
-      return { hasData: false, message: 'No historical data recorded' };
+      return { hasData: true, message: 'Historical data exists' };
     }
     return { hasData: false, message: 'No patient selected' };
-  }, [activePatientId, medicalHistoryQuery.data]);
+  }, [activePatientId]);
 
   // Handler for Latest Visit
   const handleLatestVisit = useCallback(() => {
