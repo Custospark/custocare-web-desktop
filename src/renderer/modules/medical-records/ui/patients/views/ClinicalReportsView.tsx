@@ -11,7 +11,7 @@ import { useGetActiveVisitClinicalNotes } from '../../../api/clinical-notes/clin
 import { useGetActiveVisitVitals } from '../../../api/vitals/vitalQueries';
 import { useGetActiveVisitDiagnoses } from '../../../api/diagnosis/diagnosisQueries';
 import { useGetActiveVisitConsultations } from '../../../api/consultations/consultationQueries';
-import { useGetPatientPrescriptions, useGetPrescriptionById } from '../../../api/prescription/PrescriptionQueries';
+import { useGetVisitPrescriptions, useGetPrescriptionById } from '../../../api/prescription/PrescriptionQueries';
 import { useGetPrescriptionItems } from '../../../api/prescription-items/PrescriptionItemsQueries';
 import { useGetRequestWithItems, useGetRequestsByVisit } from '../../../api/lab/LabQueries';
 import { LabRequestStatus, type LabRequest } from '../../../api/lab/LabTypes';
@@ -79,20 +79,20 @@ export const ClinicalReportsView: React.FC<ClinicalReportsViewProps> = ({ theme 
 
   const [searchQuery, setSearchQuery] = useState('');
 
-  const vitalsQuery = useGetActiveVisitVitals();
-  const notesQuery = useGetActiveVisitClinicalNotes({ enabled: vitalsQuery.isFetched });
-  const diagnosesQuery = useGetActiveVisitDiagnoses({ enabled: notesQuery.isFetched });
-  const consultationsQuery = useGetActiveVisitConsultations({ enabled: diagnosesQuery.isFetched });
+  const vitalsQuery = useGetActiveVisitVitals({ enabled: !!activeVisitId });
+  const notesQuery = useGetActiveVisitClinicalNotes({ enabled: !!activeVisitId });
+  const diagnosesQuery = useGetActiveVisitDiagnoses({ enabled: !!activeVisitId });
+  const consultationsQuery = useGetActiveVisitConsultations({ enabled: !!activeVisitId });
   const allergiesQuery = useGetAllergies(activePatientId ?? '', {}, {
-    enabled: consultationsQuery.isFetched && !!activePatientId,
+    enabled: !!activePatientId,
   });
 
   const labRequestsQuery = useGetRequestsByVisit(Number(activeVisitId ?? 0), {
-    enabled: allergiesQuery.isFetched && !!activeVisitId,
+    enabled: !!activeVisitId,
   });
 
-  const prescriptionsQuery = useGetPatientPrescriptions(Number(activePatientId ?? 0), [], {
-    enabled: labRequestsQuery.isFetched && !!activePatientId,
+  const prescriptionsQuery = useGetVisitPrescriptions(Number(activeVisitId ?? 0), Number(activePatientId ?? 0), {
+    enabled: !!activeVisitId,
   });
 
   const visitRequests = useMemo(() => labRequestsQuery.data ?? [], [labRequestsQuery.data]);
