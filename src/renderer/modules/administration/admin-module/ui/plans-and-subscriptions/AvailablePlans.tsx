@@ -91,11 +91,7 @@ export const AvailablePlans: React.FC<AvailablePlansProps> = ({ theme }) => {
 
   const isLoading = plansLoading || subLoading;
   const plans = plansResponse?.data || [];
-  const rawSubscription = subscriptionResponse?.data;
-  // Treat cancelled, suspended, past_due as no subscription — fresh start
-  const subscription = rawSubscription && (rawSubscription.status === 'cancelled' || rawSubscription.status === 'suspended' || rawSubscription.status === 'past_due')
-    ? null
-    : rawSubscription;
+  const subscription = subscriptionResponse?.data;
 
   const { restore: restoreFacilityFunctionality } = useRestoreFacilityFunctionality(
     subscription,
@@ -639,6 +635,17 @@ export const AvailablePlans: React.FC<AvailablePlansProps> = ({ theme }) => {
                       ? `Plan changes unlock in ${daysUntilPlanSwitch} day${daysUntilPlanSwitch === 1 ? '' : 's'} (after your ${currentPlanTrialDays}-day trial on ${currentPlan?.name ?? 'this plan'}).`
                       : 'Complete payment on your current plan or finish your trial before switching.'}
                   </p>
+                )}
+
+                {subscription && !subscription.has_access && !isCurrentPlan && !isScheduled && (
+                  <button
+                    onClick={() => handleStartTrial(plan.id)}
+                    disabled={createSubscription.isPending}
+                    className="w-full py-2.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer bg-gradient-to-r from-blue-600 to-indigo-700 text-white shadow-lg hover:shadow-xl hover:scale-[1.02]"
+                  >
+                    <RefreshCw className="w-3.5 h-3.5" />
+                    {subscription.status === 'cancelled' ? 'Resubscribe' : 'Subscribe'}
+                  </button>
                 )}
 
                 {hasActiveSubscription && !isInTrial && !isCurrentPlan && !isScheduled && isUpgrade(plan.id) && (
