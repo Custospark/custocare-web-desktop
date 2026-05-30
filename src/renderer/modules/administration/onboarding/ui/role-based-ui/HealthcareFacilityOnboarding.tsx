@@ -88,7 +88,7 @@ export const Index: React.FC = () => {
     () => loadSaved('step', 1) as 1 | 2 | 3 | 4
   );
   const [selectedPlanId, setSelectedPlanId] = useState<number | null>(
-    loadFromStorage('plan', null),
+    () => loadSaved<number | null>('plan', null),
   );
   const [billingAnnual, setBillingAnnual] = useState(true);
   const [formData, setFormData] = useState<FacilityFormData>(
