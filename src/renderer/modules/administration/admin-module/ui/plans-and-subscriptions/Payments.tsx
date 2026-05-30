@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useCallback } from 'react';
 import {
   Landmark, Smartphone, CheckCircle, Copy,
   CheckCheck, Upload, Loader2, FileText,
@@ -54,6 +54,7 @@ export const Payments: React.FC<PaymentsProps> = ({ theme }) => {
   const [notes, setNotes] = useState('');
   const [copied, setCopied] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const navigate = useNavigate();
 
   const { data: subResp, isLoading: subLoading, refetch: refetchSubscription } = useGetFacilitySubscription();
@@ -149,6 +150,12 @@ export const Payments: React.FC<PaymentsProps> = ({ theme }) => {
     });
   };
 
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await Promise.all([refetch(), refetchSubscription()]);
+    setRefreshing(false);
+  }, [refetch, refetchSubscription]);
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files?.[0]) setFile(e.target.files[0]);
   };
@@ -223,17 +230,23 @@ export const Payments: React.FC<PaymentsProps> = ({ theme }) => {
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-3">
             <h1 className="text-2xl font-bold">Complete payment</h1>
-            <button
+            <motion.button
               type="button"
-              onClick={() => { refetch(); refetchSubscription(); }}
+              onClick={handleRefresh}
+              whileTap={{ scale: 0.9 }}
               className={cn(
                 'rounded-lg p-2 transition-all cursor-pointer',
                 isDark ? 'hover:bg-gray-800 text-gray-400' : 'hover:bg-gray-100 text-gray-500',
               )}
               title="Refresh payment status"
             >
-              <RefreshCw className="w-4 h-4" />
-            </button>
+              <motion.div
+                animate={{ rotate: refreshing ? 360 : 0 }}
+                transition={{ repeat: refreshing ? Infinity : 0, duration: 1, ease: 'linear' }}
+              >
+                <RefreshCw className="w-4 h-4" />
+              </motion.div>
+            </motion.button>
           </div>
           {planName && (
             <p className={cn('text-sm', isDark ? 'text-gray-400' : 'text-gray-600')}>
@@ -547,14 +560,16 @@ export const Payments: React.FC<PaymentsProps> = ({ theme }) => {
         />
       )}
 
-      {payments.length > 0 && (
-        <div className={cn('rounded-2xl border overflow-hidden', isDark ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200')}>
-          <div className={cn('p-4 border-b font-semibold flex items-center justify-between', isDark ? 'border-gray-800' : 'border-gray-200')}>
-            <span>Payment History</span>
+      <div className={cn('rounded-2xl border overflow-hidden', isDark ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200')}>
+        <div className={cn('p-4 border-b font-semibold flex items-center justify-between', isDark ? 'border-gray-800' : 'border-gray-200')}>
+          <span>Payment History</span>
+          {payments.length > 0 && (
             <span className={cn('text-xs font-normal', isDark ? 'text-gray-400' : 'text-gray-500')}>
               {payments.filter(p => p.status === PaymentStatus.APPROVED).length} approved · {payments.filter(p => p.status === PaymentStatus.PENDING).length} pending
             </span>
-          </div>
+          )}
+        </div>
+        {payments.length > 0 ? (
           <div className="divide-y" style={{ borderColor: isDark ? '#1f2a37' : '#e5e7eb' }}>
             {payments.map((p: Payment) => (
               <div key={p.id} className="p-4 flex items-center justify-between">
@@ -591,8 +606,12 @@ export const Payments: React.FC<PaymentsProps> = ({ theme }) => {
               </div>
             ))}
           </div>
-        </div>
-      )}
+        ) : (
+          <div className={cn('p-8 text-center text-sm', isDark ? 'text-gray-500' : 'text-gray-500')}>
+            No payment records yet. Submit a payment above to get started.
+          </div>
+        )}
+      </div>
 
       <div className={cn('rounded-xl border border-dashed p-4 text-center', isDark ? 'border-gray-700 bg-gray-800/10' : 'border-gray-200 bg-gray-50/50')}>
         <p className={cn('text-xs', isDark ? 'text-gray-500' : 'text-gray-500')}>
