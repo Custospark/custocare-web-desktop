@@ -12,7 +12,6 @@ import {
   Stethoscope,
   CalendarDays,
   ShieldCheck,
-  Sparkles,
 } from 'lucide-react';
 import { cn } from '../../../../../../shared/utils/classNameUtils';
 import { useGetFacilityIdentity } from '../../../../api/facility/FacilityQueries';
@@ -275,12 +274,12 @@ export const ClinicalNotesPreviewDocument: React.FC<ClinicalNotesPreviewDocument
           in the full clinical context by an authorized healthcare professional.
         </p>
 
-        <div className="mt-3 flex items-center justify-center gap-2">
-          <Sparkles className="h-3.5 w-3.5 text-blue-500" />
-          <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-blue-600">
-            Continuous Care • Clinical Excellence
-          </p>
-        </div>
+        <p className="mt-3 text-[11px] font-semibold text-gray-700">
+          Custocare
+        </p>
+        <p className="text-[10px] italic text-gray-400">
+          &ldquo;Continuous Care. Clinical Excellence.&rdquo;
+        </p>
 
         <p className="mt-3 text-[10px] font-mono text-gray-500">
           PRINT TIME:{' '}

@@ -18,6 +18,8 @@ import {
 import { AllergySeverity, type Allergy } from '../../../../api/allergies/AllergyTypes';
 import type { RootState } from '../../../../../../app/store/rootReducer';
 import { useGetFacilityIdentity } from '../../../../api/facility/FacilityQueries';
+import { getSeverityLabel } from './allergiesForm.utils';
+import { cn } from '../../../../../../shared/utils/classNameUtils';
 
 const formatDate = (value: string | null | undefined): string => {
   if (!value) return 'N/A';
