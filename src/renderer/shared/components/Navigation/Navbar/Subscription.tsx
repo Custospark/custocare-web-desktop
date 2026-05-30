@@ -129,7 +129,7 @@ const getSubscriptionDisplay = (sub: BillingSubscription | undefined): Subscript
       return {
         badge: 'Trial',
         badgeKind: 'trial',
-        subtitle: navbarSubtitle('Payment due'),
+        subtitle: navbarDatePhrase('Trial till', sub.trial_ends_at) || navbarSubtitle('Trial'),
       };
     }
     if (sub.status === SubscriptionStatus.PAST_DUE) {
@@ -147,6 +147,13 @@ const getSubscriptionDisplay = (sub: BillingSubscription | undefined): Subscript
   }
 
   if (sub.status === SubscriptionStatus.TRIAL) {
+    if (!sub.has_access) {
+      return {
+        badge: 'Trial ended',
+        badgeKind: 'past_due',
+        subtitle: navbarSubtitle('Subscribe to continue'),
+      };
+    }
     return {
       badge: 'Trial',
       badgeKind: 'trial',
