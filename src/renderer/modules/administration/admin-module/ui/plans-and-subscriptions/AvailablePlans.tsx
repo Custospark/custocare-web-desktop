@@ -111,7 +111,7 @@ export const AvailablePlans: React.FC<AvailablePlansProps> = ({ theme }) => {
     },
   });
   const currentPlan = subscription?.effective_plan ?? subscription?.plan;
-  const hasActiveSubscription = subscription?.has_access || false;
+  const hasActiveSubscription = subscription?.status === 'active' || false;
   const isInTrial = subscription?.status === SubscriptionStatus.TRIAL;
   const scheduledTargetId = subscription?.scheduled_change?.to_plan?.id ?? null;
   const effectiveAt = subscription?.scheduled_change?.effective_at;
@@ -292,7 +292,7 @@ export const AvailablePlans: React.FC<AvailablePlansProps> = ({ theme }) => {
   return (
     <div className="space-y-6">
       {/* Current subscription banner */}
-      {hasActiveSubscription && currentPlan && (
+      {subscription && currentPlan && subscription.has_access && (
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -362,12 +362,14 @@ export const AvailablePlans: React.FC<AvailablePlansProps> = ({ theme }) => {
       {/* Header */}
       <div className="text-center">
         <h1 className={cn("text-2xl font-bold mb-2", theme === 'dark' ? "text-white" : "text-gray-900")}>
-          {hasActiveSubscription ? 'Change Your Plan' : 'Choose Your Plan'}
+          {hasActiveSubscription || isInTrial ? 'Change Your Plan' : 'Choose Your Plan'}
         </h1>
         <p className={cn("text-sm", theme === 'dark' ? "text-gray-400" : "text-gray-600")}>
           {hasActiveSubscription
             ? 'Upgrade or downgrade your plan as your facility grows.'
-            : 'Pick the plan that fits your facility. Start with a free trial.'}
+            : isInTrial
+              ? 'Switch to a different plan or complete payment to activate.'
+              : 'Pick the plan that fits your facility. Start with a free trial.'}
         </p>
       </div>
 
