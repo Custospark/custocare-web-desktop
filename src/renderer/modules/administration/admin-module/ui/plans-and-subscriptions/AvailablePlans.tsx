@@ -92,8 +92,8 @@ export const AvailablePlans: React.FC<AvailablePlansProps> = ({ theme }) => {
   const isLoading = plansLoading || subLoading;
   const plans = plansResponse?.data || [];
   const rawSubscription = subscriptionResponse?.data;
-  // Treat cancelled/suspended as no subscription — fresh start for the user
-  const subscription = rawSubscription && (rawSubscription.status === 'cancelled' || rawSubscription.status === 'suspended')
+  // Treat cancelled, suspended, past_due as no subscription — fresh start
+  const subscription = rawSubscription && (rawSubscription.status === 'cancelled' || rawSubscription.status === 'suspended' || rawSubscription.status === 'past_due')
     ? null
     : rawSubscription;
 
