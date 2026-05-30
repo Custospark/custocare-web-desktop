@@ -33,6 +33,7 @@ import {
   isSubscribedToPlan,
   planRequiresCompletePayment,
   subscriptionNeedsPayment,
+  subscriptionHasPendingPaymentApproval,
 } from '../../utils/subscriptionPaymentUtils';
 import { SubscriptionStatus } from '../../api/subscriptions/SubscriptionTypes';
 import { CURRENCIES } from '../../../../../shared/utils/currencies';
@@ -115,7 +116,11 @@ export const AvailablePlans: React.FC<AvailablePlansProps> = ({ theme }) => {
   const isInTrial = subscription?.status === SubscriptionStatus.TRIAL;
   const scheduledTargetId = subscription?.scheduled_change?.to_plan?.id ?? null;
   const effectiveAt = subscription?.scheduled_change?.effective_at;
-  const paymentAction = getSubscriptionPaymentAction(subscription);
+  const rawPaymentAction = getSubscriptionPaymentAction(subscription);
+  // Trial users without a pending payment should see trial info, not "Complete payment"
+  const paymentAction = isInTrial && !subscriptionHasPendingPaymentApproval(subscription)
+    ? null
+    : rawPaymentAction;
   const completePaymentLabel = paymentAction?.label ?? 'Complete payment';
   const sorted = [...plans].sort((a, b) => a.pricing.usd - b.pricing.usd);
   const currentPlanDetails = currentPlan
