@@ -19,6 +19,17 @@ import { AllergySeverity, type Allergy } from '../../../../api/allergies/Allergy
 import type { RootState } from '../../../../../../app/store/rootReducer';
 import { useGetFacilityIdentity } from '../../../../api/facility/FacilityQueries';
 
+const formatDate = (value: string | null | undefined): string => {
+  if (!value) return 'N/A';
+  try {
+    return new Intl.DateTimeFormat('en-US', {
+      year: 'numeric', month: 'short', day: '2-digit',
+    }).format(new Date(value));
+  } catch {
+    return value;
+  }
+};
+
 // Helper component for info rows
 const InfoRow: React.FC<{
   icon: React.ReactNode;
