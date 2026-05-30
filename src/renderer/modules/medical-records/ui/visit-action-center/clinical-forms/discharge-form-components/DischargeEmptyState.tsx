@@ -28,11 +28,11 @@ export const DischargeEmptyState: React.FC<DischargeEmptyStateProps> = ({
         <div
           className={cn(
             'mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl',
-            isDark ? 'bg-teal-950/40' : 'bg-teal-50'
+            isDark ? 'bg-blue-950/40' : 'bg-blue-50'
           )}
         >
           <UserMinus
-            className={cn('h-8 w-8', isDark ? 'text-teal-300' : 'text-teal-700')}
+            className={cn('h-8 w-8', isDark ? 'text-blue-300' : 'text-blue-700')}
           />
         </div>
 
@@ -49,7 +49,7 @@ export const DischargeEmptyState: React.FC<DischargeEmptyStateProps> = ({
           <button
             type="button"
             onClick={onDischarge}
-            className="inline-flex cursor-pointer items-center gap-2 rounded-lg bg-teal-600 px-5 py-3 text-sm font-medium text-white transition-all hover:bg-teal-700"
+            className="inline-flex cursor-pointer items-center gap-2 rounded-lg bg-blue-600 px-5 py-3 text-sm font-medium text-white transition-all hover:bg-blue-700"
           >
             <DoorOpen className="h-4 w-4" />
             Discharge Patient

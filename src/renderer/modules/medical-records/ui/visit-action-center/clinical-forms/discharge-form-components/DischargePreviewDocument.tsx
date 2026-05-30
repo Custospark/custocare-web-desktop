@@ -11,7 +11,6 @@ import {
   Fingerprint,
   Stethoscope,
   ShieldCheck,
-  Sparkles,
   DoorOpen,
   FileText,
   ListChecks,
@@ -129,9 +128,9 @@ export const DischargePreviewDocument: React.FC<DischargePreviewDocumentProps> =
   if (isLoading) {
     return (
       <div className="mx-auto max-w-4xl rounded-2xl border border-slate-200 bg-white p-6 shadow-sm print:max-w-none print:rounded-none print:border-0 print:p-0">
-        <div className="mb-6 border-b-2 border-teal-600 pb-5 text-center">
-          <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-teal-50">
-            <Building2 className="h-7 w-7 text-teal-600" />
+        <div className="mb-6 border-b-2 border-blue-600 pb-5 text-center">
+          <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-50">
+            <Building2 className="h-7 w-7 text-blue-600" />
           </div>
           <h1 className="text-2xl font-black tracking-tight text-slate-900">Loading...</h1>
         </div>
@@ -142,7 +141,7 @@ export const DischargePreviewDocument: React.FC<DischargePreviewDocumentProps> =
   if (!dischargeData) {
     return (
       <div className="mx-auto max-w-4xl rounded-2xl border border-slate-200 bg-white p-6 shadow-sm print:max-w-none print:rounded-none print:border-0 print:p-0">
-        <div className="mb-6 border-b-2 border-teal-600 pb-5 text-center">
+        <div className="mb-6 border-b-2 border-blue-600 pb-5 text-center">
           <h1 className="text-xl font-black tracking-tight text-slate-900">No Discharge Data</h1>
         </div>
         <p className="text-center text-sm text-slate-500">
@@ -154,9 +153,9 @@ export const DischargePreviewDocument: React.FC<DischargePreviewDocumentProps> =
 
   return (
     <div className="mx-auto max-w-4xl rounded-2xl border border-slate-200 bg-white p-6 shadow-sm print:max-w-none print:rounded-none print:border-0 print:p-0 print:shadow-none">
-      <div className="mb-6 border-b-2 border-teal-600 pb-5 text-center print:mb-4 print:pb-4">
-        <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-teal-50 print:hidden">
-          <Building2 className="h-7 w-7 text-teal-600" />
+      <div className="mb-6 border-b-2 border-blue-600 pb-5 text-center print:mb-4 print:pb-4">
+        <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-50 print:hidden">
+          <Building2 className="h-7 w-7 text-blue-600" />
         </div>
 
         <h1 className="text-2xl font-black tracking-tight text-slate-900 print:text-xl">
@@ -164,7 +163,7 @@ export const DischargePreviewDocument: React.FC<DischargePreviewDocumentProps> =
         </h1>
 
         <div className="mt-2 flex flex-wrap items-center justify-center gap-2 print:mt-1">
-          <span className="rounded-full bg-teal-100 px-2.5 py-1 text-[11px] font-semibold text-teal-700 print:bg-transparent print:p-0 print:text-gray-600">
+          <span className="rounded-full bg-blue-100 px-2.5 py-1 text-[11px] font-semibold text-blue-700 print:bg-transparent print:p-0 print:text-gray-600">
             Clinical Documentation
           </span>
           <span className="rounded-full bg-blue-100 px-2.5 py-1 text-[11px] font-semibold text-blue-700 print:bg-transparent print:p-0 print:text-gray-600">
@@ -199,8 +198,8 @@ export const DischargePreviewDocument: React.FC<DischargePreviewDocumentProps> =
           </span>
         </div>
 
-        <div className="mt-4 rounded-xl bg-gradient-to-r from-teal-50 to-blue-50 px-4 py-3 print:mt-3 print:rounded-none print:bg-transparent print:border-y print:border-gray-200 print:py-2">
-          <p className="text-lg font-black tracking-wide text-teal-700 print:text-base print:text-slate-900">
+        <div className="mt-4 rounded-xl bg-gradient-to-r from-blue-50 to-blue-50 px-4 py-3 print:mt-3 print:rounded-none print:bg-transparent print:border-y print:border-gray-200 print:py-2">
+          <p className="text-lg font-black tracking-wide text-blue-700 print:text-base print:text-slate-900">
             DISCHARGE SUMMARY
           </p>
         </div>
@@ -247,7 +246,7 @@ export const DischargePreviewDocument: React.FC<DischargePreviewDocumentProps> =
             <DoorOpen className="h-4 w-4 text-slate-400" />
             Disposition
           </h3>
-          <span className="inline-block rounded-full bg-teal-100 px-3 py-1 text-xs font-semibold text-teal-700">
+          <span className="inline-block rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-700">
             {getDispositionLabel(dischargeData.discharge_disposition!)}
           </span>
         </div>
@@ -347,12 +346,12 @@ export const DischargePreviewDocument: React.FC<DischargePreviewDocumentProps> =
           in the full clinical context by an authorized healthcare professional.
         </p>
 
-        <div className="mt-3 flex items-center justify-center gap-2">
-          <Sparkles className="h-3.5 w-3.5 text-teal-500" />
-          <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-teal-600">
-            Continuous Care • Clinical Excellence
-          </p>
-        </div>
+        <p className="mt-3 text-[11px] font-semibold text-gray-700">
+          Custocare
+        </p>
+        <p className="text-[10px] italic text-gray-400">
+          &ldquo;Continuous Care. Clinical Excellence.&rdquo;
+        </p>
 
         <p className="mt-3 text-[10px] font-mono text-gray-500">
           PRINT TIME:{' '}

@@ -44,7 +44,7 @@ const getDispositionDisplay = (disposition: string | null | undefined): { label:
     expired: { label: 'Expired', color: 'bg-red-100 text-red-700' },
     hospice: { label: 'Hospice Care', color: 'bg-purple-100 text-purple-700' },
     skilled_nursing_facility: { label: 'Skilled Nursing', color: 'bg-cyan-100 text-cyan-700' },
-    rehabilitation_facility: { label: 'Rehabilitation', color: 'bg-teal-100 text-teal-700' },
+    rehabilitation_facility: { label: 'Rehabilitation', color: 'bg-blue-100 text-blue-700' },
     psychiatric_facility: { label: 'Psychiatric Facility', color: 'bg-violet-100 text-violet-700' },
     law_enforcement_custody: { label: 'Law Enforcement Custody', color: 'bg-slate-100 text-slate-700' },
   };
