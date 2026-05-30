@@ -572,7 +572,7 @@ export const selectSessionStartedAt = (state: { auth: AuthState }) => state.auth
 export const selectUserDisplayName = (state: { auth: AuthState }): string | null => {
   const u = state.auth.user;
   if (!u) return null;
-  return u.profile?.display_name || u.profile?.full_name || u.name || null;
+  return u.profile?.first_name || u.profile?.full_name || u.profile.display_name || null;
 };
 
 export const selectVerificationContext = (state: { auth: AuthState }) => state.auth.verification;

@@ -78,7 +78,7 @@ const getIcon = (slug: string, className = 'w-3.5 h-3.5') =>
 
 const formatShortDate = (iso: string | null | undefined): string => {
   if (!iso) return '';
-  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
+  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
 };
 
 /** Compact date for navbar, e.g. "Jul 10, 2026". */
@@ -172,17 +172,18 @@ const getSubscriptionDisplay = (sub: BillingSubscription | undefined): Subscript
 
   if (sub.cancel_at_period_end && sub.has_access) {
     return {
-      badge: 'Ending',
-      badgeKind: 'ending',
-      subtitle: navbarDatePhrase('Ends', sub.access_ends_at) || navbarSubtitle('Ends soon'),
+      badge: 'Active',
+        badgeKind: 'active',
+      subtitle: navbarDatePhrase('Active till', sub.access_ends_at) || navbarSubtitle('Active till'),
     };
   }
 
   if (sub.scheduled_change?.to_plan && sub.scheduled_change.effective_at) {
+    const changeLabel = sub.scheduled_change.change_type === 'upgrade' ? 'Upgrade' : 'Downgrade';
     return {
-      badge: 'Scheduled',
+      badge: `${changeLabel} scheduled`,
       badgeKind: 'scheduled',
-      subtitle: navbarDatePhrase('From', sub.scheduled_change.effective_at)
+      subtitle: navbarDatePhrase(changeLabel === 'Upgrade' ? 'Upgrading' : 'Downgrading', sub.scheduled_change.effective_at)
         || navbarSubtitle('Change pending'),
     };
   }
@@ -227,7 +228,7 @@ const badgeTone = (kind: StatusBadgeKind, isDark: boolean): string => {
     case 'trial':
       return isDark ? 'bg-amber-500/20 text-amber-300' : 'bg-amber-100 text-amber-800';
     case 'ending':
-      return isDark ? 'bg-orange-500/20 text-orange-300' : 'bg-orange-100 text-orange-800';
+      return isDark ? 'bg-blue-500/20 text-blue-300' : 'bg-blue-100 text-blue-800';
     case 'scheduled':
       return isDark ? 'bg-cyan-500/20 text-cyan-300' : 'bg-cyan-100 text-cyan-800';
     case 'past_due':
@@ -378,13 +379,13 @@ const SubscriptionDropdown: React.FC<SubscriptionDropdownProps> = ({
           <div
             className={cn(
               'mt-3 flex items-start gap-2 rounded-lg px-2.5 py-2 text-xs',
-              isDark ? 'bg-amber-900/30 text-amber-200' : 'bg-amber-50 text-amber-900',
+              isDark ? 'bg-blue-900/30 text-blue-200' : 'bg-blue-50 text-blue-900',
             )}
           >
             <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
             <span>
-              Cancellation scheduled — access until{' '}
-              {formatShortDate(subscription.access_ends_at)}
+              Subscription ends{' '}
+              {formatNavbarDate(subscription.access_ends_at)}
             </span>
           </div>
         )}
@@ -398,7 +399,7 @@ const SubscriptionDropdown: React.FC<SubscriptionDropdownProps> = ({
           >
             <Clock className="w-3.5 h-3.5 shrink-0 mt-0.5" />
             <span>
-              Switching to {subscription.scheduled_change.to_plan.name} on{' '}
+              {subscription.scheduled_change.change_type === 'upgrade' ? 'Upgrade' : 'Downgrade'} to {subscription.scheduled_change.to_plan.name} on{' '}
               {formatShortDate(subscription.scheduled_change.effective_at)}
             </span>
           </div>

@@ -29,6 +29,7 @@ import { ROUTES as ONBOARDING_ROUTES } from '../../../../modules/administration/
 import { logoutClientSession } from '../../../../app/store/utils/logoutClientSession';
 import { useAppDispatch, useAppSelector } from '../../../../app/store/hooks/useApp';
 import { useToast } from '../../../../app/store/contexts/toast/useToast';
+import { selectUserDisplayName } from '../../../../app/store/slices/authSlice';
 import {
   switchCapability,
   switchFacility,
@@ -249,11 +250,13 @@ export const Navbar: React.FC<NavbarProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
+    const displayName = useAppSelector(selectUserDisplayName);
+
     const handleLogout = () => {
-      // 1. First show toast (immediate feedback to user)
+      const name = displayName?.trim() || 'Valued User';
       showToast(
         'info',
-        "You've been logged out successfully. Thank you for using Custocare — see you again soon!",
+        `You've been logged out successfully, ${name}. Thank you for using Custocare — see you again soon!`,
         5000
       );
       

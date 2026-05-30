@@ -226,9 +226,9 @@ export const AvailablePlans: React.FC<AvailablePlansProps> = ({ theme }) => {
     const plan = sorted.find(p => p.id === planId);
     if (!plan || !currentPlan) return;
 
-    const effectiveLabel = effectiveAt
-      ? new Date(effectiveAt).toLocaleDateString()
-      : subscription?.next_billing_date
+      const effectiveLabel = effectiveAt
+        ? new Date(effectiveAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' })
+        : subscription?.next_billing_date
         ? new Date(subscription.next_billing_date).toLocaleDateString('en-US', { timeZone: 'UTC' })
         : 'your next billing date';
 
@@ -481,7 +481,7 @@ export const AvailablePlans: React.FC<AvailablePlansProps> = ({ theme }) => {
 
               {isScheduled && effectiveAt && (
                 <span className="absolute -top-2.5 left-3 px-2.5 py-0.5 rounded-full text-[10px] font-bold text-white bg-gradient-to-r from-cyan-600 to-blue-600 shadow">
-                  Starts {new Date(effectiveAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                  Starts {new Date(effectiveAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' })}
                 </span>
               )}
 
@@ -493,7 +493,7 @@ export const AvailablePlans: React.FC<AvailablePlansProps> = ({ theme }) => {
 
               {isCurrentPlan && subscription?.cancel_at_period_end && subscription.access_ends_at && !paymentRequired && (
                 <span className="absolute -top-2.5 right-3 px-2.5 py-0.5 rounded-full text-[10px] font-bold text-amber-900 bg-amber-200 shadow">
-                  Access until {new Date(subscription.access_ends_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                  Active till {new Date(subscription.access_ends_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' })}
                 </span>
               )}
 
@@ -634,6 +634,15 @@ export const AvailablePlans: React.FC<AvailablePlansProps> = ({ theme }) => {
                     {daysUntilPlanSwitch > 0
                       ? `Plan changes unlock in ${daysUntilPlanSwitch} day${daysUntilPlanSwitch === 1 ? '' : 's'} (after your ${currentPlanTrialDays}-day trial on ${currentPlan?.name ?? 'this plan'}).`
                       : 'Complete payment on your current plan or finish your trial before switching.'}
+                  </p>
+                )}
+
+                {isScheduled && effectiveAt && (
+                  <p className={cn(
+                    'w-full py-2.5 px-2 rounded-lg text-xs font-medium text-center',
+                    theme === 'dark' ? 'bg-cyan-900/30 text-cyan-300' : 'bg-cyan-50 text-cyan-700',
+                  )}>
+                    {subscription?.scheduled_change?.change_type === 'downgrade' ? 'Downgrade' : 'Upgrade'} scheduled — starts {new Date(effectiveAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' })}
                   </p>
                 )}
 

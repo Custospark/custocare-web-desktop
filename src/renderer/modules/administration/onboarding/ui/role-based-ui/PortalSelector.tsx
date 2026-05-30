@@ -18,6 +18,7 @@ import { ACCOUNT_ROUTES, ROUTES } from '../../../../../app/routes/routeConstants
 import { ROUTES as ONBOARDING_ROUTES } from '../../routes/onboardingRouteConstants';
 import { cn } from '../../../../../shared/types/cn';
 import { useAppDispatch, useAppSelector } from '../../../../../app/store/hooks/useApp';
+import { selectUserDisplayName } from '../../../../../app/store/slices/authSlice';
 import { toggleTheme } from '../../../../../app/store/slices/uiSlice';
 import { useToast } from '../../../../../app/store/contexts/toast/useToast';
 import { logoutClientSession } from '../../../../../app/store/utils/logoutClientSession';
@@ -195,15 +196,18 @@ export const PortalSelector: React.FC = () => {
   /**
    * Handle logout
    */
+  const displayName = useAppSelector(selectUserDisplayName);
+
   const handleLogout = useCallback((): void => {
     logoutClientSession(dispatch);
+    const name = displayName?.trim() || 'Valued User';
     showToast(
       'info',
-      "You've been logged out successfully. Thank you for using Custocare — see you again soon!",
-      5000
+      `You've been logged out successfully, ${name}. Thank you for using Custocare — see you again soon!`,
+      8000
     );
     navigate(ROUTES.LANDING);
-  }, [dispatch, navigate, showToast]);
+  }, [dispatch, navigate, showToast, displayName]);
 
   return (
     <div
