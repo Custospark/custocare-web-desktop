@@ -232,6 +232,11 @@ export const Payments: React.FC<PaymentsProps> = ({ theme }) => {
               )}
             </p>
           )}
+          {subscription?.status === 'past_due' && subscription?.grace_period_ends_at && (
+            <p className={cn('text-xs mt-1', isDark ? 'text-amber-300' : 'text-amber-700')}>
+              Grace period ends {new Date(subscription.grace_period_ends_at).toLocaleDateString('en-US', { timeZone: 'UTC' })}
+            </p>
+          )}
         </div>
       </div>
 

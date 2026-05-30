@@ -291,6 +291,12 @@ export const useGetFacilitySubscription = (
       );
       return res.data;
     },
+    refetchInterval: (query) => {
+      const data = query.state.data?.data;
+      // Poll every 15s while subscription has no access — detects payment approval quickly.
+      // Once access is granted, stop polling.
+      return data && !data.has_access ? 15_000 : false;
+    },
     ...restOptions,
     enabled: Boolean(facilityId) && enabledOption,
   });

@@ -313,9 +313,11 @@ export const AvailablePlans: React.FC<AvailablePlansProps> = ({ theme }) => {
               {isInTrial && <span className="ml-2 text-amber-500 font-medium">(Trial)</span>}
             </p>
             <p className={cn("text-xs", theme === 'dark' ? "text-gray-400" : "text-gray-600")}>
-              {subscription?.next_billing_date
-                ? `Next billing: ${new Date(subscription.next_billing_date).toLocaleDateString('en-US', { timeZone: 'UTC' })}`
-                : 'Manage your subscription below'}
+              {subscription?.status === 'past_due' && subscription?.grace_period_ends_at
+                ? `Grace period ends ${new Date(subscription.grace_period_ends_at).toLocaleDateString('en-US', { timeZone: 'UTC' })}`
+                : subscription?.next_billing_date
+                  ? `Next billing: ${new Date(subscription.next_billing_date).toLocaleDateString('en-US', { timeZone: 'UTC' })}`
+                  : 'Manage your subscription below'}
             </p>
           </div>
           <button
