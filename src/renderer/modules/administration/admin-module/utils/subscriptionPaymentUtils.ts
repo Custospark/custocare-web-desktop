@@ -16,7 +16,11 @@ export const planRequiresCompletePayment = (
   planId: number,
 ): boolean => {
   const action = getSubscriptionPaymentAction(subscription);
-  return Boolean(action?.required && action.plan_id === planId);
+  return Boolean(
+    action?.required
+    && action.plan_id === planId
+    && subscription?.status !== 'trial',
+  );
 };
 
 export const subscriptionNeedsPayment = (
