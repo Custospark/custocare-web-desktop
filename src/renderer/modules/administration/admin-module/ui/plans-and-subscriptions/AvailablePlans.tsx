@@ -91,7 +91,11 @@ export const AvailablePlans: React.FC<AvailablePlansProps> = ({ theme }) => {
 
   const isLoading = plansLoading || subLoading;
   const plans = plansResponse?.data || [];
-  const subscription = subscriptionResponse?.data;
+  const rawSubscription = subscriptionResponse?.data;
+  // Treat cancelled/suspended as no subscription — fresh start for the user
+  const subscription = rawSubscription && (rawSubscription.status === 'cancelled' || rawSubscription.status === 'suspended')
+    ? null
+    : rawSubscription;
 
   const { restore: restoreFacilityFunctionality } = useRestoreFacilityFunctionality(
     subscription,

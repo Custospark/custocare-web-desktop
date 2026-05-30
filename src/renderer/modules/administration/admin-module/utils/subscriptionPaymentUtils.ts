@@ -54,6 +54,7 @@ export const isSubscribedToPlan = (
   planId: number,
 ): boolean => {
   if (!subscription) return false;
+  if (subscription.status === 'cancelled' || subscription.status === 'suspended') return false;
   return subscription.plan?.id === planId || subscription.effective_plan?.id === planId;
 };
 
