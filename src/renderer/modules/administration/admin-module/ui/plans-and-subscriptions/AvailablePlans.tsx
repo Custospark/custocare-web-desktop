@@ -100,6 +100,7 @@ export const AvailablePlans: React.FC<AvailablePlansProps> = ({ theme }) => {
 
   const createSubscription = useCreateSubscription({
     onSuccess: async () => {
+      setSubscribingPlanId(null);
       const restored = await restoreFacilityFunctionality();
       if (restored) {
         const isReturning = Boolean(subscriptionResponse?.data);
@@ -113,6 +114,7 @@ export const AvailablePlans: React.FC<AvailablePlansProps> = ({ theme }) => {
       }
       navigate(ADMINISTRATION_PLANS_SUBSCRIPTIONS_ROUTES.SUBSCRIPTIONS);
     },
+    onError: () => setSubscribingPlanId(null),
   });
   const currentPlan = subscription?.effective_plan ?? subscription?.plan;
   const hasActiveSubscription = subscription?.status === 'active' || false;
@@ -137,6 +139,7 @@ export const AvailablePlans: React.FC<AvailablePlansProps> = ({ theme }) => {
   const daysUntilPlanSwitch = getTrialDaysUntilPlanSwitch(subscription, currentPlanTrialDays);
 
   const [displayCurrency, setDisplayCurrency] = useState(facilityCurrency ?? 'UGX');
+  const [subscribingPlanId, setSubscribingPlanId] = useState<number | null>(null);
   const { data: rateData } = useCurrencyConvert(1, 'USD', displayCurrency);
   const exchangeRate = rateData?.data?.converted ?? null;
   const convertPrice = (usd: number) =>
@@ -157,7 +160,7 @@ export const AvailablePlans: React.FC<AvailablePlansProps> = ({ theme }) => {
   };
 
   const isYourPlan = (planId: number) =>
-    hasActiveSubscription && currentPlan?.id === planId && scheduledTargetId !== planId;
+    (hasActiveSubscription || isInTrial) && currentPlan?.id === planId && scheduledTargetId !== planId;
 
   const isScheduledTarget = (planId: number) => scheduledTargetId === planId;
 
@@ -241,7 +244,7 @@ export const AvailablePlans: React.FC<AvailablePlansProps> = ({ theme }) => {
       theme,
     });
     if (!confirmed) return;
-    scheduleChange.mutate({ data: { plan_id: planId, change_type: changeType } });
+    scheduleChange.mutate({ data: { plan_id: planId, change_type: changeType, billing_cycle: annual ? 'yearly' : 'monthly' } });
   };
 
   const handleUpgradeNow = async (planId: number) => {
@@ -259,7 +262,7 @@ export const AvailablePlans: React.FC<AvailablePlansProps> = ({ theme }) => {
     if (!confirmed) return;
 
     upgradeNow.mutate(
-      { data: { plan_id: planId } },
+      { data: { plan_id: planId, billing_cycle: annual ? 'yearly' : 'monthly' } },
       {
         onSuccess: () => {
           navigate(ADMINISTRATION_PLANS_SUBSCRIPTIONS_ROUTES.PAYMENTS);
@@ -475,7 +478,7 @@ export const AvailablePlans: React.FC<AvailablePlansProps> = ({ theme }) => {
 
               {isCurrentPlan && (
                 <span className="absolute -top-2.5 left-3 px-2.5 py-0.5 rounded-full text-[10px] font-bold text-white bg-gradient-to-r from-blue-600 to-cyan-500 shadow">
-                  Your plan
+                  {isInTrial ? 'Trial' : 'Your plan'}
                 </span>
               )}
 
@@ -580,34 +583,46 @@ export const AvailablePlans: React.FC<AvailablePlansProps> = ({ theme }) => {
                 )}
 
                 {isCurrentPlan && isInTrial && !paymentRequired && (
-                  <span className={cn("w-full py-2.5 px-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 border",
-                    theme === 'dark'
-                      ? "bg-gradient-to-r from-blue-600/15 to-cyan-500/15 text-cyan-300 border-cyan-500/30"
-                      : "bg-gradient-to-r from-blue-600/15 to-blue-500/15 text-blue-700 border-blue-300/40"
-                  )}>
-                    <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
-                    <span className="text-center leading-tight">
-                      Your plan<span className="hidden sm:inline"> —</span>
-                      <span className="block sm:inline"> trial day {daysOnTrial} of {currentPlanTrialDays}</span>
+                  <div className="flex flex-col gap-2">
+                    <span className={cn("w-full py-2.5 px-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 border",
+                      theme === 'dark'
+                        ? "bg-gradient-to-r from-blue-600/15 to-cyan-500/15 text-cyan-300 border-cyan-500/30"
+                        : "bg-gradient-to-r from-blue-600/15 to-blue-500/15 text-blue-700 border-blue-300/40"
+                    )}>
+                      <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                      <span className="text-center leading-tight">
+                        Trial<span className="hidden sm:inline"> —</span>
+                        <span className="block sm:inline"> day {Math.min(daysOnTrial + 1, currentPlanTrialDays)} of {currentPlanTrialDays}</span>
+                      </span>
                     </span>
-                  </span>
+                    <button
+                      type="button"
+                      onClick={() => navigate(ADMINISTRATION_PLANS_SUBSCRIPTIONS_ROUTES.PAYMENTS)}
+                      className="w-full py-2.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-2 bg-gradient-to-r from-amber-500 to-orange-600 text-white shadow-lg hover:shadow-xl hover:scale-[1.02] cursor-pointer"
+                    >
+                      <AlertCircle className="w-3.5 h-3.5" />
+                      Complete payment
+                    </button>
+                  </div>
                 )}
 
                 {showStartTrial && (
                   <button
                     type="button"
-                    onClick={() => handleStartTrial(plan.id)}
+                    onClick={() => { setSubscribingPlanId(plan.id); handleStartTrial(plan.id); }}
                     disabled={createSubscription.isPending}
                     className={cn(
-                      "w-full py-2.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer bg-gradient-to-r from-blue-600 to-emerald-600 text-white shadow-lg hover:shadow-xl hover:scale-[1.02]",
-                      createSubscription.isPending && "opacity-60 cursor-wait"
+                      'w-full py-2.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer bg-gradient-to-r from-blue-600 to-indigo-700 text-white shadow-lg hover:shadow-xl hover:scale-[1.02]',
+                      createSubscription.isPending && subscribingPlanId !== plan.id && 'opacity-60',
+                      createSubscription.isPending && subscribingPlanId === plan.id && 'opacity-60 cursor-wait',
                     )}
                   >
-                    {createSubscription.isPending ? (
-                      <><RefreshCw className="w-3.5 h-3.5 animate-spin" /> Processing</>
+                    {createSubscription.isPending && subscribingPlanId === plan.id ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
                     ) : (
-                      <><Crown className="w-3.5 h-3.5" /> Start Free Trial</>
+                      <Sparkles className="w-4 h-4" />
                     )}
+                    Start Free Trial
                   </button>
                 )}
 
@@ -646,7 +661,7 @@ export const AvailablePlans: React.FC<AvailablePlansProps> = ({ theme }) => {
                   </p>
                 )}
 
-                {subscription && subscription.status !== 'active' && !isInTrial && !isCurrentPlan && !isScheduled && (
+                {subscription && subscription.status !== 'active' && !isCurrentPlan && !isScheduled && (
                   <div className="flex flex-col gap-2">
                     {paymentRequired && (
                       <button
@@ -659,11 +674,15 @@ export const AvailablePlans: React.FC<AvailablePlansProps> = ({ theme }) => {
                       </button>
                     )}
                     <button
-                      onClick={() => handleStartTrial(plan.id)}
+                      onClick={() => { setSubscribingPlanId(plan.id); handleStartTrial(plan.id); }}
                       disabled={createSubscription.isPending}
                       className="w-full py-2.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer bg-gradient-to-r from-blue-600 to-indigo-700 text-white shadow-lg hover:shadow-xl hover:scale-[1.02]"
                     >
-                      <RefreshCw className="w-3.5 h-3.5" />
+                      {createSubscription.isPending && subscribingPlanId === plan.id ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <RefreshCw className="w-3.5 h-3.5" />
+                      )}
                       {subscription.status === 'cancelled' ? 'Resubscribe' : 'Subscribe'}
                     </button>
                   </div>
