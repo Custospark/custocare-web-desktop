@@ -417,8 +417,7 @@ export const AvailablePlans: React.FC<AvailablePlansProps> = ({ theme }) => {
       {/* Plan Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-5xl mx-auto">
         {sorted.map((plan) => {
-          const isYourPlanCard = isYourPlan(plan.id);
-          const isCurrentPlan = isYourPlanCard || isSubscribedToPlan(subscription, plan.id);
+          const isCurrentPlan = isYourPlan(plan.id);
           const isScheduled = isScheduledTarget(plan.id);
           const paymentRequired = planRequiresCompletePayment(subscription, plan.id);
           const showStartTrial =
@@ -639,7 +638,7 @@ export const AvailablePlans: React.FC<AvailablePlansProps> = ({ theme }) => {
                   </p>
                 )}
 
-                {subscription && !subscription.has_access && !isCurrentPlan && !isScheduled && (
+                {subscription && subscription.status !== 'active' && !isInTrial && !isCurrentPlan && !isScheduled && (
                   <button
                     onClick={() => handleStartTrial(plan.id)}
                     disabled={createSubscription.isPending}
