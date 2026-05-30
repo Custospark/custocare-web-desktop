@@ -88,8 +88,9 @@ export const Index: React.FC = () => {
     () => loadSaved('step', 1) as 1 | 2 | 3 | 4
   );
   const [selectedPlanId, setSelectedPlanId] = useState<number | null>(
-    () => loadSaved<number | null>('plan', null)
+    loadFromStorage('plan', null),
   );
+  const [billingAnnual, setBillingAnnual] = useState(true);
   const [formData, setFormData] = useState<FacilityFormData>(
     () => loadSaved<FacilityFormData | null>('form', null) || {
       facility_name: '',
@@ -255,10 +256,11 @@ export const Index: React.FC = () => {
       operational_status: formData.operational_status as OperationalStatus,
       user_id: user.id,
       plan_id: selectedPlanId,
+      billing_cycle: billingAnnual ? 'yearly' : 'monthly',
     };
     
     registerFacilityMutation.mutate(payload);
-  }, [formData, user, isStep1Valid, isStep2Valid, isStep3Valid, isStep4Valid, selectedPlanId, registerFacilityMutation]);
+  }, [formData, user, isStep1Valid, isStep2Valid, isStep3Valid, isStep4Valid, selectedPlanId, billingAnnual, registerFacilityMutation]);
 
   const handleContinueToDashboard = useCallback(() => {
     if (!registerFacilityMutation.data?.data) return;
@@ -426,6 +428,8 @@ export const Index: React.FC = () => {
                         selectedPlanId={selectedPlanId}
                         onSelectPlan={setSelectedPlanId}
                         theme={theme}
+                        annual={billingAnnual}
+                        onAnnualChange={setBillingAnnual}
                       />
                     )}
                   </AnimatePresence>

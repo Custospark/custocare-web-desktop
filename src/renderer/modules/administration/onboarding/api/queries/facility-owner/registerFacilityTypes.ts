@@ -70,6 +70,7 @@ export interface RegisterFacilityRequest {
   operational_status: OperationalStatus;
   user_id: string;
   plan_id?: number | null;
+  billing_cycle?: 'monthly' | 'yearly';
 }
 
 export interface FacilityResponse {

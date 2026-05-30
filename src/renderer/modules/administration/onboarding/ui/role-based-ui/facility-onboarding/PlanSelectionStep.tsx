@@ -44,6 +44,8 @@ interface PlanSelectionStepProps {
   selectedPlanId: number | null;
   onSelectPlan: (planId: number) => void;
   theme: string;
+  annual: boolean;
+  onAnnualChange: (annual: boolean) => void;
 }
 
 const PLAN_ICONS: Record<string, React.ReactNode> = {
@@ -61,9 +63,10 @@ export const PlanSelectionStep: React.FC<PlanSelectionStepProps> = ({
   selectedPlanId,
   onSelectPlan,
   theme,
+  annual,
+  onAnnualChange,
 }) => {
   const [detailPlan, setDetailPlan] = useState<Plan | null>(null);
-  const [annual, setAnnual] = useState(true);
   const facilityCurrency = useAppSelector(selectActiveFacilityCurrency);
   const [displayCurrency, setDisplayCurrency] = useState(facilityCurrency ?? 'UGX');
   const { data: rateData } = useCurrencyConvert(1, 'USD', displayCurrency);
@@ -117,7 +120,7 @@ export const PlanSelectionStep: React.FC<PlanSelectionStepProps> = ({
           <span className={cn("text-xs font-medium", !annual ? "text-blue-600" : theme === 'dark' ? "text-gray-400" : "text-gray-500")}>Monthly</span>
           <button
             type="button"
-            onClick={() => setAnnual(!annual)}
+            onClick={() => onAnnualChange(!annual)}
             className={cn("relative w-10 h-5 rounded-full transition-colors", annual ? "bg-blue-600" : theme === 'dark' ? "bg-gray-700" : "bg-gray-300")}
           >
             <span className={cn("absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-transform", annual && "translate-x-5")} />
