@@ -102,9 +102,12 @@ export const AvailablePlans: React.FC<AvailablePlansProps> = ({ theme }) => {
     onSuccess: async () => {
       const restored = await restoreFacilityFunctionality();
       if (restored) {
+        const isReturning = Boolean(subscriptionResponse?.data);
         showToast(
           'success',
-          'Trial started — all functionalities restored from the server.',
+          isReturning
+            ? 'Subscription updated — all functionalities restored.'
+            : 'Trial started — all functionalities restored.',
           5000,
         );
       }
@@ -635,14 +638,26 @@ export const AvailablePlans: React.FC<AvailablePlansProps> = ({ theme }) => {
                 )}
 
                 {subscription && subscription.status !== 'active' && !isInTrial && !isCurrentPlan && !isScheduled && (
-                  <button
-                    onClick={() => handleStartTrial(plan.id)}
-                    disabled={createSubscription.isPending}
-                    className="w-full py-2.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer bg-gradient-to-r from-blue-600 to-indigo-700 text-white shadow-lg hover:shadow-xl hover:scale-[1.02]"
-                  >
-                    <RefreshCw className="w-3.5 h-3.5" />
-                    {subscription.status === 'cancelled' ? 'Resubscribe' : 'Subscribe'}
-                  </button>
+                  <div className="flex flex-col gap-2">
+                    {paymentRequired && (
+                      <button
+                        type="button"
+                        onClick={() => handleStartTrial(plan.id)}
+                        className="w-full py-2.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-2 bg-gradient-to-r from-amber-500 to-orange-600 text-white shadow-lg hover:shadow-xl hover:scale-[1.02] cursor-pointer"
+                      >
+                        <AlertCircle className="w-3.5 h-3.5" />
+                        {completePaymentLabel}
+                      </button>
+                    )}
+                    <button
+                      onClick={() => handleStartTrial(plan.id)}
+                      disabled={createSubscription.isPending}
+                      className="w-full py-2.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer bg-gradient-to-r from-blue-600 to-indigo-700 text-white shadow-lg hover:shadow-xl hover:scale-[1.02]"
+                    >
+                      <RefreshCw className="w-3.5 h-3.5" />
+                      {subscription.status === 'cancelled' ? 'Resubscribe' : 'Subscribe'}
+                    </button>
+                  </div>
                 )}
 
                 {hasActiveSubscription && !isInTrial && !isCurrentPlan && !isScheduled && isUpgrade(plan.id) && (
