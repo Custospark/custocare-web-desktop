@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import {
   Landmark, Smartphone, CheckCircle, Copy,
   CheckCheck, Upload, Loader2, FileText,
-  Building2, ArrowLeft, AlertCircle, CreditCard,
+  Building2, ArrowLeft, AlertCircle, CreditCard, RefreshCw,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
@@ -220,8 +220,21 @@ export const Payments: React.FC<PaymentsProps> = ({ theme }) => {
         >
           <ArrowLeft className="w-5 h-5" />
         </button>
-        <div>
-          <h1 className="text-2xl font-bold">Complete payment</h1>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-bold">Complete payment</h1>
+            <button
+              type="button"
+              onClick={() => { refetch(); refetchSubscription(); }}
+              className={cn(
+                'rounded-lg p-2 transition-all cursor-pointer',
+                isDark ? 'hover:bg-gray-800 text-gray-400' : 'hover:bg-gray-100 text-gray-500',
+              )}
+              title="Refresh payment status"
+            >
+              <RefreshCw className="w-4 h-4" />
+            </button>
+          </div>
           {planName && (
             <p className={cn('text-sm', isDark ? 'text-gray-400' : 'text-gray-600')}>
               {planName}
