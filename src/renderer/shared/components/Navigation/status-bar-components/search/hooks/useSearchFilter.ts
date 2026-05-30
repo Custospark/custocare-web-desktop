@@ -84,6 +84,14 @@ export function useSearchFilter(query: string) {
             accessibleModuleCodes.includes(m.moduleCode)
           );
         }
+
+        if (m.moduleCode === 'patient_dashboard') {
+          return false;
+        }
+      }
+
+      if (m.moduleCode === 'patient_dashboard') {
+        return false;
       }
 
       return accessibleModuleCodes.includes(m.moduleCode);
