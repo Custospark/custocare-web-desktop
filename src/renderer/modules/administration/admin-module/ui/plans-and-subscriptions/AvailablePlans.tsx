@@ -113,7 +113,7 @@ export const AvailablePlans: React.FC<AvailablePlansProps> = ({ theme }) => {
   });
   const currentPlan = subscription?.effective_plan ?? subscription?.plan;
   const hasActiveSubscription = subscription?.status === 'active' || false;
-  const isInTrial = subscription?.status === SubscriptionStatus.TRIAL;
+  const isInTrial = subscription?.status === SubscriptionStatus.TRIAL && (subscription?.has_access ?? false);
   const scheduledTargetId = subscription?.scheduled_change?.to_plan?.id ?? null;
   const effectiveAt = subscription?.scheduled_change?.effective_at;
   const rawPaymentAction = getSubscriptionPaymentAction(subscription);
@@ -197,17 +197,19 @@ export const AvailablePlans: React.FC<AvailablePlansProps> = ({ theme }) => {
     if (!activeFacilityId) return;
     if (isSubscribedToPlan(subscription, planId)) return;
 
+    const hasExistingSubscription = Boolean(subscriptionResponse?.data);
     const cycleLabel = annual ? 'Annual' : 'Monthly';
     const cycleDesc = annual
-      ? `Billed once per year at ${plan.pricing.annual_usd ?? Math.round(plan.pricing.usd * 10)} USD (${Math.round(plan.pricing.usd * 2)} USD off).`
+      ? `Billed once per year at ${plan.pricing.annual_usd ?? Math.round(plan.pricing.usd * 10)} USD.`
       : `Billed ${plan.pricing.usd} USD per month.`;
     const trialDays = plan.trial_days ?? 0;
+    const showTrialMsg = !hasExistingSubscription && trialDays > 0;
     const confirmed = await confirm({
       title: `Subscribe — ${cycleLabel} Plan`,
-      message: trialDays > 0
+      message: showTrialMsg
         ? `Start a ${plan.name} subscription with a ${trialDays}-day free trial.\n\n${cycleDesc}\n\nYou can switch or cancel anytime before the billing date.`
-        : `Start a ${plan.name} subscription.\n\n${cycleDesc}`,
-      confirmText: trialDays > 0 ? `Start ${cycleLabel} Free Trial` : `Subscribe ${cycleLabel}`,
+        : `Subscribe to the ${plan.name} plan.\n\n${cycleDesc}`,
+      confirmText: showTrialMsg ? `Start ${cycleLabel} Free Trial` : `Subscribe ${cycleLabel}`,
       cancelText: 'Cancel',
       variant: 'info',
       theme,
@@ -586,17 +588,6 @@ export const AvailablePlans: React.FC<AvailablePlansProps> = ({ theme }) => {
                       <span className="block sm:inline"> trial day {daysOnTrial} of {currentPlanTrialDays}</span>
                     </span>
                   </span>
-                )}
-
-                {paymentRequired && isCurrentPlan && (
-                  <button
-                    type="button"
-                    onClick={() => navigate(ADMINISTRATION_PLANS_SUBSCRIPTIONS_ROUTES.PAYMENTS)}
-                    className="w-full py-2.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-2 bg-gradient-to-r from-amber-500 to-orange-600 text-white shadow-lg hover:shadow-xl hover:scale-[1.02] cursor-pointer"
-                  >
-                    <AlertCircle className="w-3.5 h-3.5" />
-                    {completePaymentLabel}
-                  </button>
                 )}
 
                 {showStartTrial && (
