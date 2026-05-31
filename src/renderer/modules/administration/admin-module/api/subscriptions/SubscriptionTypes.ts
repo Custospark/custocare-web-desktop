@@ -450,10 +450,12 @@ export interface CancelSubscriptionRequest {
 export interface ScheduleSubscriptionChangeRequest {
   plan_id: number;
   change_type: 'upgrade' | 'downgrade';
+  billing_cycle?: 'monthly' | 'yearly';
 }
 
 export interface UpgradeNowRequest {
   plan_id: number;
+  billing_cycle?: 'monthly' | 'yearly';
 }
 
 export interface PaymentQuoteParams {

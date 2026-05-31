@@ -79,6 +79,12 @@ export const Payments: React.FC<PaymentsProps> = ({ theme }) => {
   const paymentAction = getSubscriptionPaymentAction(subscription);
   const needsPayment = subscriptionNeedsPayment(subscription);
   const pendingApproval = subscriptionHasPendingPaymentApproval(subscription);
+
+  // Derive payment message — fallback for suspended/cancelled where backend returns null
+  const paymentMessage = paymentAction?.message
+    ?? (subscription?.status === 'suspended' ? 'Your subscription has been suspended. Submit payment to reactivate.'
+      : subscription?.status === 'cancelled' ? 'Your subscription has been cancelled. Submit payment to reactivate.'
+      : null);
   const quoteParams = resolvePaymentQuoteParams(subscription);
   const plans = plansResp?.data ?? [];
 
@@ -278,7 +284,7 @@ export const Payments: React.FC<PaymentsProps> = ({ theme }) => {
         </div>
       </div>
 
-      {needsPayment && paymentAction?.message && (
+      {needsPayment && paymentMessage && (
         <motion.div
           initial={{ opacity: 0, y: -8 }}
           animate={{ opacity: 1, y: 0 }}
@@ -291,10 +297,10 @@ export const Payments: React.FC<PaymentsProps> = ({ theme }) => {
             <AlertCircle className={cn('w-5 h-5 shrink-0 mt-0.5', isDark ? 'text-amber-400' : 'text-amber-600')} />
             <div className="space-y-2">
               <p className={cn('font-bold text-sm', isDark ? 'text-amber-100' : 'text-amber-900')}>
-                {paymentAction.label ?? 'Complete payment'}
+                {paymentAction?.label ?? 'Payment required'}
               </p>
               <p className={cn('text-sm', isDark ? 'text-amber-200/90' : 'text-amber-800')}>
-                {paymentAction.message}
+                {paymentMessage}
               </p>
               <ol className={cn('text-xs list-decimal list-inside space-y-1', isDark ? 'text-amber-200/80' : 'text-amber-900/80')}>
                 <li>Review the amount due below.</li>

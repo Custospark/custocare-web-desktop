@@ -25,7 +25,12 @@ export const planRequiresCompletePayment = (
 
 export const subscriptionNeedsPayment = (
   subscription: Subscription | null | undefined,
-): boolean => Boolean(getSubscriptionPaymentAction(subscription)?.required);
+): boolean => {
+  if (!subscription) return false;
+  // Suspended/cancelled subscriptions always need payment to reactivate
+  if (subscription.status === 'suspended' || subscription.status === 'cancelled') return true;
+  return Boolean(getSubscriptionPaymentAction(subscription)?.required);
+};
 
 export const subscriptionHasPendingPaymentApproval = (
   subscription: Subscription | null | undefined,

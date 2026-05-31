@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   Building2, CheckCircle2, Loader2, Info,
-  Crown, ArrowUp, ArrowDown, RefreshCw, CreditCard, AlertCircle,
+  Crown, ArrowUp, ArrowDown, RefreshCw, CreditCard, AlertCircle, Sparkles,
 } from 'lucide-react';
 import { useAppSelector } from '../../../../../app/store/hooks/useApp';
 import { selectActiveFacilityCurrency } from '../../../../../app/store/slices/activeContextSlice';
@@ -134,7 +134,6 @@ export const AvailablePlans: React.FC<AvailablePlansProps> = ({ theme }) => {
   const [annual, setAnnual] = useState(true);
   const facilityCurrency = useAppSelector(selectActiveFacilityCurrency);
   const currentPlanTrialDays = currentPlanDetails?.trial_days ?? subscription?.plan?.trial_days ?? 0;
-  const daysOnTrial = getDaysOnTrial(subscription);
   const canSwitchDuringTrial = canSwitchPlansDuringTrial(subscription, currentPlanTrialDays);
   const daysUntilPlanSwitch = getTrialDaysUntilPlanSwitch(subscription, currentPlanTrialDays);
 
@@ -592,7 +591,7 @@ export const AvailablePlans: React.FC<AvailablePlansProps> = ({ theme }) => {
                       <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
                       <span className="text-center leading-tight">
                         Trial<span className="hidden sm:inline"> —</span>
-                        <span className="block sm:inline"> day {Math.min(daysOnTrial + 1, currentPlanTrialDays)} of {currentPlanTrialDays}</span>
+                        <span className="block sm:inline">{subscription?.days_remaining ?? 0} days remaining</span>
                       </span>
                     </span>
                     <button
