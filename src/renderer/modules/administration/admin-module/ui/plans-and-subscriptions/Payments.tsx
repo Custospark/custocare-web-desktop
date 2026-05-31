@@ -284,7 +284,7 @@ export const Payments: React.FC<PaymentsProps> = ({ theme }) => {
         </div>
       </div>
 
-      {needsPayment && paymentMessage && (
+      {needsPayment && !pendingApproval && paymentMessage && (
         <motion.div
           initial={{ opacity: 0, y: -8 }}
           animate={{ opacity: 1, y: 0 }}
@@ -335,7 +335,7 @@ export const Payments: React.FC<PaymentsProps> = ({ theme }) => {
       )}
 
       {/* Transaction Summary */}
-      {(needsPayment || quoteRequiresPayment) && (
+      {!pendingApproval && (needsPayment || quoteRequiresPayment) && (
       <div className={cn('rounded-2xl border-2 p-6', isDark ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200')}>
         <h2 className={cn('font-bold text-sm mb-4 flex items-center gap-2', isDark ? 'text-gray-300' : 'text-gray-700')}>
           <FileText className="w-4 h-4" />
