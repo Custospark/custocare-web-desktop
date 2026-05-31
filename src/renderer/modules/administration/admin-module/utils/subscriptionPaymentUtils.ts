@@ -15,6 +15,14 @@ export const planRequiresCompletePayment = (
   subscription: Subscription | null | undefined,
   planId: number,
 ): boolean => {
+  if (!subscription) return false;
+
+  // Suspended/cancelled subs always need payment on their current plan
+  if (subscription.status === 'suspended' || subscription.status === 'cancelled') {
+    const subscribedPlanId = subscription.plan?.id ?? subscription.effective_plan?.id;
+    return subscribedPlanId === planId;
+  }
+
   const action = getSubscriptionPaymentAction(subscription);
   return Boolean(
     action?.required
