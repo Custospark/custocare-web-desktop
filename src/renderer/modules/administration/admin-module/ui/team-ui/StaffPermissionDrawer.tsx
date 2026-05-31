@@ -44,6 +44,7 @@ interface StaffInfoForDrawer {
   employee_number: string;
   current_role_code: string;
   current_assignment_status: string;
+  current_module_codes?: string[];
 }
 
 
@@ -90,13 +91,13 @@ export const StaffPermissionDrawer: React.FC<StaffPermissionDrawerProps> = ({
     assignment_status: '',
     role_code: '',
     department_ids: [],
-    module_code: [],
+    module_code: staffInfo.current_module_codes ?? [],
     shift_schedule: null,
     shift_type: null,
     employment_status: '',
     employment_type: '',
     effective_from: getCurrentDate(),
-  }), []);
+  }), [staffInfo.current_module_codes]);
 
   const [formData, setFormData] = useState<FormData>(getInitialFormData());
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
