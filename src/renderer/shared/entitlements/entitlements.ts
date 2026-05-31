@@ -136,7 +136,7 @@ export const getPlanEnabledModuleCodesFromPlan = (
 
   if (plan.features && typeof plan.features === 'object') {
     const enabled = MODULE_FEATURE_CODES.filter((code) => plan.features?.[code] === true);
-    return intersectRoleModulesWithPlan(enabled, ALWAYS_AVAILABLE_MODULES);
+    return [...new Set([...enabled, ...ALWAYS_AVAILABLE_MODULES])];
   }
 
   const slug = plan.slug as PlanTier | undefined;

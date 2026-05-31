@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   Loader2,
   Plus,
@@ -85,7 +85,6 @@ export const DischargeEditor: React.FC<DischargeEditorProps> = ({
   const [showMedicationModal, setShowMedicationModal] = useState(false);
   const [medicationForm, setMedicationForm] = useState<MedicationFormData>(EMPTY_MEDICATION);
   const [isMutating, setIsMutating] = useState(false);
-  const medicationNameRef = useRef<HTMLInputElement | null>(null);
 
   const inputClass = cn(
     'w-full rounded-lg border px-3 py-2 text-sm outline-none transition-all',
@@ -347,8 +346,6 @@ export const DischargeEditor: React.FC<DischargeEditorProps> = ({
         onClose={() => setShowMedicationModal(false)}
         onChange={handleMedFormChange}
         onSubmit={handleMedSubmit}
-        onAddNewMedication={() => {}}
-        medicationNameRef={medicationNameRef}
       />
     </section>
   );

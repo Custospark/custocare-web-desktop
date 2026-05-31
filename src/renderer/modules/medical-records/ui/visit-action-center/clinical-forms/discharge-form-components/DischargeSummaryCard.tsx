@@ -175,8 +175,8 @@ export const DischargeSummaryCard: React.FC<DischargeSummaryCardProps> = ({
               </span>
             </div>
             <p className={cn('text-sm whitespace-pre-line', colors.text.primary)}>
-              {dischargeData.discharge_instructions.length > 300
-                ? `${dischargeData.discharge_instructions.slice(0, 300)}...`
+              {(dischargeData.discharge_instructions ?? '').length > 300
+                ? `${(dischargeData.discharge_instructions ?? '').slice(0, 300)}...`
                 : dischargeData.discharge_instructions}
             </p>
           </div>

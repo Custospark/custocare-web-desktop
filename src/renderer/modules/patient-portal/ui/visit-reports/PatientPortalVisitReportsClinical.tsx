@@ -9,35 +9,25 @@ import {
   Search,
   X,
 } from 'lucide-react';
-import { useGetAllergies } from '../../../medical-records/api/allergies/AllergyQueries';
-import { useGetVisitClinicalNotes } from '../../../medical-records/api/clinical-notes/clinicalNoteQueries';
-import { useGetVisitVitals } from '../../../medical-records/api/vitals/vitalQueries';
-import { useGetVisitDiagnoses } from '../../../medical-records/api/diagnosis/diagnosisQueries';
 import { useGetVisitConsultations } from '../../../medical-records/api/consultations/consultationQueries';
 import { useGetPatientPrescriptions, useGetPrescriptionById } from '../../../medical-records/api/prescription/PrescriptionQueries';
 import { PrescriptionStatus, type Prescription } from '../../../medical-records/api/prescription/PrescriptionTypes';
 import { useGetPrescriptionItems } from '../../../medical-records/api/prescription-items/PrescriptionItemsQueries';
 import { useGetRequestWithItems, useGetRequestsByVisit } from '../../../medical-records/api/lab/LabQueries';
 import { LabRequestStatus, type LabRequest } from '../../../medical-records/api/lab/LabTypes';
+import { useGetDischargeData } from '../../../medical-records/api/discharge/DischargeQueries';
 import type {
   FacilitySnapshot,
   MedicalHistoryVisit,
   PatientMedicalHistoryPayload,
 } from '../../../medical-records/api/patient-medical-history/patientMedicalHistoryTypes';
-import { normalizeAllergyResponse } from '../../../medical-records/ui/visit-action-center/clinical-forms/allergies-form-components';
-import { pickPrimaryClinicalNote } from '../../../medical-records/ui/visit-action-center/clinical-forms/clinical-notes-form-components/clinicalNotesForm.utils';
-import { pickPrimaryVitals } from '../../../medical-records/ui/visit-action-center/clinical-forms/vitals-form-components/vitalsForm.utils';
-import { pickPrimaryDiagnosis } from '../../../medical-records/ui/visit-action-center/clinical-forms/diagnoses-form-components/diagnosesForm.utils';
 import { pickPrimaryConsultation } from '../../../medical-records/ui/visit-action-center/clinical-forms/consultations-form-components/consultationsForm.utils';
 import {
-  AllergyReportLauncher,
-  ClinicalNoteReportLauncher,
   ConsultationReportLauncher,
-  DiagnosisReportLauncher,
+  DischargeReportLauncher,
   LabRequestReportLauncher,
   LabResultReportLauncher,
   PrescriptionReportLauncher,
-  VitalsReportLauncher,
 } from '../../../medical-records/ui/visit-action-center/clinical-forms/clinical-reports/launchers';
 import type { ClinicalReportPortalContext } from '../../../medical-records/ui/visit-action-center/clinical-forms/clinical-reports/launchers/clinicalReportPortalContext';
 import LoadingSkeleton from '../../../../shared/components/Loading/LoadingSkeletons';
@@ -62,14 +52,11 @@ interface ActionItem {
 }
 
 type ReportModalModule =
-  | 'allergies'
-  | 'clinical-notes'
-  | 'vitals'
-  | 'diagnoses'
   | 'consultations'
   | 'prescriptions'
   | 'lab-requests'
   | 'lab-results'
+  | 'discharge'
   | null;
 
 interface ReportModalState {
@@ -139,26 +126,6 @@ export function PatientPortalVisitReportsClinical({
   const visitApisEnabled =
     patientId > 0 && effectiveVisitId != null && effectiveFacilityId != null;
 
-  const allergiesQuery = useGetAllergies(String(patientId), {}, {
-    enabled: patientId > 0,
-    staleTime: 30_000,
-  });
-
-  const portalVisitNotesQuery = useGetVisitClinicalNotes(effectiveVisitId ?? 0, {
-    enabled: visitApisEnabled,
-    facilityId: effectiveFacilityId ?? undefined,
-    staleTime: 30_000,
-  });
-  const portalVisitVitalsQuery = useGetVisitVitals(effectiveVisitId ?? 0, {
-    enabled: visitApisEnabled,
-    facilityId: effectiveFacilityId ?? undefined,
-    staleTime: 30_000,
-  });
-  const portalVisitDiagnosesQuery = useGetVisitDiagnoses(effectiveVisitId ?? 0, {
-    enabled: visitApisEnabled,
-    facilityId: effectiveFacilityId ?? undefined,
-    staleTime: 30_000,
-  });
   const portalVisitConsultationsQuery = useGetVisitConsultations(effectiveVisitId ?? 0, {
     enabled: visitApisEnabled,
     facilityId: effectiveFacilityId ?? undefined,
@@ -234,6 +201,14 @@ export function PatientPortalVisitReportsClinical({
     staleTime: 30_000,
   });
 
+  const portalDischargeQuery = useGetDischargeData(
+    effectiveVisitId != null ? String(effectiveVisitId) : null,
+    {
+      enabled: visitApisEnabled,
+      staleTime: 30_000,
+    },
+  );
+
   const portalContext = useMemo((): ClinicalReportPortalContext | null => {
     if (!patientId || effectiveVisitId == null) return null;
     const facilityId =
@@ -276,22 +251,6 @@ export function PatientPortalVisitReportsClinical({
   const availability = useMemo(() => {
     if (patientId <= 0) return null;
 
-    const normalizedAllergies = normalizeAllergyResponse(allergiesQuery.data);
-    const allergyHasData =
-      normalizedAllergies.allergies.length > 0 || (scoped?.allergies.length ?? 0) > 0;
-
-    const notesList = portalVisitNotesQuery.data?.data ?? [];
-    const clinicalNotesHasData =
-      !!pickPrimaryClinicalNote(notesList) || (scoped?.clinical_notes.length ?? 0) > 0;
-
-    const vitalsList = portalVisitVitalsQuery.data?.data ?? [];
-    const vitalsHasData =
-      !!pickPrimaryVitals(vitalsList) || (scoped?.vitals.length ?? 0) > 0;
-
-    const diagnosesList = portalVisitDiagnosesQuery.data?.data ?? [];
-    const diagnosesHasData =
-      !!pickPrimaryDiagnosis(diagnosesList) || (scoped?.diagnoses.length ?? 0) > 0;
-
     const consultationsList = portalVisitConsultationsQuery.data?.data ?? [];
     const consultationsHasData =
       !!pickPrimaryConsultation(consultationsList) || (scoped?.consultations.length ?? 0) > 0;
@@ -316,26 +275,22 @@ export function PatientPortalVisitReportsClinical({
       !!activeLabRequestForOrders || (scoped?.lab_requests.length ?? 0) > 0;
     const labResultsHasData = labResultCount > 0 || (scoped?.lab_results.length ?? 0) > 0;
 
+    const dischargeHasData = !!portalDischargeQuery.data?.data;
+
     return {
-      allergies: allergyHasData,
-      clinicalNotes: clinicalNotesHasData,
-      vitals: vitalsHasData,
-      diagnoses: diagnosesHasData,
       consultations: consultationsHasData,
       prescriptions: prescriptionsHasData,
       labRequests: labRequestsHasData,
       labResults: labResultsHasData,
+      discharge: dischargeHasData,
     };
   }, [
     activeLabRequestForOrders,
     activeLabRequestForResults,
-    allergiesQuery.data,
     labResultRequestQuery.data,
     patientId,
     portalVisitConsultationsQuery.data,
-    portalVisitDiagnosesQuery.data,
-    portalVisitNotesQuery.data,
-    portalVisitVitalsQuery.data,
+    portalDischargeQuery.data,
     resolvedExistingPrescription,
     scoped,
     selectedPrescriptionItemsQuery.data?.data,
@@ -361,62 +316,6 @@ export function PatientPortalVisitReportsClinical({
   const reportOptions: ActionItem[] = useMemo(() => {
     if (!availability) return [];
     return [
-      {
-        key: 'allergy-report',
-        label: 'Allergy Report',
-        icon: <FileOutput className="w-5 h-5" />,
-        description: PATIENT_PORTAL_REPORT_ROW_DESCRIPTION.allergy,
-        category: 'Clinical',
-        actionPrefix: 'View',
-        statusInfo: patientPortalReportBadge(
-          availability.allergies,
-          'Allergy report',
-          PATIENT_PORTAL_REPORT_EMPTY_HINT.allergies
-        ),
-        handler: () => openReport('allergies', 'preview'),
-      },
-      {
-        key: 'clinical-notes-report',
-        label: 'Clinical Notes Report',
-        icon: <FileOutput className="w-5 h-5" />,
-        description: PATIENT_PORTAL_REPORT_ROW_DESCRIPTION.clinicalNotes,
-        category: 'Documentation',
-        actionPrefix: 'View',
-        statusInfo: patientPortalReportBadge(
-          availability.clinicalNotes,
-          'Clinical notes report',
-          PATIENT_PORTAL_REPORT_EMPTY_HINT.clinicalNotes
-        ),
-        handler: () => openReport('clinical-notes', 'preview'),
-      },
-      {
-        key: 'vitals-report',
-        label: 'Vitals Report',
-        icon: <FileOutput className="w-5 h-5" />,
-        description: PATIENT_PORTAL_REPORT_ROW_DESCRIPTION.vitals,
-        category: 'Clinical',
-        actionPrefix: 'View',
-        statusInfo: patientPortalReportBadge(
-          availability.vitals,
-          'Vitals report',
-          PATIENT_PORTAL_REPORT_EMPTY_HINT.vitals
-        ),
-        handler: () => openReport('vitals', 'preview'),
-      },
-      {
-        key: 'diagnosis-report',
-        label: 'Diagnosis Report',
-        icon: <FileOutput className="w-5 h-5" />,
-        description: PATIENT_PORTAL_REPORT_ROW_DESCRIPTION.diagnoses,
-        category: 'Clinical',
-        actionPrefix: 'View',
-        statusInfo: patientPortalReportBadge(
-          availability.diagnoses,
-          'Diagnosis report',
-          PATIENT_PORTAL_REPORT_EMPTY_HINT.diagnoses
-        ),
-        handler: () => openReport('diagnoses', 'preview'),
-      },
       {
         key: 'consultation-report',
         label: 'Consultation Report',
@@ -472,6 +371,20 @@ export function PatientPortalVisitReportsClinical({
           PATIENT_PORTAL_REPORT_EMPTY_HINT.labResults
         ),
         handler: () => openReport('lab-results', 'preview'),
+      },
+      {
+        key: 'discharge-report',
+        label: 'Discharge Report',
+        icon: <FileOutput className="w-5 h-5" />,
+        description: PATIENT_PORTAL_REPORT_ROW_DESCRIPTION.discharge,
+        category: 'Clinical',
+        actionPrefix: 'View',
+        statusInfo: patientPortalReportBadge(
+          availability.discharge,
+          'Discharge report',
+          PATIENT_PORTAL_REPORT_EMPTY_HINT.discharge
+        ),
+        handler: () => openReport('discharge', 'preview'),
       },
     ];
   }, [availability, openReport]);
@@ -725,34 +638,6 @@ export function PatientPortalVisitReportsClinical({
         </AnimatePresence>
       </div>
 
-      <AllergyReportLauncher
-        isOpen={reportModal.isOpen && reportModal.module === 'allergies'}
-        onClose={closeReport}
-        initialAction={reportModal.action}
-        theme={theme}
-        portalContext={portalContext}
-      />
-      <ClinicalNoteReportLauncher
-        isOpen={reportModal.isOpen && reportModal.module === 'clinical-notes'}
-        onClose={closeReport}
-        initialAction={reportModal.action}
-        theme={theme}
-        portalContext={portalContext}
-      />
-      <VitalsReportLauncher
-        isOpen={reportModal.isOpen && reportModal.module === 'vitals'}
-        onClose={closeReport}
-        initialAction={reportModal.action}
-        theme={theme}
-        portalContext={portalContext}
-      />
-      <DiagnosisReportLauncher
-        isOpen={reportModal.isOpen && reportModal.module === 'diagnoses'}
-        onClose={closeReport}
-        initialAction={reportModal.action}
-        theme={theme}
-        portalContext={portalContext}
-      />
       <ConsultationReportLauncher
         isOpen={reportModal.isOpen && reportModal.module === 'consultations'}
         onClose={closeReport}
@@ -776,6 +661,13 @@ export function PatientPortalVisitReportsClinical({
       />
       <LabResultReportLauncher
         isOpen={reportModal.isOpen && reportModal.module === 'lab-results'}
+        onClose={closeReport}
+        initialAction={reportModal.action}
+        theme={theme}
+        portalContext={portalContext}
+      />
+      <DischargeReportLauncher
+        isOpen={reportModal.isOpen && reportModal.module === 'discharge'}
         onClose={closeReport}
         initialAction={reportModal.action}
         theme={theme}

@@ -27,7 +27,6 @@ import { useRestoreFacilityFunctionality } from '../../../../../shared/entitleme
 import { ADMINISTRATION_PLANS_SUBSCRIPTIONS_ROUTES } from '../../../../../app/routes/constants/administration.paths';
 import {
   canSwitchPlansDuringTrial,
-  getDaysOnTrial,
   getSubscriptionPaymentAction,
   getTrialDaysUntilPlanSwitch,
   isSubscribedToPlan,

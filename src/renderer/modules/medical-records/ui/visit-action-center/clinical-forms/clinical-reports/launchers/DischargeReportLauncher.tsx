@@ -27,7 +27,8 @@ export const DischargeReportLauncher: React.FC<DischargeReportLauncherProps> = (
   const activePatient = useSelector(selectActivePatient);
   const { showToast } = useToast();
 
-  const visitId = portalContext?.visitId ?? activeVisitUuid ?? null;
+  const rawVisitId = portalContext?.visitId ?? activeVisitUuid ?? null;
+  const visitId = rawVisitId != null ? String(rawVisitId) : null;
   const resolvedFacilityId =
     portalContext != null ? portalContext.facilityId ?? facilityFromStore : facilityFromStore;
 
@@ -47,11 +48,9 @@ export const DischargeReportLauncher: React.FC<DischargeReportLauncherProps> = (
   const isError = dischargeQuery.isError;
   const error = dischargeQuery.error;
 
-  const activePatientFromVisit = dischargeData?.patient;
   const displayPatientName =
     portalContext?.patientDisplayName?.trim() ||
     activePatient?.name?.trim() ||
-    activePatientFromVisit?.full_name?.trim() ||
     'this patient';
 
   useEffect(() => {

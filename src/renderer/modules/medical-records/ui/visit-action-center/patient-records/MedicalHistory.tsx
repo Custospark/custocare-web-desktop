@@ -178,9 +178,21 @@ export const MedicalHistory: React.FC<MedicalHistoryProps> = ({
 
   const filteredPayload = useMemo(() => {
     if (!scopedPayload) return null;
-    if (!showFilters) return scopedPayload;
-    return filterMedicalHistoryPayload(scopedPayload, timeRange, searchQuery);
-  }, [scopedPayload, timeRange, searchQuery, showFilters]);
+    const base = !showFilters ? scopedPayload : filterMedicalHistoryPayload(scopedPayload, timeRange, searchQuery);
+
+    // Patient portal: only show sections the patient can access
+    if (audience === 'patient_portal') {
+      return {
+        ...base,
+        allergies: [],
+        clinical_notes: [],
+        vitals: [],
+        diagnoses: [],
+      };
+    }
+
+    return base;
+  }, [scopedPayload, timeRange, searchQuery, showFilters, audience]);
 
   const printRef = useRef<HTMLDivElement>(null);
 
@@ -332,8 +344,9 @@ export const MedicalHistory: React.FC<MedicalHistoryProps> = ({
                       isDark ? 'bg-slate-800 text-slate-200' : 'bg-slate-100 text-slate-700'
                     )}
                   >
-                    Visits {filteredPayload.visits.length} · Allergies {filteredPayload.allergies.length} · Rx{' '}
-                    {filteredPayload.prescriptions.length}
+                    {audience === 'patient_portal'
+                      ? `Visits ${filteredPayload.visits.length} · Rx ${filteredPayload.prescriptions.length}`
+                      : `Visits ${filteredPayload.visits.length} · Allergies ${filteredPayload.allergies.length} · Rx ${filteredPayload.prescriptions.length}`}
                   </span>
                   <span
                     className={cn(
@@ -341,7 +354,9 @@ export const MedicalHistory: React.FC<MedicalHistoryProps> = ({
                       isDark ? 'bg-slate-800 text-slate-200' : 'bg-slate-100 text-slate-700'
                     )}
                   >
-                    Labs {filteredPayload.lab_requests.length} · Results {filteredPayload.lab_results.length}
+                    {audience === 'patient_portal'
+                      ? `Labs ${filteredPayload.lab_requests.length} · Results ${filteredPayload.lab_results.length} · Consults ${filteredPayload.consultations.length}`
+                      : `Labs ${filteredPayload.lab_requests.length} · Results ${filteredPayload.lab_results.length}`}
                   </span>
                   {historyQuery.isFetching && (
                     <span

@@ -127,7 +127,6 @@ export const StaffListView: React.FC<StaffListViewProps> = ({
       employee_number: staffMember.employee_id || '',
       current_role_code: staffMember.facility_role_summary?.role_at_facility || '',
       current_assignment_status: staffMember.facility_role_summary?.assignment_status || '',
-      current_module_codes: staffMember.facility_role_summary?.module_codes ?? [],
     };
     
     setSelectedStaffInfo(staffInfo);

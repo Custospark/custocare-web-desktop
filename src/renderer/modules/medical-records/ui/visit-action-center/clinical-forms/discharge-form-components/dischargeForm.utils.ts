@@ -21,7 +21,7 @@ export const normalizeDischargeResponse = (data: DischargeData | null): Discharg
 
   return {
     dischargedAt: data.discharged_at?.slice(0, 16) || EMPTY_DISCHARGE_FORM.dischargedAt,
-    dischargeDisposition: data.discharge_disposition || '',
+    dischargeDisposition: (data.discharge_disposition || '') as DischargeFormValues['dischargeDisposition'],
     dischargeDiagnosis: data.discharge_diagnosis || '',
     dischargeInstructions: data.discharge_instructions || '',
     dischargeMedications: (data.discharge_medications || []).map((med) => ({
@@ -33,14 +33,14 @@ export const normalizeDischargeResponse = (data: DischargeData | null): Discharg
       durationDays: med.duration_days ?? null,
     })),
     followupScheduledAt: data.followup_scheduled_at?.slice(0, 16) || '',
-    followupProviderStaffId: data.followup_provider_staff_id ?? null,
+    followupProviderStaffId: data.followup_provider?.id ?? null,
   };
 };
 
 export const buildCreateDischargePayload = (values: DischargeFormValues): DischargeRequest => {
   return {
     discharged_at: values.dischargedAt,
-    discharge_disposition: values.dischargeDisposition || null,
+    discharge_disposition: (values.dischargeDisposition || '') as string,
     discharge_diagnosis: values.dischargeDiagnosis || null,
     discharge_instructions: values.dischargeInstructions,
     discharge_medications: values.dischargeMedications
@@ -60,7 +60,7 @@ export const buildCreateDischargePayload = (values: DischargeFormValues): Discha
 export const buildUpdateDischargePayload = (values: DischargeFormValues): UpdateDischargeRequest => {
   return {
     discharged_at: values.dischargedAt,
-    discharge_disposition: values.dischargeDisposition || null,
+    discharge_disposition: (values.dischargeDisposition || '') as string,
     discharge_diagnosis: values.dischargeDiagnosis || null,
     discharge_instructions: values.dischargeInstructions,
     discharge_medications: values.dischargeMedications

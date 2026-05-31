@@ -281,6 +281,12 @@ const MRPatientCreate: React.FC<MRPatientCreateProps> = ({
         return;
       }
 
+      // Check visit limit before proceeding
+      if (visitLimitReached) {
+        showToast('error', 'Monthly visit limit reached. Upgrade your plan to register more patient visits this month.', 5000);
+        return;
+      }
+
       if (!patient.id) {
         console.error('Patient ID is missing:', patient);
         showToast('error', 'Invalid patient data. Patient ID is missing.', 4000);

@@ -59,7 +59,7 @@ export const DischargeForm: React.FC<DischargeFormProps> = ({
   const [showTemplateModal, setShowTemplateModal] = useState(false);
 
   const templatesQuery = useGetFacilityTemplates(
-    { facility_id: facilityId ?? undefined, include_system: true },
+    { facility_id: facilityId ?? 0, include_system: true },
     { enabled: !!facilityId }
   );
 
@@ -383,7 +383,7 @@ export const DischargeForm: React.FC<DischargeFormProps> = ({
         isOpen={previewOpen}
         onClose={closePreview}
         dischargeData={dischargeData}
-        patientName={activePatient?.name || activePatient?.full_name || 'Unknown Patient'}
+        patientName={activePatient?.name || 'Unknown Patient'}
         initialAction={previewAction}
       />
     </>

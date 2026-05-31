@@ -32,7 +32,7 @@ export const useGetDischargeData = (
   const { showToast } = useToast();
 
   return useQuery<DischargeSingleSuccessResponse, AxiosError<DischargeNotFoundResponse | DischargeSystemErrorResponse>>({
-    queryKey: dischargeKeys.detail(effectiveVisitId ?? 0),
+    queryKey: dischargeKeys.detail(effectiveVisitId ?? '0'),
     queryFn: async () => {
       if (!effectiveVisitId) {
         throw new Error('Visit ID is required');

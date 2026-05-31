@@ -153,7 +153,7 @@ export const ClinicalReportsView: React.FC<ClinicalReportsViewProps> = ({ theme 
     const prescriptionItems = selectedPrescriptionItemsQuery.data?.data ?? [];
     const raw = labResultRequestQuery.data;
     const labResultRequest = raw && typeof raw === 'object' && 'request_uuid' in raw
-      ? (raw as LabRequest)
+      ? (raw as unknown as LabRequest)
       : activeLabRequestForResults;
     const labResultCount = labResultRequest?.items?.reduce(
       (sum, item) => sum + (Array.isArray(item.results) ? item.results.length : 0), 0

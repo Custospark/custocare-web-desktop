@@ -19,6 +19,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 // Custom hooks
 import { useCurrentFacility } from '../../../../api/dispensing/customer-walkin/useCustomerWalkinQueries';
 import { useCreateWalkInSession } from '../../../../api/dispensing/customer-walkin/useCustomerWalkinQueries';
+import { usePlanEntitlements } from '../../../../../../shared/entitlements/usePlanEntitlements';
 
 // UI Components
 import LoadingSkeleton from '../../../../../../shared/components/Loading/LoadingSkeletons';
@@ -91,6 +92,7 @@ export const WalkInSessionCreator: React.FC<WalkInSessionCreatorProps> = ({
   
   // Hooks
   const { isValid: hasValidFacility, error: facilityError } = useCurrentFacility();
+  const { visitLimitReached } = usePlanEntitlements();
   
   const {
     mutate: createWalkInSession,
@@ -184,7 +186,14 @@ export const WalkInSessionCreator: React.FC<WalkInSessionCreatorProps> = ({
       showFacilityErrorDialog(errorMessage);
       return;
     }
-    
+
+    if (visitLimitReached) {
+      const errorMessage = 'Monthly visit limit reached. Upgrade your plan to register more patient visits this month.';
+      setLocalError(new Error(errorMessage));
+      showFacilityErrorDialog(errorMessage);
+      return;
+    }
+
     createWalkInSession();
   };
   

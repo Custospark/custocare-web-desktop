@@ -702,14 +702,18 @@ export const Subscription: React.FC<SubscriptionProps> = ({
       return null;
     }
 
-    const inactiveLabel =
-      sub?.status === SubscriptionStatus.SUSPENDED ? 'Subscription suspended' : 'Choose a plan';
-    const inactiveHint =
+    const badgeText =
       sub?.status === SubscriptionStatus.SUSPENDED
-        ? 'Renew to restore access'
+        ? 'Suspended'
         : sub?.status === SubscriptionStatus.CANCELLED
-          ? 'Subscribe again to continue'
-          : 'Get started today';
+          ? 'Cancelled'
+          : 'Choose a plan';
+    const badgeSubtitle =
+      sub?.status === SubscriptionStatus.SUSPENDED
+        ? 'Renew to restore'
+        : sub?.status === SubscriptionStatus.CANCELLED
+          ? 'Subscribe again'
+          : 'Get started';
 
     return (
       <div className={cn('relative', className)}>
@@ -723,26 +727,21 @@ export const Subscription: React.FC<SubscriptionProps> = ({
         >
           <div
             className={cn(
-              'w-7 h-7 rounded-full flex items-center justify-center ring-1 ring-amber-500/50',
+              'w-7 h-7 rounded-full flex items-center justify-center ring-1 ring-amber-500/50 shrink-0',
               isDark ? 'bg-amber-900/30' : 'bg-amber-100',
             )}
           >
             <Sparkles className="w-3.5 h-3.5 text-amber-500" />
           </div>
-          <div className="hidden lg:block">
-            <span
-              className={cn(
-                'text-xs font-semibold',
-                isDark ? 'text-amber-400' : 'text-amber-700',
-              )}
-            >
-              {inactiveLabel}
+          <div className="hidden lg:block min-w-0 max-w-[140px]">
+            <span className={cn('text-xs font-semibold truncate block', isDark ? 'text-amber-400' : 'text-amber-700')}>
+              {badgeText}
             </span>
-            <span className={cn('block text-xs', isDark ? 'text-gray-400' : 'text-gray-600')}>
-              {inactiveHint}
+            <span className={cn('block text-xs truncate', isDark ? 'text-gray-400' : 'text-gray-600')}>
+              {badgeSubtitle}
             </span>
           </div>
-          <ChevronDown className="hidden lg:block w-3 h-3 ml-auto text-amber-500" />
+          <ChevronDown className="hidden lg:block w-3 h-3 ml-auto shrink-0 text-amber-500" />
         </button>
       </div>
     );

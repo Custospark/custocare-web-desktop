@@ -285,8 +285,10 @@ export const MedicalHistoryPreviewDocument: React.FC<MedicalHistoryPreviewDocume
           label="Record counts"
           value={
             <span className="text-right text-slate-800">
-              Visits {counts.visits} · Allergies {counts.allergies} · Rx {counts.prescriptions} · Notes {counts.notes} ·
-              Vitals {counts.vitals} · Dx {counts.diagnoses} · Consults {counts.consultations} · Lab Requests {counts.labs} · Lab Results {counts.labResults}
+              {isPatientPortalLetterhead
+                ? `Visits ${counts.visits} · Rx ${counts.prescriptions} · Consults ${counts.consultations} · Lab Requests ${counts.labs} · Lab Results ${counts.labResults}`
+                : `Visits ${counts.visits} · Allergies ${counts.allergies} · Rx ${counts.prescriptions} · Notes ${counts.notes} · Vitals ${counts.vitals} · Dx ${counts.diagnoses} · Consults ${counts.consultations} · Lab Requests ${counts.labs} · Lab Results ${counts.labResults}`
+              }
             </span>
           }
         />
@@ -331,44 +333,45 @@ export const MedicalHistoryPreviewDocument: React.FC<MedicalHistoryPreviewDocume
         )}
       </section>
 
-      {/* Allergies */}
-      <section className="mt-8 print:mt-6 print:break-inside-avoid">
-        <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-slate-700">
-          <AlertTriangle className="h-4 w-4 text-amber-600" />
-          Allergies
-        </h3>
-        {history.allergies.length === 0 ? (
-          <p className="text-sm text-slate-600">No allergy records.</p>
-        ) : (
-          <table className="w-full border-collapse border border-slate-200 text-sm">
-            <thead className="bg-slate-100">
-              <tr>
-                <th className="border border-slate-200 px-2 py-2 text-left text-xs font-semibold text-slate-800">Allergen</th>
-                <th className="border border-slate-200 px-2 py-2 text-left text-xs font-semibold text-slate-800">Severity</th>
-                <th className="border border-slate-200 px-2 py-2 text-left text-xs font-semibold text-slate-800">Facility</th>
-                <th className="border border-slate-200 px-2 py-2 text-left text-xs font-semibold text-slate-800">Recorded</th>
-              </tr>
-            </thead>
-            <tbody>
-              {history.allergies.map((a) => (
-                <tr key={a.id} className="align-top">
-                  <td className="border border-slate-200 px-2 py-2 text-xs font-medium text-slate-900">
-                    {a.allergen}
-                    {a.reaction ? <div className="mt-1 font-normal text-slate-700">{a.reaction}</div> : null}
-                  </td>
-                  <td className="border border-slate-200 px-2 py-2 text-xs text-slate-700">{a.severity ?? '—'}</td>
-                  <td className="border border-slate-200 px-2 py-2">
-                    <FacilityCell facility={a.facility} />
-                  </td>
-                  <td className="border border-slate-200 px-2 py-2 text-xs text-slate-700">
-                    {formatDateTime(a.occurred_at ?? a.diagnosed_at ?? a.created_at)}
-                  </td>
+      {!isPatientPortalLetterhead ? (
+        <section className="mt-8 print:mt-6 print:break-inside-avoid">
+          <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-slate-700">
+            <AlertTriangle className="h-4 w-4 text-amber-600" />
+            Allergies
+          </h3>
+          {history.allergies.length === 0 ? (
+            <p className="text-sm text-slate-600">No allergy records.</p>
+          ) : (
+            <table className="w-full border-collapse border border-slate-200 text-sm">
+              <thead className="bg-slate-100">
+                <tr>
+                  <th className="border border-slate-200 px-2 py-2 text-left text-xs font-semibold text-slate-800">Allergen</th>
+                  <th className="border border-slate-200 px-2 py-2 text-left text-xs font-semibold text-slate-800">Severity</th>
+                  <th className="border border-slate-200 px-2 py-2 text-left text-xs font-semibold text-slate-800">Facility</th>
+                  <th className="border border-slate-200 px-2 py-2 text-left text-xs font-semibold text-slate-800">Recorded</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </section>
+              </thead>
+              <tbody>
+                {history.allergies.map((a) => (
+                  <tr key={a.id} className="align-top">
+                    <td className="border border-slate-200 px-2 py-2 text-xs font-medium text-slate-900">
+                      {a.allergen}
+                      {a.reaction ? <div className="mt-1 font-normal text-slate-700">{a.reaction}</div> : null}
+                    </td>
+                    <td className="border border-slate-200 px-2 py-2 text-xs text-slate-700">{a.severity ?? '—'}</td>
+                    <td className="border border-slate-200 px-2 py-2">
+                      <FacilityCell facility={a.facility} />
+                    </td>
+                    <td className="border border-slate-200 px-2 py-2 text-xs text-slate-700">
+                      {formatDateTime(a.occurred_at ?? a.diagnosed_at ?? a.created_at)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </section>
+      ) : null}
 
       {/* Prescriptions */}
       <section className="mt-8 print:mt-6 print:break-inside-avoid">
@@ -434,111 +437,114 @@ export const MedicalHistoryPreviewDocument: React.FC<MedicalHistoryPreviewDocume
         )}
       </section>
 
-      {/* Clinical notes */}
-      <section className="mt-8 print:mt-6 print:break-inside-avoid">
-        <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-slate-700">
-          <FileText className="h-4 w-4 text-blue-600" />
-          Clinical notes
-        </h3>
-        {history.clinical_notes.length === 0 ? (
-          <p className="text-sm text-slate-600">No clinical notes.</p>
-        ) : (
-          <div className="space-y-3">
-            {history.clinical_notes.map((n) => (
-              <div key={n.id} className="rounded-xl border border-slate-200 p-3 print:break-inside-avoid">
-                <div className="flex flex-wrap justify-between gap-2 border-b border-slate-200 pb-2">
-                  <div>
-                    <p className="text-sm font-semibold text-slate-900 capitalize">{n.note_type ?? 'Note'} · {n.note_status ?? '—'}</p>
-                    <p className="text-xs text-slate-700">
-                      {formatDateTime(n.occurred_at ?? n.noted_at ?? n.created_at)}
-                    </p>
-                    <p className="text-xs text-slate-700">{renderClinician(n.clinician?.name)}</p>
+      {!isPatientPortalLetterhead ? (
+        <section className="mt-8 print:mt-6 print:break-inside-avoid">
+          <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-slate-700">
+            <FileText className="h-4 w-4 text-blue-600" />
+            Clinical notes
+          </h3>
+          {history.clinical_notes.length === 0 ? (
+            <p className="text-sm text-slate-600">No clinical notes.</p>
+          ) : (
+            <div className="space-y-3">
+              {history.clinical_notes.map((n) => (
+                <div key={n.id} className="rounded-xl border border-slate-200 p-3 print:break-inside-avoid">
+                  <div className="flex flex-wrap justify-between gap-2 border-b border-slate-200 pb-2">
+                    <div>
+                      <p className="text-sm font-semibold text-slate-900 capitalize">{n.note_type ?? 'Note'} · {n.note_status ?? '—'}</p>
+                      <p className="text-xs text-slate-700">
+                        {formatDateTime(n.occurred_at ?? n.noted_at ?? n.created_at)}
+                      </p>
+                      <p className="text-xs text-slate-700">{renderClinician(n.clinician?.name)}</p>
+                    </div>
+                    <FacilityCell facility={n.facility} />
                   </div>
-                  <FacilityCell facility={n.facility} />
+                  {n.assessment ? <p className="mt-2 text-xs text-slate-800">{n.assessment}</p> : null}
+                  {n.plan ? <p className="mt-1 text-xs text-slate-700">Plan: {n.plan}</p> : null}
                 </div>
-                {n.assessment ? <p className="mt-2 text-xs text-slate-800">{n.assessment}</p> : null}
-                {n.plan ? <p className="mt-1 text-xs text-slate-700">Plan: {n.plan}</p> : null}
-              </div>
-            ))}
-          </div>
-        )}
-      </section>
-
-      {/* Vitals */}
-      <section className="mt-8 print:mt-6 print:break-inside-avoid">
-        <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-slate-700">
-          <HeartPulse className="h-4 w-4 text-rose-700" />
-          Vital signs
-        </h3>
-        {history.vitals.length === 0 ? (
-          <p className="text-sm text-slate-600">No vitals.</p>
-        ) : (
-          <table className="w-full border-collapse border border-slate-200 text-sm">
-            <thead className="bg-slate-100">
-              <tr>
-                <th className="border border-slate-200 px-2 py-2 text-left text-xs font-semibold text-slate-800">Time</th>
-                <th className="border border-slate-200 px-2 py-2 text-left text-xs font-semibold text-slate-800">Facility</th>
-                <th className="border border-slate-200 px-2 py-2 text-left text-xs font-semibold text-slate-800">Measurements</th>
-                <th className="border border-slate-200 px-2 py-2 text-left text-xs font-semibold text-slate-800">Clinician</th>
-              </tr>
-            </thead>
-            <tbody>
-              {history.vitals.map((v) => (
-                <tr key={v.id} className="align-top">
-                  <td className="border border-slate-200 px-2 py-2 text-xs text-slate-700">
-                    {formatDateTime(v.occurred_at ?? v.measured_at ?? v.created_at)}
-                   </td>
-                  <td className="border border-slate-200 px-2 py-2">
-                    <FacilityCell facility={v.facility} />
-                   </td>
-                  <td className="border border-slate-200 px-2 py-2 text-xs text-slate-800">{vitalSummary(v)}</td>
-                  <td className="border border-slate-200 px-2 py-2 text-xs text-slate-700">{renderClinician(v.clinician?.name)}</td>
-                </tr>
               ))}
-            </tbody>
-          </table>
-        )}
-      </section>
+            </div>
+          )}
+        </section>
+      ) : null}
 
-      {/* Diagnoses */}
-      <section className="mt-8 print:mt-6 print:break-inside-avoid">
-        <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-slate-700">
-          <Stethoscope className="h-4 w-4 text-violet-700" />
-          Diagnoses
-        </h3>
-        {history.diagnoses.length === 0 ? (
-          <p className="text-sm text-slate-600">No diagnoses recorded.</p>
-        ) : (
-          <table className="w-full border-collapse border border-slate-200 text-sm">
-            <thead className="bg-slate-100">
-              <tr>
-                <th className="border border-slate-200 px-2 py-2 text-left text-xs font-semibold text-slate-800">Diagnosis</th>
-                <th className="border border-slate-200 px-2 py-2 text-left text-xs font-semibold text-slate-800">Code</th>
-                <th className="border border-slate-200 px-2 py-2 text-left text-xs font-semibold text-slate-800">Facility</th>
-                <th className="border border-slate-200 px-2 py-2 text-left text-xs font-semibold text-slate-800">Recorded</th>
-              </tr>
-            </thead>
-            <tbody>
-              {history.diagnoses.map((d) => (
-                <tr key={d.id} className="align-top">
-                  <td className="border border-slate-200 px-2 py-2 text-xs font-medium text-slate-900">
-                    {d.diagnosis_description ?? '—'}
-                    <div className="font-normal text-slate-700">{d.clinical_status ?? ''}</div>
-                    <div className="font-normal text-slate-700">{renderClinician(d.clinician?.name)}</div>
-                   </td>
-                  <td className="border border-slate-200 px-2 py-2 text-xs text-slate-700">{d.diagnosis_code ?? '—'}</td>
-                  <td className="border border-slate-200 px-2 py-2">
-                    <FacilityCell facility={d.facility} />
-                   </td>
-                  <td className="border border-slate-200 px-2 py-2 text-xs text-slate-700">
-                    {formatDateTime(d.occurred_at ?? d.created_at)}
-                   </td>
+      {!isPatientPortalLetterhead ? (
+        <section className="mt-8 print:mt-6 print:break-inside-avoid">
+          <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-slate-700">
+            <HeartPulse className="h-4 w-4 text-rose-700" />
+            Vital signs
+          </h3>
+          {history.vitals.length === 0 ? (
+            <p className="text-sm text-slate-600">No vitals.</p>
+          ) : (
+            <table className="w-full border-collapse border border-slate-200 text-sm">
+              <thead className="bg-slate-100">
+                <tr>
+                  <th className="border border-slate-200 px-2 py-2 text-left text-xs font-semibold text-slate-800">Time</th>
+                  <th className="border border-slate-200 px-2 py-2 text-left text-xs font-semibold text-slate-800">Facility</th>
+                  <th className="border border-slate-200 px-2 py-2 text-left text-xs font-semibold text-slate-800">Measurements</th>
+                  <th className="border border-slate-200 px-2 py-2 text-left text-xs font-semibold text-slate-800">Clinician</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </section>
+              </thead>
+              <tbody>
+                {history.vitals.map((v) => (
+                  <tr key={v.id} className="align-top">
+                    <td className="border border-slate-200 px-2 py-2 text-xs text-slate-700">
+                      {formatDateTime(v.occurred_at ?? v.measured_at ?? v.created_at)}
+                     </td>
+                    <td className="border border-slate-200 px-2 py-2">
+                      <FacilityCell facility={v.facility} />
+                     </td>
+                    <td className="border border-slate-200 px-2 py-2 text-xs text-slate-800">{vitalSummary(v)}</td>
+                    <td className="border border-slate-200 px-2 py-2 text-xs text-slate-700">{renderClinician(v.clinician?.name)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </section>
+      ) : null}
+
+      {!isPatientPortalLetterhead ? (
+        <section className="mt-8 print:mt-6 print:break-inside-avoid">
+          <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-slate-700">
+            <Stethoscope className="h-4 w-4 text-violet-700" />
+            Diagnoses
+          </h3>
+          {history.diagnoses.length === 0 ? (
+            <p className="text-sm text-slate-600">No diagnoses recorded.</p>
+          ) : (
+            <table className="w-full border-collapse border border-slate-200 text-sm">
+              <thead className="bg-slate-100">
+                <tr>
+                  <th className="border border-slate-200 px-2 py-2 text-left text-xs font-semibold text-slate-800">Diagnosis</th>
+                  <th className="border border-slate-200 px-2 py-2 text-left text-xs font-semibold text-slate-800">Code</th>
+                  <th className="border border-slate-200 px-2 py-2 text-left text-xs font-semibold text-slate-800">Facility</th>
+                  <th className="border border-slate-200 px-2 py-2 text-left text-xs font-semibold text-slate-800">Recorded</th>
+                </tr>
+              </thead>
+              <tbody>
+                {history.diagnoses.map((d) => (
+                  <tr key={d.id} className="align-top">
+                    <td className="border border-slate-200 px-2 py-2 text-xs font-medium text-slate-900">
+                      {d.diagnosis_description ?? '—'}
+                      <div className="font-normal text-slate-700">{d.clinical_status ?? ''}</div>
+                      <div className="font-normal text-slate-700">{renderClinician(d.clinician?.name)}</div>
+                     </td>
+                    <td className="border border-slate-200 px-2 py-2 text-xs text-slate-700">{d.diagnosis_code ?? '—'}</td>
+                    <td className="border border-slate-200 px-2 py-2">
+                      <FacilityCell facility={d.facility} />
+                     </td>
+                    <td className="border border-slate-200 px-2 py-2 text-xs text-slate-700">
+                      {formatDateTime(d.occurred_at ?? d.created_at)}
+                     </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </section>
+      ) : null}
 
       {/* Consultations */}
       <section className="mt-8 print:mt-6 print:break-inside-avoid">
