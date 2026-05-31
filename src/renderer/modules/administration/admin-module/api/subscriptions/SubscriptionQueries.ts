@@ -467,7 +467,7 @@ export const useGetPaymentQuote = (
       );
       return res.data;
     },
-    staleTime: 30 * 1000,
+    staleTime: 0,
     ...options,
   });
 };
