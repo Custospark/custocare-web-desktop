@@ -231,7 +231,7 @@ export const useGetPlans = (
       const res = await axiosInstance.get<PlansCollectionResponse>('/billing/plans');
       return res.data;
     },
-    staleTime: 5 * 60 * 1000, // Plans rarely change — cache for 5 minutes
+    staleTime: 5 * 60 * 1000,
     ...options,
   });
 };
@@ -467,7 +467,7 @@ export const useGetPaymentQuote = (
       );
       return res.data;
     },
-    staleTime: 60 * 1000,
+    staleTime: 30 * 1000,
     ...options,
   });
 };
