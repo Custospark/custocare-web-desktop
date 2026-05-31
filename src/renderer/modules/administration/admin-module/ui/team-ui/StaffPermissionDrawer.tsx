@@ -34,6 +34,8 @@ import type {
   UpdateFacilityStaffRoleRequest,
 } from '../../api/team-management/types/facilityStaffRoleTypes';
 import LoadingSkeleton from '../../../../../shared/components/Loading/LoadingSkeletons';
+import { useAppDispatch } from '../../../../../app/store/hooks/useApp';
+import { restoreFacilityFunctionalityFromBackend } from '../../../../../shared/entitlements/facilityContextRestore';
 
 interface StaffInfoForDrawer {
   staff_id: number;
@@ -75,6 +77,7 @@ export const StaffPermissionDrawer: React.FC<StaffPermissionDrawerProps> = ({
   onSuccess,
 }) => {
   const isDark = theme === 'dark';
+  const dispatch = useAppDispatch();
 
   // Get current date in YYYY-MM-DD format
   const getCurrentDate = () => {
@@ -152,8 +155,9 @@ export const StaffPermissionDrawer: React.FC<StaffPermissionDrawerProps> = ({
 
   // Update mutation
   const updateMutation = useUpdateFacilityStaffRole({
-    onSuccess: () => {
+    onSuccess: async () => {
       onSuccess();
+      await restoreFacilityFunctionalityFromBackend(dispatch, facilityId);
     },
   });
 
