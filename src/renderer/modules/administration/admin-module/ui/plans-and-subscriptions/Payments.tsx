@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useCallback } from 'react';
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import {
   Landmark, Smartphone, CheckCircle, Copy,
   CheckCheck, Upload, Loader2, FileText,
@@ -19,6 +19,7 @@ import {
   PaymentType,
   SubscriptionStatus,
   type Payment,
+  type PaymentQuote,
   type PaymentQuoteIntent,
 } from '../../api/subscriptions/SubscriptionTypes';
 import { cn } from '../../../../../shared/types/cn';
@@ -55,6 +56,7 @@ export const Payments: React.FC<PaymentsProps> = ({ theme }) => {
   const [copied, setCopied] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [lastQuote, setLastQuote] = useState<PaymentQuote | null>(null);
   const navigate = useNavigate();
 
   const { data: subResp, isLoading: subLoading, refetch: refetchSubscription } = useGetFacilitySubscription();
@@ -89,15 +91,25 @@ export const Payments: React.FC<PaymentsProps> = ({ theme }) => {
 
   const quoteIntent: PaymentQuoteIntent = quoteParams?.intent ?? 'subscription';
 
-  const { data: quoteResp, isLoading: quoteLoading } = useGetPaymentQuote(
-    subscription && quoteParams
+  const paymentQuoteParams = useMemo(
+    () => subscription && quoteParams
       ? { intent: quoteIntent, ...(targetPlanId ? { plan_id: targetPlanId } : {}) }
       : null,
+    [subscription, quoteParams, quoteIntent, targetPlanId],
   );
 
-  const quote = quoteResp?.data;
+  const { data: quoteResp, isLoading: quoteLoading } = useGetPaymentQuote(paymentQuoteParams);
+
+  const quote = quoteResp?.data ?? lastQuote;
   const lineItems = quote?.line_items ?? [];
   const total = quote?.total_usd ?? 0;
+
+  // Keep last quote visible when query refetches or is disabled
+  useEffect(() => {
+    if (quoteResp?.data) {
+      setLastQuote(quoteResp.data);
+    }
+  }, [quoteResp?.data]);
   const noSubscription = !subscription;
 
   const paymentType = (() => {
