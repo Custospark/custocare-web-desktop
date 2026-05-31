@@ -34,14 +34,18 @@ export const subscriptionHasPendingPaymentApproval = (
 export const resolvePaymentQuoteParams = (
   subscription: Subscription | null | undefined,
 ): { intent: PaymentQuoteIntent; planId?: number } | null => {
+  if (!subscription) return null;
   const action = getSubscriptionPaymentAction(subscription);
-  if (!action?.required || !action.intent) {
-    return null;
+  if (action?.required && action.intent) {
+    return {
+      intent: action.intent as PaymentQuoteIntent,
+      planId: action.plan_id ?? undefined,
+    };
   }
-  return {
-    intent: action.intent as PaymentQuoteIntent,
-    planId: action.plan_id ?? undefined,
-  };
+  // Fall back to subscription intent for the current plan
+  const planId = subscription.plan?.id ?? subscription.effective_plan?.id;
+  if (!planId) return null;
+  return { intent: 'subscription' as PaymentQuoteIntent, planId };
 };
 
 /** Days since subscription started (for trial consumption). */
