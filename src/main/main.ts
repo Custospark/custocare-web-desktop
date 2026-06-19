@@ -71,7 +71,7 @@ function createWindow(): BrowserWindow {
 
   // IMPORTANT: init updater only in production
   if (!isDev) {
-    initAutoUpdater(mainWindow);
+    initAutoUpdater();
   }
 
   return mainWindow;

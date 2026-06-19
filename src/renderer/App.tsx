@@ -15,7 +15,6 @@ import { AppProvider } from './app/store/contexts/app/AppContext';
 import { ConfirmProvider } from './shared/components/Feedback/ConfirmDialog/ConfirmProvider';
 import { ToastProvider } from './app/store/contexts/toast/ToastContext';
 import { NavigationBridge } from './app/routes/navigation/NavigationBridge';
-import { UpdateNotification } from './shared/components/Feedback/UpdateNotification';
 import { ScrollToTop } from './shared/components/ScrollToTop/ScrollToTop'; // ← Import ScrollToTop
 import NetworkOfflineOverlay from './shared/components/Errors/NetworkOfflineOverlay';
 
@@ -61,9 +60,6 @@ function App() {
                     <AppRoutes />
                   </AppInitializer>
                   <BillingTray/>
-
-                  {/* ---- System-Level UI (Non-blocking) ---- */}
-                  <UpdateNotification />
                 </AppProvider>
               </Router>
 

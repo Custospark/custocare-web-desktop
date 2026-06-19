@@ -8,6 +8,10 @@ import { cn } from '../../../../../shared/types/cn';
 import LogoImage from '../../../../../shared/assets/LogoImage';
 import { BrandName } from '../../../../../shared/utils/BrandName';
 import { useToast } from '../../../../../app/store/contexts/toast/useToast';
+import {
+  getWindowsInstallerDownloadUrl,
+  getWindowsInstallerFileName,
+} from '../../../../../shared/config/desktopRelease';
 
 interface LandingHeaderProps {
   theme: string;
@@ -28,17 +32,15 @@ export const LandingHeader: React.FC<LandingHeaderProps> = ({ theme }) => {
   const { showToast } = useToast();
 
   const handleDownloadWindows = () => {
-    const downloadUrl = 'https://github.com/Custospark/custocare-web-desktop/releases/download/v2.13.11/Custocare-Setup-2.13.11.exe';
-
     const link = document.createElement('a');
-    link.href = downloadUrl;
-    link.download = 'Custocare-Setup-2.13.11.exe';
+    link.href = getWindowsInstallerDownloadUrl();
+    link.download = getWindowsInstallerFileName();
     link.style.display = 'none';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
 
-    showToast("info", "Custocare Desktop download started...", 5000);
+    showToast('success', 'Custocare Desktop download started...');
   };
 
   return (
