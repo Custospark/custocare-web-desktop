@@ -28,10 +28,10 @@
     "build:win": "npm run transpile:electron && npm run react:build && npx electron-builder --win --x64",
     "build:linux": "npm run transpile:electron && npm run react:build && npx electron-builder --linux --x64",
     "build:all": "npm run build:mac && npm run build:win && npm run build:linux",
-    "publish:mac": "npm run transpile:electron && npm run react:build && npx electron-builder --mac --arm64 --publish always",
-    "publish:win": "npm run transpile:electron && npm run react:build && npx electron-builder --win --x64 --publish always",
-    "publish:linux": "npm run transpile:electron && npm run react:build && npx electron-builder --linux --x64 --publish always",
-    "publish:all": "npm run transpile:electron && npm run react:build && npx electron-builder --mac --win --linux --publish always",
+    "publish:mac": "npm run transpile:electron && npm run react:build && node scripts/create-release.mjs && npx electron-builder --mac --arm64 --publish always",
+    "publish:win": "npm run transpile:electron && npm run react:build && node scripts/create-release.mjs && npx electron-builder --win --x64 --publish always",
+    "publish:linux": "npm run transpile:electron && npm run react:build && node scripts/create-release.mjs && npx electron-builder --linux --x64 --publish always",
+    "publish:all": "npm run transpile:electron && npm run react:build && node scripts/create-release.mjs && npx electron-builder --mac --win --linux --publish always",
     "prepare": "husky"
   },
   "dependencies": {
