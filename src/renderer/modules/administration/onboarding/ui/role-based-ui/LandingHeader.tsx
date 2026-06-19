@@ -8,10 +8,7 @@ import { cn } from '../../../../../shared/types/cn';
 import LogoImage from '../../../../../shared/assets/LogoImage';
 import { BrandName } from '../../../../../shared/utils/BrandName';
 import { useToast } from '../../../../../app/store/contexts/toast/useToast';
-import {
-  getWindowsInstallerDownloadUrl,
-  getWindowsInstallerFileName,
-} from '../../../../../shared/config/desktopRelease';
+import { getWindowsInstallerDownloadUrl } from '../../../../../shared/config/desktopRelease';
 
 interface LandingHeaderProps {
   theme: string;
@@ -32,14 +29,7 @@ export const LandingHeader: React.FC<LandingHeaderProps> = ({ theme }) => {
   const { showToast } = useToast();
 
   const handleDownloadWindows = () => {
-    const link = document.createElement('a');
-    link.href = getWindowsInstallerDownloadUrl();
-    link.download = getWindowsInstallerFileName();
-    link.style.display = 'none';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-
+    window.open(getWindowsInstallerDownloadUrl(), '_blank');
     showToast('success', 'Custocare Desktop download started...');
   };
 
