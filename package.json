@@ -85,6 +85,7 @@
   "build": {
     "appId": "com.custospark.custocare",
     "productName": "Custocare",
+    "artifactName": "${productName}-Setup-${version}.${ext}",
     "directories": {
       "output": "dist/releases/",
       "buildResources": "assets"
