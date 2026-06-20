@@ -44,17 +44,24 @@ function githubRequest(method, path, body) {
   });
 }
 
-const { status, data } = await githubRequest(
+const { status: listStatus, data: releases } = await githubRequest(
   'GET',
-  `/repos/Custospark/custocare-web-desktop/releases/tags/${tag}`
+  '/repos/Custospark/custocare-web-desktop/releases?per_page=20'
 );
 
-if (status === 404) {
+if (listStatus !== 200) {
+  console.error(`❌ Failed to list releases (${listStatus})`);
+  process.exit(0);
+}
+
+const release = Array.isArray(releases) ? releases.find((r) => r.tag_name === tag) : null;
+
+if (!release) {
   console.log(`ℹ️  No release found for ${tag} — skipping`);
   process.exit(0);
 }
 
-if (!data.draft) {
+if (!release.draft) {
   console.log(`ℹ️  Release ${tag} is already published — nothing to do`);
   process.exit(0);
 }
@@ -63,7 +70,7 @@ console.log(`📝 Publishing draft release ${tag}...`);
 
 const { status: patchStatus, data: patchData } = await githubRequest(
   'PATCH',
-  `/repos/Custospark/custocare-web-desktop/releases/${data.id}`,
+  `/repos/Custospark/custocare-web-desktop/releases/${release.id}`,
   JSON.stringify({ draft: false })
 );
 
