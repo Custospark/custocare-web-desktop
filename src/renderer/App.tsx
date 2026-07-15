@@ -3,7 +3,10 @@
 import { Provider } from 'react-redux';
 import { QueryClientProvider } from '@tanstack/react-query';
 // import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
-import { BrowserRouter as Router } from 'react-router-dom';
+import { BrowserRouter, HashRouter } from 'react-router-dom';
+
+const isElectron = navigator.userAgent.toLowerCase().includes('electron');
+const Router = isElectron ? HashRouter : BrowserRouter;
 
 import { store } from './app/store/store';
 import { queryClient } from './app/api/axiosConfig';
