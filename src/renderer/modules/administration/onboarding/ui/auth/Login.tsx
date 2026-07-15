@@ -4,6 +4,7 @@ import { Mail, Lock, AlertCircle, Loader2, Eye, EyeOff } from 'lucide-react';
 import { useAppSelector } from '../../../../../app/store/hooks/useApp';
 import AuthLayout from './AuthLayout';
 import { cn } from '../../../../../shared/types/cn';
+import heroSmilingNurse3 from '/assets/smiling_nurse_3.jpg';
 
 // ── Use the correct login hook from AccountQueries ─────────────────────────
 import { useLogin } from '../../../../account/api/AccountQueries';
@@ -129,7 +130,7 @@ export const Login: React.FC = () => {
         <AuthLayout
         title="Welcome back"
         subtitle="Sign in to continue"
-        heroImage="/assets/smiling_nurse_3.jpg"
+        heroImage={heroSmilingNurse3}
         heroHeadline="Continuous care. Clinical Excellence."
         heroSubtext="Clinical, Nursing, Lab, Pharmacy, Billing, Ambulance — all working as one. Faster. Safer. Smarter."
       >

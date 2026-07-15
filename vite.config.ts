@@ -3,27 +3,16 @@ import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
-import type { Plugin } from 'vite';
 
 // Read version from package.json
 const pkg = JSON.parse(readFileSync(resolve(__dirname, 'package.json'), 'utf-8'));
 const appVersion = pkg.version;
-
-function stripCrossorigin(): Plugin {
-  return {
-    name: 'strip-crossorigin',
-    transformIndexHtml(html) {
-      return html.replace(/crossorigin\s*/g, '');
-    },
-  };
-}
 
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [
     react(),
     tailwindcss(),
-    stripCrossorigin(),
   ],
   base: './',
   build: {

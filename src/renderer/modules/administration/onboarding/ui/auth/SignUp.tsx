@@ -14,6 +14,7 @@ import {
 import { useAppSelector } from '../../../../../app/store/hooks/useApp';
 import AuthLayout from './AuthLayout';
 import { cn } from '../../../../../shared/types/cn';
+import heroSmilingNurse from '/assets/smiling_nurse.jpg';
 import { countryCodes } from './countryCodes';
 
 // ── AccountQueries integration ──────────────────────────────────────────────
@@ -250,7 +251,7 @@ export const SignUp: React.FC = () => {
    <AuthLayout
       title="Create your account"
       subtitle="Join Custocare, built for continuous care."
-      heroImage="/assets/smiling_nurse.jpg"
+        heroImage={heroSmilingNurse}
       heroHeadline="Continuous care. Clinical Excellence."
       heroSubtext="Lab knows. Clinical sees. Pharmacy acts. Nursing documents. Billing captures. Ambulance alerts. No dropped balls. Just care. Start your journey here."
       showBackToLogin

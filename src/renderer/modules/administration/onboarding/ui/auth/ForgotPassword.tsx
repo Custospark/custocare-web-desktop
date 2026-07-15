@@ -4,6 +4,7 @@ import { Mail, AlertCircle, Loader2, CheckCircle, ArrowRight, Clock } from 'luci
 import { useAppSelector } from '../../../../../app/store/hooks/useApp';
 import AuthLayout from './AuthLayout';
 import { cn } from '../../../../../shared/types/cn';
+import heroSmilingNurse4 from '/assets/smiling_nurse_4.jpg';
 
 // ── AccountQueries integration ───────────────────────────────────────────────
 import { useForgotPassword } from '../../../../account/api/AccountQueries';
@@ -209,7 +210,7 @@ const ForgotPassword: React.FC = () => {
         title="Check Your Email"
         subtitle="We've sent you password reset instructions"
         // heroImage="https://images.unsplash.com/photo-1563986768609-322da13575f3?w=1200&q=80"
-        heroImage="/assets/smiling_nurse_4.jpg"
+        heroImage={heroSmilingNurse4}
         heroHeadline="Secure Account Recovery"
         heroSubtext="Your account security is our top priority. Follow the instructions sent to your email to reset your password."
         showBackToLogin
@@ -427,7 +428,7 @@ const ForgotPassword: React.FC = () => {
       <AuthLayout
       title="Reset your password"
       subtitle="We've all been there. Let's get you back in."
-      heroImage="/assets/smiling_nurse_4.jpg"
+      heroImage={heroSmilingNurse4}
       // heroImage="https://images.unsplash.com/photo-1587825140708-dfaf72ae4b04?w=1200&q=80"
       heroHeadline="Continuous care. Clinical Excellence."
       heroSubtext="Lab, Pharmacy, Clinical, Nursing, Billing, Ambulance — all working as one. Don't let a forgotten password slow you down."
