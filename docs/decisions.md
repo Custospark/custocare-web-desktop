@@ -2,6 +2,49 @@
 
 ---
 
+## 2026-07-15: Desktop App Fixes — HashRouter for Electron, Strip Crossorigin, Preload Bridge, Icon Path
+
+**Context:** The Custocare desktop app showed a 404 "Resource Not Found" page on startup in production builds. Three root causes were identified by comparing against the working Custosell desktop setup:
+
+### Root Cause 1: BrowserRouter with file:// Protocol
+**`App.tsx`** used `BrowserRouter` which reads `window.location.pathname` to determine the current route. When Electron loads via `loadFile()` and the `file://` protocol, the pathname is the full filesystem path (e.g., `/C:/Users/.../dist/web/index.html`), not `/`. None of the app's routes (`/`, `/login`, etc.) matched this full path, so the catch-all `*` route fired and rendered the `NotFound` component.
+
+**Fix:** Switched to a conditional router matching Custosell's pattern:
+```tsx
+const isElectron = navigator.userAgent.toLowerCase().includes('electron');
+const Router = isElectron ? HashRouter : BrowserRouter;
+```
+- **In Electron** (`file://`): `HashRouter` uses the URL hash (`index.html#/`), which correctly resolves to `/` regardless of the file path.
+- **In browser** (web server): `BrowserRouter` for clean URLs.
+
+### Root Cause 2: crossorigin Attribute on Module Scripts
+Vite adds `crossorigin` to `<script type="module">` and `<link rel="stylesheet">` tags by default. When Electron loads `index.html` via `file://`, the `crossorigin` attribute causes the browser to expect CORS headers — but there's no HTTP server for local files, so the browser blocks the scripts.
+
+**Fix:** Added `stripCrossorigin()` Vite plugin that removes `crossorigin` from the built HTML via `transformIndexHtml`. Identical to Custosell's implementation.
+
+### Root Cause 3: Missing Preload Script & Icon Path
+- **Preload:** `src/preload/preload.ts` was empty (0 lines). Added the `secureStore` context bridge using `safeStorage` exposed via `contextBridge.exposeInMainWorld`.
+- **Icon path:** Production icon path used `path.join(__dirname, 'assets/icon.png')` which resolves inside the asar where the icon doesn't exist. Fixed to use `process.resourcesPath` for production (matching Custosell).
+- **preload in webPreferences:** Added `preload` path to `webPreferences` — dev uses `dist/desktop/preload/preload.js`, production uses `app.getAppPath() + '/preload.js'` (copied by `extraFiles` in electron-builder).
+
+### Files changed (FE — 6 files)
+
+| File | Change |
+|------|--------|
+| `src/renderer/App.tsx` | Conditional `HashRouter`/`BrowserRouter` based on `navigator.userAgent` |
+| `vite.config.ts` | Added `stripCrossorigin()` plugin |
+| `src/main/main.ts` | Added `safeStorage`, secure store IPC, fixed icon path, added preload path |
+| `src/preload/preload.ts` | Filled with `secureStore` context bridge (was empty) |
+| `src/tsconfig.json` | Added `include: ["main/**/*", "preload/**/*"]` |
+| `src/renderer/.../LandingHeader.tsx` | Kept download toast (per request) |
+
+### Trade-offs
+- `HashRouter` adds `#/` prefix to URLs — both in Electron and web. For the web version served by a real server, this produces `/#/login` URLs instead of `/login`. This is acceptable because both formats work, and the hash-based approach is the standard pattern for Electron + React apps.
+- The `stripCrossorigin` plugin is a simple regex replacement. It only affects the production build output. Dev server is unaffected.
+- The `secureStore` bridge is only used by the Electron renderer. When running in a browser, `window.secureStore` will be `undefined` — consumers must guard against this.
+
+---
+
 ## 2026-05-27: Rename `max_patients_per_month` → `max_visits_per_month` + Frontend Limit Guards
 
 **Context:** The column `max_patients_per_month` on the `plans` table was semantically misleading — the actual enforcement in `UsageService::getVisitsCount()` counts **all visits** (every encounter), not unique patients. Additionally, the frontend had plan limit guards only on the Staff Invitation flow; Department creation, Visit creation, and `StaffCreationForm` all lacked frontend enforcement, relying solely on backend validation errors.
