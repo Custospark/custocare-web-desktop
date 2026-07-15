@@ -44,6 +44,7 @@ import { InventoryItemFormDrawer, type InventoryItemFormData } from './component
 import { InventoryCatalogList } from './components/InventoryCatalogList';
 import { InventoryStockAdjustModal } from './components/InventoryStockAdjustModal';
 import { InventoryItemLedgerHistoryModal } from './components/InventoryItemLedgerHistoryModal';
+import { InventoryImportModal } from './components/InventoryImportModal';
 import { generateItemCode } from './utils/inventoryItemUiUtils';
 
 interface AdminInventoryItemProps {
@@ -161,6 +162,9 @@ export const AdminInventoryItem: React.FC<AdminInventoryItemProps> = ({ theme })
 
   // Ledger history modal state
   const [historyItem, setHistoryItem] = useState<InventoryItem | null>(null);
+
+  // Import modal state
+  const [importOpen, setImportOpen] = useState(false);
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -319,7 +323,7 @@ export const AdminInventoryItem: React.FC<AdminInventoryItemProps> = ({ theme })
     staleTime: 1000 * 30, // 30 seconds
   });
 
-  const items = itemsResponse?.data ?? [];
+  const items = useMemo(() => itemsResponse?.data ?? [], [itemsResponse]);
 
   // ---------------------------------------------------------------------------
   // CLIENT-SIDE FILTERING - Apply all filters to the loaded data
@@ -387,10 +391,12 @@ export const AdminInventoryItem: React.FC<AdminInventoryItemProps> = ({ theme })
     return filtered;
   }, [items, filters]);
 
-  // Reset to page 1 when filters change
+  const filterKey = JSON.stringify(filters) + itemsPerPage;
+  const currentPageKey = useMemo(() => filterKey, [filterKey]);
   useEffect(() => {
-    setCurrentPage(1);
-  }, [filters, itemsPerPage]);
+    const id = setTimeout(() => setCurrentPage(1), 0);
+    return () => clearTimeout(id);
+  }, [currentPageKey]);
 
   const setListCache = useCallback(
     (updater: (current: InventoryItemListResponse | undefined) => InventoryItemListResponse | undefined) => {
@@ -521,7 +527,7 @@ export const AdminInventoryItem: React.FC<AdminInventoryItemProps> = ({ theme })
       requires_refrigeration: item.requires_refrigeration,
       requires_controlled_access: item.requires_controlled_access,
       storage_location_type: item.storage_location_type || '',
-      storage_requirements: item.storage_requirements as any,
+      storage_requirements: item.storage_requirements ?? '',
       
       // Safety & Compliance
       requires_prescription: item.requires_prescription,
@@ -594,7 +600,7 @@ export const AdminInventoryItem: React.FC<AdminInventoryItemProps> = ({ theme })
       requires_refrigeration: item.requires_refrigeration,
       requires_controlled_access: item.requires_controlled_access,
       storage_location_type: item.storage_location_type || '',
-      storage_requirements: item.storage_requirements as any,
+      storage_requirements: item.storage_requirements ?? '',
       
       // Safety & Compliance
       requires_prescription: item.requires_prescription,
@@ -682,7 +688,7 @@ export const AdminInventoryItem: React.FC<AdminInventoryItemProps> = ({ theme })
       requires_prescription: formData.requires_prescription,
       fda_approval_number: safeTrim(formData.fda_approval_number),
       is_hazardous: formData.is_hazardous,
-      safety_warnings: formData.safety_warnings as any,
+      safety_warnings: formData.safety_warnings as string | undefined,
       contraindications: formData.contraindications,
       special_handling_instructions: safeTrim(formData.special_handling_instructions),
       is_billable: formData.is_billable,
@@ -956,9 +962,7 @@ export const AdminInventoryItem: React.FC<AdminInventoryItemProps> = ({ theme })
         items={items}
         onRefresh={() => refetch()}
         onCreate={openCreate}
-        onImport={() => {
-          console.log('Open import dialog');
-        }}
+        onImport={() => setImportOpen(true)}
       />
 
       <InventoryItemFiltersBar
@@ -1049,6 +1053,16 @@ export const AdminInventoryItem: React.FC<AdminInventoryItemProps> = ({ theme })
         logs={historyData?.data ?? []}
         isLoading={historyLoading}
         onClose={() => setHistoryItem(null)}
+      />
+
+      <InventoryImportModal
+        theme={theme}
+        open={importOpen}
+        onClose={() => setImportOpen(false)}
+        onImported={() => {
+          setImportOpen(false);
+          queryClient.invalidateQueries({ queryKey: inventoryItemKeys.all });
+        }}
       />
     </div>
   );

@@ -1,5 +1,5 @@
-// electron/main.ts
-import { app, BrowserWindow, Menu, ipcMain } from 'electron';
+import { app, BrowserWindow, Menu, ipcMain, safeStorage } from 'electron';
+import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { initAutoUpdater, installUpdateOnQuitIfReady } from './autoUpdater.js';
@@ -11,28 +11,53 @@ const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
 
 let mainWindow: BrowserWindow | null = null;
 
+function getSecureStorePath(): string {
+  return path.join(app.getPath('userData'), 'secure-store.json');
+}
+
+function readSecureStoreFile(): Record<string, string> {
+  const filePath = getSecureStorePath();
+  if (!fs.existsSync(filePath)) return {};
+  try {
+    return JSON.parse(fs.readFileSync(filePath, 'utf8')) as Record<string, string>;
+  } catch {
+    return {};
+  }
+}
+
+function writeSecureStoreFile(data: Record<string, string>): void {
+  fs.writeFileSync(getSecureStorePath(), JSON.stringify(data), 'utf8');
+}
+
 function getProdIndexPath(): string {
   return path.join(app.getAppPath(), 'dist', 'web', 'index.html');
 }
 
 function createWindow(): BrowserWindow {
+  const iconPath = isDev
+    ? path.join(__dirname, '..', '..', 'assets', 'icon.png')
+    : path.join(process.resourcesPath, 'icon.png');
+
   mainWindow = new BrowserWindow({
-    width: 1400,
-    height: 900,
-    minWidth: 1200,
-    minHeight: 700,
+    width: 1200,
+    height: 800,
+    minWidth: 900,
+    minHeight: 600,
     show: false,
     frame: true,
     autoHideMenuBar: true,
     backgroundColor: '#ffffff',
     fullscreenable: true,
-    icon: path.join(__dirname, 'assets/icon.png'),
+    icon: iconPath,
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false,
+      preload: isDev
+        ? path.join(__dirname, '..', 'preload', 'preload.js')
+        : path.join(app.getAppPath(), 'preload.js'),
       webSecurity: !isDev,
-      devTools: isDev
-    }
+      devTools: isDev,
+    },
   });
 
   Menu.setApplicationMenu(null);
@@ -69,7 +94,6 @@ function createWindow(): BrowserWindow {
     mainWindow = null;
   });
 
-  // IMPORTANT: init updater only in production
   if (!isDev) {
     initAutoUpdater();
   }
@@ -77,23 +101,21 @@ function createWindow(): BrowserWindow {
   return mainWindow;
 }
 
-/**
- * IPC: fullscreen controls
- */
-ipcMain.on('toggle-fullscreen', () => {
-  if (!mainWindow) return;
+ipcMain.handle('toggle-fullscreen', () => {
+  if (!mainWindow) return false;
   mainWindow.setFullScreen(!mainWindow.isFullScreen());
+  return mainWindow.isFullScreen();
 });
 
 ipcMain.handle('is-fullscreen', () => mainWindow?.isFullScreen() ?? false);
 
-/**
- * IPC: DevTools controls (DEV ONLY)
- */
 ipcMain.on('toggle-devtools', () => {
   if (!isDev || !mainWindow) return;
-  if (mainWindow.webContents.isDevToolsOpened()) mainWindow.webContents.closeDevTools();
-  else mainWindow.webContents.openDevTools({ mode: 'detach' });
+  if (mainWindow.webContents.isDevToolsOpened()) {
+    mainWindow.webContents.closeDevTools();
+  } else {
+    mainWindow.webContents.openDevTools({ mode: 'detach' });
+  }
 });
 
 ipcMain.on('open-devtools', () => {
@@ -111,27 +133,46 @@ ipcMain.handle('is-devtools-open', () => {
   return mainWindow.webContents.isDevToolsOpened();
 });
 
-/**
- * App lifecycle
- */
+ipcMain.handle('secure-store:set', (_event, key: string, value: string) => {
+  if (!safeStorage.isEncryptionAvailable()) return false;
+  const encrypted = safeStorage.encryptString(value).toString('base64');
+  const store = readSecureStoreFile();
+  store[key] = encrypted;
+  writeSecureStoreFile(store);
+  return true;
+});
+
+ipcMain.handle('secure-store:get', (_event, key: string) => {
+  if (!safeStorage.isEncryptionAvailable()) return null;
+  const store = readSecureStoreFile();
+  const encrypted = store[key];
+  if (!encrypted) return null;
+  try {
+    return safeStorage.decryptString(Buffer.from(encrypted, 'base64'));
+  } catch {
+    return null;
+  }
+});
+
+ipcMain.handle('secure-store:delete', (_event, key: string) => {
+  const store = readSecureStoreFile();
+  delete store[key];
+  writeSecureStoreFile(store);
+});
+
 app.whenReady().then(() => {
   createWindow();
 
   app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow();
+    if (BrowserWindow.getAllWindows().length === 0) {
+      createWindow();
+    }
   });
 });
 
-/**
- * The critical part:
- * When the user quits the app, if an update was downloaded,
- * run the installer silently so the next launch is updated.
- */
 app.on('before-quit', (event) => {
   if (isDev) return;
 
-  // If updater has a ready update, this will call quitAndInstall and return true.
-  // If it returns true, we prevent the default quit once and let quitAndInstall handle it.
   const willInstall = installUpdateOnQuitIfReady();
   if (willInstall) {
     event.preventDefault();
@@ -139,7 +180,9 @@ app.on('before-quit', (event) => {
 });
 
 app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') app.quit();
+  if (process.platform !== 'darwin') {
+    app.quit();
+  }
 });
 
 process.on('uncaughtException', (error: Error) => {

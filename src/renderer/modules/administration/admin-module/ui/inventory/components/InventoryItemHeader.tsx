@@ -1,6 +1,6 @@
 // src/administration/admin-module/inventory-items/components/InventoryItemHeader.tsx
 import React from 'react';
-import { Box, ChevronUp, Package, Plus, Shield, TrendingUp } from 'lucide-react';
+import { Box, ChevronUp, Package, Plus, Shield, TrendingUp, Upload } from 'lucide-react';
 import { type InventoryItem, ItemStatus } from '../../../api/admin-inventory/inventoryItemTypes';
 import { normalizeAmount } from '../utils/inventoryItemUiUtils';
 import { cn } from '../../../../../../shared/utils/classNameUtils';
@@ -18,6 +18,7 @@ export const InventoryItemHeader: React.FC<Props> = ({
   theme,
   items,
   onCreate,
+  onImport,
 }) => {
   const isDark = theme === 'dark';
 
@@ -59,6 +60,13 @@ export const InventoryItemHeader: React.FC<Props> = ({
         </div>
 
         <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+        <button
+          onClick={onImport}
+          className="inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 border-2 border-blue-200 text-blue-700 hover:bg-blue-50 rounded-lg text-xs sm:text-sm font-medium transition-colors whitespace-nowrap cursor-pointer hover:cursor-pointer active:cursor-pointer"
+        >
+          <Upload className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+          <span className="hidden xs:inline">Import</span>
+        </button>
         <button
           onClick={onCreate}
           className="inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs sm:text-sm font-medium transition-colors whitespace-nowrap cursor-pointer hover:cursor-pointer active:cursor-pointer"
