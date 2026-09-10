@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import {
   FileText,
-  ArrowLeft, AlertCircle, CreditCard, RefreshCw,
+  ArrowLeft, CreditCard, RefreshCw,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
@@ -58,11 +58,6 @@ export const Payments: React.FC<PaymentsProps> = ({ theme }) => {
   const needsPayment = subscriptionNeedsPayment(subscription);
   const pendingApproval = subscriptionHasPendingPaymentApproval(subscription);
 
-  // Derive payment message - fallback for suspended/cancelled where backend returns null
-  const paymentMessage = paymentAction?.message
-    ?? (subscription?.status === 'suspended' ? 'Your subscription has been suspended. Submit payment to reactivate.'
-      : subscription?.status === 'cancelled' ? 'Your subscription has been cancelled. Submit payment to reactivate.'
-      : null);
   const quoteParams = resolvePaymentQuoteParams(subscription);
   const plans = plansResp?.data ?? [];
 
@@ -234,34 +229,6 @@ export const Payments: React.FC<PaymentsProps> = ({ theme }) => {
           )}
         </div>
       </div>
-
-      {needsPayment && !pendingApproval && paymentMessage && (
-        <motion.div
-          initial={{ opacity: 0, y: -8 }}
-          animate={{ opacity: 1, y: 0 }}
-          className={cn(
-            'rounded-xl border-2 p-5',
-            isDark ? 'bg-amber-900/20 border-amber-600/40' : 'bg-amber-50 border-amber-200',
-          )}
-        >
-          <div className="flex items-start gap-3">
-            <AlertCircle className={cn('w-5 h-5 shrink-0 mt-0.5', isDark ? 'text-amber-400' : 'text-amber-600')} />
-            <div className="space-y-2">
-              <p className={cn('font-bold text-sm', isDark ? 'text-amber-100' : 'text-amber-900')}>
-                {paymentAction?.label ?? 'Payment required'}
-              </p>
-              <p className={cn('text-sm', isDark ? 'text-amber-200/90' : 'text-amber-800')}>
-                {paymentMessage}
-              </p>
-              <ol className={cn('text-xs list-decimal list-inside space-y-1', isDark ? 'text-amber-200/80' : 'text-amber-900/80')}>
-                <li>Review the amount due below.</li>
-                <li>Pay online instantly with mobile money or card.</li>
-                <li>Your subscription activates automatically once payment completes.</li>
-              </ol>
-            </div>
-          </div>
-        </motion.div>
-      )}
 
       {pendingApproval && (
         <motion.div

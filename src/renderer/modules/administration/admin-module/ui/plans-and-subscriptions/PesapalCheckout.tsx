@@ -109,7 +109,7 @@ export const PesapalCheckout: React.FC<PesapalCheckoutProps> = ({
 
   const handlePay = () => {
     if (!email.trim()) {
-      showToast('error', 'Enter the email address for the PesaPal receipt.', 5000);
+      showToast('error', 'Enter the email address for your receipt.', 5000);
       return;
     }
     approvedRef.current = false;
@@ -156,7 +156,7 @@ export const PesapalCheckout: React.FC<PesapalCheckoutProps> = ({
         </div>
         <div>
           <h3 className={cn('font-bold text-sm', isDark ? 'text-white' : 'text-gray-900')}>
-            Pay Online with PesaPal
+            Pay Online
           </h3>
           <p className={cn('text-xs', isDark ? 'text-gray-400' : 'text-gray-500')}>
             Mobile money & cards - instant activation
