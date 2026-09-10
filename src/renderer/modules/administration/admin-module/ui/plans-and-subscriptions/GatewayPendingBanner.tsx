@@ -36,7 +36,7 @@ export const GatewayPendingBanner: React.FC<GatewayPendingBannerProps> = ({
   const status = statusQuery.data?.data?.status;
 
   useEffect(() => {
-    if (status === 'approved' && !approvedRef.current) {
+    if (status === 'completed' && !approvedRef.current) {
       approvedRef.current = true;
       showToast('success', 'Payment confirmed. Subscription activated.', 7000);
       onApproved();

@@ -42,14 +42,14 @@ export enum SubscriptionStatus {
 
 /**
  * Payment record statuses.
- * pending → approved | rejected | refunded
+ * pending → completed | failed | refunded
  *
  * Mirrors: app/Enums/Billing/PaymentStatus.php
  */
 export enum PaymentStatus {
   PENDING  = 'pending',
-  APPROVED = 'approved',
-  REJECTED = 'rejected',
+  COMPLETED = 'completed',
+  FAILED = 'failed',
   REFUNDED = 'refunded',
 }
 
@@ -915,8 +915,8 @@ export const SUBSCRIPTION_STATUS_LABELS: Record<SubscriptionStatus, string> = {
 /** UI labels for payment statuses (mirrors backend PaymentStatus::label()). */
 export const PAYMENT_STATUS_LABELS: Record<PaymentStatus, string> = {
   [PaymentStatus.PENDING]:  'Pending Payment',
-  [PaymentStatus.APPROVED]: 'Approved',
-  [PaymentStatus.REJECTED]: 'Rejected',
+  [PaymentStatus.COMPLETED]: 'Completed',
+  [PaymentStatus.FAILED]: 'Failed',
   [PaymentStatus.REFUNDED]: 'Refunded',
 };
 

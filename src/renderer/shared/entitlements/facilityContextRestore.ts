@@ -91,7 +91,7 @@ export function shouldOfferRestoreAfterApprovedPayment(
     return false;
   }
 
-  return options.payments.some((payment) => payment.status === PaymentStatus.APPROVED);
+  return options.payments.some((payment) => payment.status === PaymentStatus.COMPLETED);
 }
 
 export function shouldOfferRestoreFunctionality(

@@ -33,8 +33,8 @@ import {
   type Payment,
   SubscriptionStatus,
   PaymentStatus,
-  SUBSCRIPTION_STATUS_LABELS,
 } from '../../api/subscriptions/SubscriptionTypes';
+import { subscriptionStatusMeta } from '../../utils/subscriptionMatrix';
 import LoadingSkeleton from '../../../../../shared/components/Loading/LoadingSkeletons';
 import { ADMINISTRATION_PLANS_SUBSCRIPTIONS_ROUTES } from '../../../../../app/routes/constants/administration.paths';
 import { cn } from '../../../../../shared/utils/classNameUtils';
@@ -61,7 +61,7 @@ interface SubscriptionStatusBadgeProps {
 
 interface TimelineEvent {
   id: string;
-  type: 'created' | 'payment' | 'approved' | 'suspended' | 'cancelled' | 'renewal';
+  type: 'created' | 'payment' | 'completed' | 'suspended' | 'cancelled' | 'renewal';
   title: string;
   description: string;
   date: string;
@@ -81,15 +81,15 @@ const SubscriptionStatusBadge: React.FC<SubscriptionStatusBadgeProps> = ({
   const cfg = (() => {
     switch (status) {
       case SubscriptionStatus.TRIAL:
-        return { icon: Clock, bg: isDark ? 'bg-blue-900/30' : 'bg-blue-100', text: isDark ? 'text-blue-300' : 'text-blue-700', border: isDark ? 'border-blue-800' : 'border-blue-200', label: SUBSCRIPTION_STATUS_LABELS[SubscriptionStatus.TRIAL] };
+        return { icon: Clock, bg: isDark ? 'bg-blue-900/30' : 'bg-blue-100', text: isDark ? 'text-blue-300' : 'text-blue-700', border: isDark ? 'border-blue-800' : 'border-blue-200', label: subscriptionStatusMeta(SubscriptionStatus.TRIAL).label };
       case SubscriptionStatus.ACTIVE:
-        return { icon: CheckCircle, bg: isDark ? 'bg-green-900/30' : 'bg-green-100', text: isDark ? 'text-green-300' : 'text-green-700', border: isDark ? 'border-green-800' : 'border-green-200', label: SUBSCRIPTION_STATUS_LABELS[SubscriptionStatus.ACTIVE] };
+        return { icon: CheckCircle, bg: isDark ? 'bg-green-900/30' : 'bg-green-100', text: isDark ? 'text-green-300' : 'text-green-700', border: isDark ? 'border-green-800' : 'border-green-200', label: subscriptionStatusMeta(SubscriptionStatus.ACTIVE).label };
       case SubscriptionStatus.PAST_DUE:
-        return { icon: AlertCircle, bg: isDark ? 'bg-yellow-900/30' : 'bg-yellow-100', text: isDark ? 'text-yellow-300' : 'text-yellow-700', border: isDark ? 'border-yellow-800' : 'border-yellow-200', label: SUBSCRIPTION_STATUS_LABELS[SubscriptionStatus.PAST_DUE] };
+        return { icon: AlertCircle, bg: isDark ? 'bg-yellow-900/30' : 'bg-yellow-100', text: isDark ? 'text-yellow-300' : 'text-yellow-700', border: isDark ? 'border-yellow-800' : 'border-yellow-200', label: subscriptionStatusMeta(SubscriptionStatus.PAST_DUE).label };
       case SubscriptionStatus.SUSPENDED:
-        return { icon: Pause, bg: isDark ? 'bg-orange-900/30' : 'bg-orange-100', text: isDark ? 'text-orange-300' : 'text-orange-700', border: isDark ? 'border-orange-800' : 'border-orange-200', label: SUBSCRIPTION_STATUS_LABELS[SubscriptionStatus.SUSPENDED] };
+        return { icon: Pause, bg: isDark ? 'bg-orange-900/30' : 'bg-orange-100', text: isDark ? 'text-orange-300' : 'text-orange-700', border: isDark ? 'border-orange-800' : 'border-orange-200', label: subscriptionStatusMeta(SubscriptionStatus.SUSPENDED).label };
       case SubscriptionStatus.CANCELLED:
-        return { icon: XCircle, bg: isDark ? 'bg-red-900/30' : 'bg-red-100', text: isDark ? 'text-red-300' : 'text-red-700', border: isDark ? 'border-red-800' : 'border-red-200', label: SUBSCRIPTION_STATUS_LABELS[SubscriptionStatus.CANCELLED] };
+        return { icon: XCircle, bg: isDark ? 'bg-red-900/30' : 'bg-red-100', text: isDark ? 'text-red-300' : 'text-red-700', border: isDark ? 'border-red-800' : 'border-red-200', label: subscriptionStatusMeta(SubscriptionStatus.CANCELLED).label };
       default:
         return { icon: AlertTriangle, bg: isDark ? 'bg-gray-800' : 'bg-gray-100', text: isDark ? 'text-gray-400' : 'text-gray-600', border: isDark ? 'border-gray-700' : 'border-gray-200', label: String(status) };
     }
@@ -123,7 +123,7 @@ const SubscriptionTimeline: React.FC<{
       list.push({ id: 'created', type: 'created', title: 'Subscription Created', description: `Started ${subscription.plan?.name || 'subscription'} plan`, date: subscription.created_at });
     }
     if (subscription.approved_at) {
-      list.push({ id: 'approved', type: 'approved', title: 'Subscription Approved', description: 'Your subscription was approved and activated', date: subscription.approved_at });
+      list.push({ id: 'completed', type: 'completed', title: 'Subscription Activated', description: 'Your subscription payment completed and activated', date: subscription.approved_at });
     }
     payments.forEach((p) => {
       list.push({
@@ -149,7 +149,7 @@ const SubscriptionTimeline: React.FC<{
     switch (type) {
       case 'created':   return Package;
       case 'payment':   return CreditCard;
-      case 'approved':  return CheckCircle;
+      case 'completed':  return CheckCircle;
       case 'suspended': return Pause;
       case 'cancelled': return XCircle;
       case 'renewal':   return RefreshCw;
@@ -158,13 +158,13 @@ const SubscriptionTimeline: React.FC<{
 
   const colorFor = (type: TimelineEvent['type'], s?: string) => {
     if (type === 'payment') {
-      if (s === PaymentStatus.APPROVED) return 'text-green-500';
-      if (s === PaymentStatus.REJECTED) return 'text-red-500';
+      if (s === PaymentStatus.COMPLETED) return 'text-green-500';
+      if (s === PaymentStatus.FAILED) return 'text-red-500';
       return 'text-yellow-500';
     }
     switch (type) {
       case 'created':   return 'text-blue-500';
-      case 'approved':  return 'text-green-500';
+      case 'completed':  return 'text-green-500';
       case 'suspended': return 'text-orange-500';
       case 'cancelled': return 'text-red-500';
       default:          return 'text-gray-500';
@@ -502,7 +502,7 @@ export const FacilitySubscriptions: React.FC<FacilitySubscriptionsProps> = ({
 
       {/* Main Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left — details */}
+        {/* Left - details */}
         <div className="lg:col-span-2 space-y-6">
 
           {/* Subscription Card */}
@@ -697,12 +697,12 @@ export const FacilitySubscriptions: React.FC<FacilitySubscriptionsProps> = ({
                   <div key={payment.id} className="p-4 flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <div className={cn('p-2 rounded-lg',
-                        payment.status === PaymentStatus.APPROVED
+                        payment.status === PaymentStatus.COMPLETED
                           ? isDark ? 'bg-green-900/30' : 'bg-green-100'
                           : payment.status === PaymentStatus.PENDING
                           ? isDark ? 'bg-yellow-900/30' : 'bg-yellow-100'
                           : isDark ? 'bg-gray-800' : 'bg-gray-100')}>
-                        {payment.status === PaymentStatus.APPROVED
+                        {payment.status === PaymentStatus.COMPLETED
                           ? <CheckCircle className="w-4 h-4 text-green-500" />
                           : payment.status === PaymentStatus.PENDING
                           ? <Clock className="w-4 h-4 text-yellow-500" />
@@ -717,7 +717,7 @@ export const FacilitySubscriptions: React.FC<FacilitySubscriptionsProps> = ({
                     </div>
                     <div className="text-right">
                       <p className={cn('text-sm font-medium',
-                        payment.status === PaymentStatus.APPROVED ? 'text-green-500' :
+                        payment.status === PaymentStatus.COMPLETED ? 'text-green-500' :
                         payment.status === PaymentStatus.PENDING  ? 'text-yellow-500' : 'text-red-500')}>
                         {payment.status_label}
                       </p>

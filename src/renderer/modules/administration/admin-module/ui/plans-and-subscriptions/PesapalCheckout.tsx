@@ -83,7 +83,7 @@ export const PesapalCheckout: React.FC<PesapalCheckoutProps> = ({
   const liveStatus = paymentId != null ? statusQuery.data?.data?.status : undefined;
 
   useEffect(() => {
-    if (liveStatus === 'approved' && !approvedRef.current) {
+    if (liveStatus === 'completed' && !approvedRef.current) {
       approvedRef.current = true;
       try {
         popupRef.current?.close();
@@ -216,7 +216,7 @@ export const PesapalCheckout: React.FC<PesapalCheckoutProps> = ({
           <button
             type="button"
             onClick={handleVerify}
-            disabled={verifying || liveStatus === 'approved'}
+            disabled={verifying || liveStatus === 'completed'}
             className={cn(
               'inline-flex items-center gap-2 px-4 py-2.5 rounded-lg font-semibold text-sm border transition-all disabled:opacity-50',
               isDark
@@ -237,10 +237,10 @@ export const PesapalCheckout: React.FC<PesapalCheckoutProps> = ({
           <span
             className={cn(
               'inline-flex items-center gap-1.5 text-xs font-semibold',
-              liveStatus === 'approved' ? 'text-emerald-600' : isDark ? 'text-amber-300' : 'text-amber-700',
+              liveStatus === 'completed' ? 'text-emerald-600' : isDark ? 'text-amber-300' : 'text-amber-700',
             )}
           >
-            {liveStatus === 'approved' && <CheckCircle className="w-4 h-4" />}
+            {liveStatus === 'completed' && <CheckCircle className="w-4 h-4" />}
             Status: {liveStatus}
           </span>
         )}

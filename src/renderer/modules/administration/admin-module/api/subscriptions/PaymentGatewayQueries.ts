@@ -214,7 +214,7 @@ export const useGetGatewayPaymentStatus = (
 
   /**
    * React Query v5: do side effects here.
-   * Invalidate caches ONLY when the status transitions to "approved"
+   * Invalidate caches ONLY when the status transitions to "completed"
    * to avoid repeated invalidations on every refetch.
    */
   const prevStatusRef = useRef<string | undefined>(undefined);
@@ -225,7 +225,7 @@ export const useGetGatewayPaymentStatus = (
     const status = getPaymentStatus(query.data);
     const prev = prevStatusRef.current;
 
-    if (status === 'approved' && prev !== 'approved') {
+    if (status === 'completed' && prev !== 'completed') {
       queryClient.invalidateQueries({
         queryKey: subscriptionKeys.subscriptions.facility(facilityId),
       });

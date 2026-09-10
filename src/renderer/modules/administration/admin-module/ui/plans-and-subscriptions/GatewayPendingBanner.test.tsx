@@ -59,7 +59,7 @@ describe('GatewayPendingBanner - persistence', () => {
       <GatewayPendingBanner theme="light" paymentId={21} onApproved={onApproved} />,
     );
 
-    bannerMocks.statusData = { data: { status: 'approved' } };
+    bannerMocks.statusData = { data: { status: 'completed' } };
     rerender(<GatewayPendingBanner theme="light" paymentId={21} onApproved={onApproved} />);
     rerender(<GatewayPendingBanner theme="light" paymentId={21} onApproved={onApproved} />);
 

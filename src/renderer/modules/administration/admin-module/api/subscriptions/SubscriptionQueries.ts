@@ -3,7 +3,7 @@
  * SUBSCRIPTION / BILLING REACT QUERY HOOKS
  * ============================================================================
  *
- * Endpoints (baseURL = API_BASE_URL) — strictly matching routes/api.php:
+ * Endpoints (baseURL = API_BASE_URL) - strictly matching routes/api.php:
  *
  * ── PUBLIC (no auth) ─────────────────────────────────────────────────────────
  *   GET  /billing/plans                                → useGetPlans
@@ -208,7 +208,7 @@ const useActiveFacilityId = (): number | null =>
   useSelector((state: RootState) => state.activeContext.activeFacilityId);
 
 /* ========================================================================== */
-/*                     PUBLIC — PLAN QUERIES                                  */
+/*                     PUBLIC - PLAN QUERIES                                  */
 /* ========================================================================== */
 
 /**
@@ -262,7 +262,7 @@ export const useGetPlan = (
 };
 
 /* ========================================================================== */
-/*         FACILITY-FACING — SUBSCRIPTION QUERIES & MUTATIONS                 */
+/*         FACILITY-FACING - SUBSCRIPTION QUERIES & MUTATIONS                 */
 /* ========================================================================== */
 
 /**
@@ -293,7 +293,7 @@ export const useGetFacilitySubscription = (
     },
     refetchInterval: (query) => {
       const data = query.state.data?.data;
-      // Poll every 15s while subscription has no access — detects payment approval quickly.
+      // Poll every 15s while subscription has no access - detects payment approval quickly.
       // Once access is granted, stop polling.
       return data && !data.has_access ? 15_000 : false;
     },
@@ -591,7 +591,7 @@ export const useCancelScheduledChange = (
 };
 
 /* ========================================================================== */
-/*           FACILITY-FACING — PAYMENT QUERIES & MUTATIONS                    */
+/*           FACILITY-FACING - PAYMENT QUERIES & MUTATIONS                    */
 /* ========================================================================== */
 
 /**
@@ -699,7 +699,7 @@ export const useRecordPayment = (
     mutationFn: async ({ data, receipt }) => {
       if (!facilityId) throw new Error('No active facility selected.');
 
-      // Build FormData — required because `receipt` is a File upload.
+      // Build FormData - required because `receipt` is a File upload.
       const form = new FormData();
       form.append('amount',       String(data.amount));
       form.append('currency',     data.currency);
@@ -735,11 +735,11 @@ export const useRecordPayment = (
         queryClient.invalidateQueries({
           queryKey: subscriptionKeys.payments.facilityList(facilityId),
         });
-        // Refresh subscription — UI may show "payment submitted" banner
+        // Refresh subscription - UI may show "payment submitted" banner
         queryClient.invalidateQueries({
           queryKey: subscriptionKeys.subscriptions.facility(facilityId),
         });
-        // Refresh invoice list — new invoice was created
+        // Refresh invoice list - new invoice was created
         queryClient.invalidateQueries({
           queryKey: subscriptionKeys.billingDocuments.facility(facilityId),
         });
@@ -759,7 +759,7 @@ export const useRecordPayment = (
 };
 
 /* ========================================================================== */
-/*                  ADMIN — PLAN QUERIES & MUTATIONS                          */
+/*                  ADMIN - PLAN QUERIES & MUTATIONS                          */
 /* ========================================================================== */
 
 /**
@@ -953,7 +953,7 @@ export const useAdminDeletePlan = (
 };
 
 /* ========================================================================== */
-/*          ADMIN — SUBSCRIPTION QUERIES & MUTATIONS                          */
+/*          ADMIN - SUBSCRIPTION QUERIES & MUTATIONS                          */
 /* ========================================================================== */
 
 /**
@@ -1152,7 +1152,7 @@ export const useAdminCancelSubscription = (
 };
 
 /* ========================================================================== */
-/*                 ADMIN — PAYMENT QUERIES & MUTATIONS                        */
+/*                 ADMIN - PAYMENT QUERIES & MUTATIONS                        */
 /* ========================================================================== */
 
 /**
@@ -1264,7 +1264,7 @@ export const useAdminApprovePayment = (
         return {
           ...(old as Record<string, unknown>),
           data: data.map((p: Record<string, unknown>) =>
-            p.id === vars.paymentId ? { ...p, status: 'approved', status_label: 'Approved' } : p
+            p.id === vars.paymentId ? { ...p, status: 'completed', status_label: 'Completed' } : p
           ),
         };
       });
@@ -1306,7 +1306,7 @@ export const useAdminApprovePayment = (
  * POST /admin/billing/payments/{payment}/reject
  *
  * ❌ Rejects a pending payment with a mandatory reason string.
- * The subscription remains in its current status — no transition is triggered.
+ * The subscription remains in its current status - no transition is triggered.
  * The backend requires `reason` to be at least 10 characters.
  *Platform Administrator
  * @example
@@ -1347,7 +1347,7 @@ export const useAdminRejectPayment = (
         return {
           ...(old as Record<string, unknown>),
           data: data.map((p: Record<string, unknown>) =>
-            p.id === vars.paymentId ? { ...p, status: 'rejected', status_label: 'Rejected' } : p
+            p.id === vars.paymentId ? { ...p, status: 'failed', status_label: 'Failed' } : p
           ),
         };
       });

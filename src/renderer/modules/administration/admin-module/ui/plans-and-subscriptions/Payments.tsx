@@ -13,7 +13,6 @@ import {
 } from '../../api/subscriptions/SubscriptionQueries';
 import {
   PaymentStatus,
-  PaymentType,
   SubscriptionStatus,
   type Payment,
   type PaymentQuote,
@@ -34,6 +33,7 @@ import {
   subscriptionHasPendingPaymentApproval,
   subscriptionNeedsPayment,
 } from '../../utils/subscriptionPaymentUtils';
+import { resolvePaymentTypeFromQuote } from '../../utils/subscriptionMatrix';
 
 interface PaymentsProps {
   theme: 'light' | 'dark';
@@ -94,13 +94,7 @@ export const Payments: React.FC<PaymentsProps> = ({ theme }) => {
   const total = quote?.total_usd ?? 0;
   const noSubscription = !subscription;
 
-  const paymentType = (() => {
-    const fromQuote = quote?.payment_type;
-    if (fromQuote === 'upgrade_proration') return PaymentType.UPGRADE_PRORATION;
-    if (fromQuote === 'renewal') return PaymentType.RENEWAL;
-    if (fromQuote === 'onboarding') return PaymentType.ONBOARDING;
-    return PaymentType.SUBSCRIPTION;
-  })();
+  const paymentType = resolvePaymentTypeFromQuote(quote?.payment_type);
 
   const quoteRequiresPayment = !quoteLoading && quote != null && total > 0.01;
 
@@ -360,7 +354,7 @@ export const Payments: React.FC<PaymentsProps> = ({ theme }) => {
                 </div>
                 <span className={cn(
                   'shrink-0 px-2 py-0.5 rounded-full text-xs font-bold',
-                  p.status === PaymentStatus.APPROVED
+                  p.status === PaymentStatus.COMPLETED
                     ? 'bg-emerald-200 dark:bg-emerald-800 text-emerald-900 dark:text-emerald-100'
                     : p.status === PaymentStatus.PENDING
                     ? 'bg-amber-200 dark:bg-amber-800 text-amber-900 dark:text-amber-100'

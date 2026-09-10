@@ -136,7 +136,7 @@ describe('PesapalCheckout - brutal paths', () => {
       data: { payment_id: 21, redirect_url: 'https://pay.example/trk-1' },
     });
 
-    gatewayMocks.statusData = { data: { status: 'approved' } };
+    gatewayMocks.statusData = { data: { status: 'completed' } };
     rerender(<PesapalCheckout {...baseProps} onApproved={onApproved} />);
 
     await waitFor(() => expect(onApproved).toHaveBeenCalled());

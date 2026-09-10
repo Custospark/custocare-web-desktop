@@ -28,6 +28,7 @@ import {
   type Plan,
   type Subscription as BillingSubscription,
 } from '../../../../modules/administration/admin-module/api/subscriptions/SubscriptionTypes';
+import { subscriptionStatusMeta } from '../../../../modules/administration/admin-module/utils/subscriptionMatrix';
 import { ADMINISTRATION_PLANS_SUBSCRIPTIONS_ROUTES } from '../../../../app/routes/constants/administration.paths';
 import {
   selectActiveFacilityId,
@@ -117,10 +118,11 @@ const getSubscriptionDisplay = (sub: BillingSubscription | undefined): Subscript
   const paymentAction = sub.payment_action;
 
   if (paymentAction?.pending_approval) {
+    const meta = subscriptionStatusMeta(sub.status);
     return {
-      badge: sub.status === SubscriptionStatus.TRIAL ? 'Trial' : 'Pending',
+      badge: sub.status === SubscriptionStatus.TRIAL ? meta.label : 'Payment in progress',
       badgeKind: sub.status === SubscriptionStatus.TRIAL ? 'trial' : 'past_due',
-      subtitle: navbarSubtitle('Pending review'),
+      subtitle: navbarSubtitle('Payment in progress'),
     };
   }
 
@@ -128,20 +130,20 @@ const getSubscriptionDisplay = (sub: BillingSubscription | undefined): Subscript
     if (sub.status === SubscriptionStatus.TRIAL) {
       if (!sub.has_access) {
         return {
-          badge: 'Trial ended',
+          badge: subscriptionStatusMeta(sub.status).label + ' ended',
           badgeKind: 'past_due',
           subtitle: navbarSubtitle('Subscribe to continue'),
         };
       }
       return {
-        badge: 'Trial',
+        badge: subscriptionStatusMeta(SubscriptionStatus.TRIAL).label,
         badgeKind: 'trial',
         subtitle: navbarDatePhrase('Trial till', sub.trial_ends_at) || navbarSubtitle('Trial'),
       };
     }
     if (sub.status === SubscriptionStatus.PAST_DUE) {
       return {
-        badge: 'Past due',
+        badge: subscriptionStatusMeta(SubscriptionStatus.PAST_DUE).label,
         badgeKind: 'past_due',
         subtitle: sub.grace_period_ends_at
           ? navbarDatePhrase('Grace till', sub.grace_period_ends_at)
@@ -158,13 +160,13 @@ const getSubscriptionDisplay = (sub: BillingSubscription | undefined): Subscript
   if (sub.status === SubscriptionStatus.TRIAL) {
     if (!sub.has_access) {
       return {
-        badge: 'Trial ended',
+        badge: subscriptionStatusMeta(sub.status).label + ' ended',
         badgeKind: 'past_due',
         subtitle: navbarSubtitle('Subscribe to continue'),
       };
     }
     return {
-      badge: 'Trial',
+      badge: subscriptionStatusMeta(SubscriptionStatus.TRIAL).label,
       badgeKind: 'trial',
       subtitle: navbarDatePhrase('Trial till', sub.trial_ends_at),
     };
@@ -172,7 +174,7 @@ const getSubscriptionDisplay = (sub: BillingSubscription | undefined): Subscript
 
   if (sub.cancel_at_period_end && sub.has_access) {
     return {
-      badge: 'Active',
+      badge: subscriptionStatusMeta(SubscriptionStatus.ACTIVE).label,
         badgeKind: 'active',
       subtitle: navbarDatePhrase('Active till', sub.access_ends_at) || navbarSubtitle('Active till'),
     };
@@ -190,7 +192,7 @@ const getSubscriptionDisplay = (sub: BillingSubscription | undefined): Subscript
 
   if (sub.status === SubscriptionStatus.PAST_DUE) {
     return {
-      badge: 'Past due',
+      badge: subscriptionStatusMeta(SubscriptionStatus.PAST_DUE).label,
       badgeKind: 'past_due',
       subtitle: sub.grace_period_ends_at
         ? navbarDatePhrase('Grace till', sub.grace_period_ends_at)
@@ -200,7 +202,7 @@ const getSubscriptionDisplay = (sub: BillingSubscription | undefined): Subscript
 
   if (sub.status === SubscriptionStatus.SUSPENDED) {
     return {
-      badge: 'Suspended',
+      badge: subscriptionStatusMeta(SubscriptionStatus.SUSPENDED).label,
       badgeKind: 'suspended',
       subtitle: navbarSubtitle('Renew now'),
     };
@@ -208,7 +210,7 @@ const getSubscriptionDisplay = (sub: BillingSubscription | undefined): Subscript
 
   if (sub.status === SubscriptionStatus.CANCELLED) {
     return {
-      badge: 'Cancelled',
+      badge: subscriptionStatusMeta(SubscriptionStatus.CANCELLED).label,
       badgeKind: 'cancelled',
       subtitle: '',
     };
@@ -217,7 +219,7 @@ const getSubscriptionDisplay = (sub: BillingSubscription | undefined): Subscript
   const periodEnd = sub.next_billing_date ?? sub.ends_at;
 
   return {
-    badge: 'Active',
+    badge: subscriptionStatusMeta(SubscriptionStatus.ACTIVE).label,
     badgeKind: 'active',
     subtitle: navbarDatePhrase('Active till', periodEnd),
   };
@@ -572,7 +574,7 @@ const SubscriptionDropdown: React.FC<SubscriptionDropdownProps> = ({
           )}
         >
           <p className={cn('text-[11px] font-medium', isDark ? 'text-sky-400/90' : 'text-blue-700')}>
-            Custocare — Continuous Care. Clinical Excellence.
+            Custocare - Continuous Care. Clinical Excellence.
           </p>
         </div>
       )}
@@ -758,7 +760,7 @@ export const Subscription: React.FC<SubscriptionProps> = ({
       title={
         isInteractive
           ? undefined
-          : 'Facility plan overview — billing is managed by your facility owner'
+          : 'Facility plan overview - billing is managed by your facility owner'
       }
     >
       <button

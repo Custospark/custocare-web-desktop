@@ -74,7 +74,7 @@ const PaginationBar: React.FC<{
 }> = ({ page, totalPages, total, pageSize, onPage, onPageSize, isDark }) => (
   <div className={cn('flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 text-sm', isDark ? 'text-gray-400' : 'text-gray-600')}>
     <span>
-      {total === 0 ? 'No rows' : `${(page - 1) * pageSize + 1}–${Math.min(page * pageSize, total)} of ${total}`}
+      {total === 0 ? 'No rows' : `${(page - 1) * pageSize + 1}-${Math.min(page * pageSize, total)} of ${total}`}
     </span>
     <div className="flex items-center gap-2">
       <select
@@ -115,7 +115,7 @@ const FacilityIconButton: React.FC<{
   onOpen: (facility: BillingFacilitySummary) => void;
 }> = ({ facility, isDark, onOpen }) => {
   if (!facility?.id) {
-    return <span className={cn('text-xs', isDark ? 'text-gray-600' : 'text-gray-400')}>—</span>;
+    return <span className={cn('text-xs', isDark ? 'text-gray-600' : 'text-gray-400')}>-</span>;
   }
   return (
     <button
@@ -346,7 +346,7 @@ const FacilitySubscriptions: React.FC<Props> = ({ theme }) => {
                             <FacilityIconButton facility={s.facility} isDark={isDark} onOpen={setFacilityModal} />
                           </td>
                           <td className="py-3 px-2">
-                            <p className="font-medium">{s.plan?.name || '—'}</p>
+                            <p className="font-medium">{s.plan?.name || '-'}</p>
                             <p className={cn('text-xs', isDark ? 'text-gray-500' : 'text-gray-400')}>
                               ${s.plan?.pricing?.usd ?? 0}/{s.billing_cycle === 'yearly' ? 'yr' : 'mo'}
                             </p>
@@ -376,12 +376,12 @@ const FacilitySubscriptions: React.FC<Props> = ({ theme }) => {
                                 </span>
                               )}
                               {pending === 0 && approved === 0 && (
-                                <span className={isDark ? 'text-gray-500' : 'text-gray-400'}>—</span>
+                                <span className={isDark ? 'text-gray-500' : 'text-gray-400'}>-</span>
                               )}
                             </div>
                           </td>
                           <td className="py-3 px-2 text-right text-xs text-gray-500">
-                            {s.created_at ? new Date(s.created_at).toLocaleDateString() : '—'}
+                            {s.created_at ? new Date(s.created_at).toLocaleDateString() : '-'}
                           </td>
                         </tr>
                       );
@@ -436,7 +436,7 @@ const FacilitySubscriptions: React.FC<Props> = ({ theme }) => {
                           <FacilityIconButton facility={p.facility} isDark={isDark} onOpen={setFacilityModal} />
                         </td>
                         <td className="py-3 px-2">
-                          <p className="font-medium text-sm">{p.plan_name || '—'}</p>
+                          <p className="font-medium text-sm">{p.plan_name || '-'}</p>
                         </td>
                         <td className="py-3 px-2 text-right font-medium whitespace-nowrap">
                           ${p.amount} {p.currency}
@@ -445,7 +445,7 @@ const FacilitySubscriptions: React.FC<Props> = ({ theme }) => {
                           <span
                             className={cn(
                               'inline-flex px-2 py-0.5 rounded-full text-xs font-bold',
-                              p.status === PaymentStatus.APPROVED
+                              p.status === PaymentStatus.COMPLETED
                                 ? 'bg-emerald-200 dark:bg-emerald-800 text-emerald-900 dark:text-emerald-100'
                                 : p.status === PaymentStatus.PENDING
                                   ? 'bg-amber-200 dark:bg-amber-800 text-amber-900 dark:text-amber-100'
@@ -456,7 +456,7 @@ const FacilitySubscriptions: React.FC<Props> = ({ theme }) => {
                           </span>
                         </td>
                         <td className="py-3 px-2 text-center text-xs text-gray-500">
-                          {p.paid_at ? new Date(p.paid_at).toLocaleDateString() : '—'}
+                          {p.paid_at ? new Date(p.paid_at).toLocaleDateString() : '-'}
                         </td>
                         <td className="py-3 px-2 text-center">
                           {(p.receipt_download_url || p.receipt_url) ? (
@@ -466,7 +466,7 @@ const FacilitySubscriptions: React.FC<Props> = ({ theme }) => {
                               className={isDark ? 'text-blue-400' : 'text-blue-600'}
                             />
                           ) : (
-                            <span className="text-xs text-gray-400">—</span>
+                            <span className="text-xs text-gray-400">-</span>
                           )}
                         </td>
                         <td className="py-3 px-2 text-center">
@@ -505,7 +505,7 @@ const FacilitySubscriptions: React.FC<Props> = ({ theme }) => {
                               </button>
                             </div>
                           ) : (
-                            <span className="text-xs text-gray-400">—</span>
+                            <span className="text-xs text-gray-400">-</span>
                           )}
                         </td>
                       </tr>
