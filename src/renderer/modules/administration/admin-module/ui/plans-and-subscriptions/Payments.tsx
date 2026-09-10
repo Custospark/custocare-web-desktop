@@ -283,17 +283,18 @@ export const Payments: React.FC<PaymentsProps> = ({ theme }) => {
       )}
 
       {/* Online checkout stays mounted for the whole flow (Custosell
-          standard): it shows the form when idle and the waiting view
-          while its payment is pending, so polling can never be orphaned
-          by a refetch. A resumed pending payment is picked up by id. */}
-      {needsPayment && subscription && quoteRequiresPayment && (
+          standard): form when idle, waiting view while its payment is
+          pending. Mounted on needsPayment OR an in-flight gateway payment
+          so a refetch + pending flag can NEVER unmount it mid-payment
+          (the unmount cleanup would kill the checkout window). */}
+      {subscription && (needsPayment || pendingPayment?.method === 'gateway') && (
         <PesapalCheckout
           theme={theme}
           subscriptionId={subscription.id}
           paymentType={paymentType}
           amount={total}
           currency="USD"
-          targetPlanId={targetPlanId ?? quote.target_plan_id ?? null}
+          targetPlanId={targetPlanId ?? quote?.target_plan_id ?? null}
           disabled={quoteLoading}
           resumedPaymentId={pendingPayment?.method === 'gateway' ? pendingPayment.id : null}
           onApproved={() => {
