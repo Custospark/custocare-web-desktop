@@ -67,6 +67,36 @@ export const PesapalCheckout: React.FC<PesapalCheckoutProps> = ({
     );
   }
 
+  // Failed/expired view: the payment died. Back to the form via reset
+  // (dismissed, so it can never be re-adopted).
+  if (flow.paymentId != null && (flow.liveStatus === 'failed' || flow.liveStatus === 'expired')) {
+    return (
+      <div
+        className={cn(
+          'rounded-xl border-2 p-5 text-center space-y-4',
+          isDark ? 'border-emerald-700 bg-emerald-900/10' : 'border-emerald-200 bg-emerald-50/60',
+        )}
+      >
+        <div className="w-14 h-14 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center mx-auto">
+          <XCircle className="w-8 h-8 text-red-600" />
+        </div>
+        <div>
+          <p className={cn('text-lg font-bold', isDark ? 'text-white' : 'text-gray-900')}>Payment failed</p>
+          <p className={cn('text-sm mt-1', isDark ? 'text-gray-400' : 'text-gray-500')}>
+            The payment did not go through. Try again below - failed payments never block you.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => flow.resetFlow()}
+          className="inline-flex items-center gap-2 px-6 py-2.5 rounded-lg font-bold text-sm bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg transition-all"
+        >
+          Try again
+        </button>
+      </div>
+    );
+  }
+
   // Waiting view: a payment is in flight (fresh or resumed). The form stays
   // hidden so a second payment can never be started by accident.
   if (flow.paymentId != null) {

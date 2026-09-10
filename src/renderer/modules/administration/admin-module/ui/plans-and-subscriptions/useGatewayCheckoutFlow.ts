@@ -43,13 +43,18 @@ export function useGatewayCheckoutFlow({
   const [verifying, setVerifying] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const approvedRef = useRef(false);
+  // Ids this flow instance gave up on. The parent prop can stay stale
+  // (pre-refetch) after cancel/reset - without this guard the stale id
+  // would be re-adopted and the waiting view would never clear.
+  const dismissedRef = useRef<Set<number>>(new Set());
 
   const cancelRemote = useCancelGatewayPayment();
 
   // Adopt a resumed pending payment (arrives async from the payments list).
-  // Never overwrites an in-flight payment owned by this flow instance.
+  // Never overwrites an in-flight payment owned by this flow instance,
+  // and never re-adopts an id this instance already dismissed.
   useEffect(() => {
-    if (resumedPaymentId != null && paymentId == null) {
+    if (resumedPaymentId != null && paymentId == null && !dismissedRef.current.has(resumedPaymentId)) {
       setPaymentId(resumedPaymentId);
     }
   }, [resumedPaymentId, paymentId]);
@@ -138,6 +143,7 @@ export function useGatewayCheckoutFlow({
       kept) and the flow returns to the form so a new payment can start. */
   const cancelPayment = async () => {
     if (paymentId == null) return;
+    dismissedRef.current.add(paymentId);
     setCancelling(true);
     try {
       await cancelRemote.mutateAsync(paymentId);
@@ -151,8 +157,10 @@ export function useGatewayCheckoutFlow({
   };
 
   /** Drop a dead payment id (failed/expired elsewhere) and return to the
-      form without touching the server. */
+      form without touching the server. Dismissed so a stale parent prop
+      can never resurrect it. */
   const resetFlow = () => {
+    if (paymentId != null) dismissedRef.current.add(paymentId);
     closePaymentPopup();
     setPaymentId(null);
     approvedRef.current = false;
