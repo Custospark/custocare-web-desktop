@@ -1,7 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { PesapalCheckout } from './PesapalCheckout';
+import { PaymentModal } from './PaymentModal';
 
 const toastSpy = vi.fn();
 
@@ -9,36 +10,25 @@ vi.mock('../../../../../app/store/contexts/toast/useToast', () => ({
   useToast: () => ({ showToast: toastSpy }),
 }));
 
-const gatewayMocks = {
-  gateways: [{ name: 'pesapal', type: 'redirect', label: 'PesaPal' }],
-  callbacks: null as null | { onSuccess?: (res: unknown) => void },
-  mutate: vi.fn(),
-  statusData: undefined as undefined | { data: { status: string } },
-  refetch: vi.fn(async () => ({})),
-  verifyRefetch: vi.fn(async () => ({})),
+const flowState = {
+  email: '',
+  setEmail: vi.fn(),
+  phone: '',
+  setPhone: vi.fn(),
+  paymentId: null as number | null,
+  liveStatus: undefined as string | undefined,
+  verifying: false,
+  busy: false,
+  popupBlocked: false,
+  paymentUrl: null as string | null,
+  initiating: false,
+  startPayment: vi.fn(),
+  verifyNow: vi.fn(),
 };
 
-vi.mock('../../api/subscriptions/PaymentGatewayQueries', () => ({
-  useGetAvailablePaymentGateways: () => ({ data: { data: gatewayMocks.gateways } }),
-  useInitiateGatewayPayment: (callbacks: unknown) => {
-    gatewayMocks.callbacks = callbacks as { onSuccess?: (res: unknown) => void };
-    return { mutate: gatewayMocks.mutate, isPending: false };
-  },
-  useGetGatewayPaymentStatus: (params: { verify?: boolean }) => {
-    if (params?.verify) {
-      return { data: gatewayMocks.statusData, isFetching: false, refetch: gatewayMocks.verifyRefetch };
-    }
-    return { data: gatewayMocks.statusData, isFetching: false, refetch: gatewayMocks.refetch };
-  },
+vi.mock('./useGatewayCheckoutFlow', () => ({
+  useGatewayCheckoutFlow: () => flowState,
 }));
-
-const popup = () => ({
-  closed: false,
-  location: { href: '' },
-  close: vi.fn(),
-});
-
-let activePopup: ReturnType<typeof popup> | null;
 
 const baseProps = {
   theme: 'light' as const,
@@ -52,122 +42,87 @@ const baseProps = {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  gatewayMocks.gateways = [{ name: 'pesapal', type: 'redirect', label: 'PesaPal' }];
-  gatewayMocks.callbacks = null;
-  gatewayMocks.statusData = undefined;
-  activePopup = popup();
-  window.open = vi.fn(() => activePopup) as unknown as typeof window.open;
+  flowState.email = '';
+  flowState.phone = '';
+  flowState.paymentId = null;
+  flowState.liveStatus = undefined;
+  flowState.popupBlocked = false;
+  flowState.paymentUrl = null;
 });
 
-describe('PesapalCheckout - brutal paths', () => {
-  it('renders nothing when PesaPal is not enabled', () => {
-    gatewayMocks.gateways = [];
-    const { container } = render(<PesapalCheckout {...baseProps} />);
+describe('PesapalCheckout - presentation over shared flow', () => {
+  it('renders nothing extra and delegates pay to the flow', async () => {
+    const user = userEvent.setup();
+    render(<PesapalCheckout {...baseProps} />);
+
+    await user.type(screen.getByPlaceholderText(/you@example.com/i), 'owner@example.com');
+    expect(flowState.setEmail).toHaveBeenCalled();
+    await user.click(screen.getByRole('button', { name: /pay now/i }));
+    expect(flowState.startPayment).toHaveBeenCalled();
+  });
+
+  it('shows verify only while a payment is in flight', () => {
+    const { rerender } = render(<PesapalCheckout {...baseProps} />);
+    expect(screen.queryByRole('button', { name: /verify payment/i })).not.toBeInTheDocument();
+
+    flowState.paymentId = 21;
+    flowState.liveStatus = 'pending';
+    rerender(<PesapalCheckout {...baseProps} />);
+    expect(screen.getByRole('button', { name: /verify payment/i })).toBeInTheDocument();
+  });
+});
+
+describe('PaymentModal - stateful owner', () => {
+  it('renders nothing when closed', () => {
+    const { container } = render(
+      <PaymentModal theme="light" params={null} onClose={vi.fn()} onApproved={vi.fn()} />,
+    );
     expect(container).toBeEmptyDOMElement();
   });
 
-  it('refuses to pay without an email and never touches the API', async () => {
+  it('shows amount and closes only on user action or approval', async () => {
     const user = userEvent.setup();
-    render(<PesapalCheckout {...baseProps} />);
+    const onClose = vi.fn();
+    render(
+      <PaymentModal
+        theme="light"
+        params={{ subscriptionId: 5, paymentType: 'subscription', amount: 39, currency: 'USD' }}
+        onClose={onClose}
+        onApproved={vi.fn()}
+      />,
+    );
 
-    await user.click(screen.getByRole('button', { name: /pay now/i }));
-
-    expect(toastSpy).toHaveBeenCalledWith('error', expect.stringContaining('email'), expect.anything());
-    expect(gatewayMocks.mutate).not.toHaveBeenCalled();
-    expect(window.open).not.toHaveBeenCalled();
+    expect(screen.getByText(/complete payment/i)).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /^close$/i }));
+    expect(onClose).toHaveBeenCalled();
   });
 
-  it('fails loudly when the popup is blocked and never initiates', async () => {
-    const user = userEvent.setup();
-    window.open = vi.fn(() => null) as unknown as typeof window.open;
-    render(<PesapalCheckout {...baseProps} />);
-
-    await user.type(screen.getByPlaceholderText(/you@example.com/i), 'owner@example.com');
-    await user.click(screen.getByRole('button', { name: /pay now/i }));
-
-    expect(toastSpy).toHaveBeenCalledWith('error', expect.stringContaining('Popup blocked'), expect.anything());
-    expect(gatewayMocks.mutate).not.toHaveBeenCalled();
+  it('shows the completed state instead of vanishing', () => {
+    flowState.paymentId = 21;
+    flowState.liveStatus = 'completed';
+    render(
+      <PaymentModal
+        theme="light"
+        params={{ subscriptionId: 5, paymentType: 'subscription', amount: 39, currency: 'USD' }}
+        onClose={vi.fn()}
+        onApproved={vi.fn()}
+      />,
+    );
+    expect(screen.getByText(/payment completed/i)).toBeInTheDocument();
   });
 
-  it('sends the full payload including target plan on initiate', async () => {
-    const user = userEvent.setup();
-    render(<PesapalCheckout {...baseProps} targetPlanId={9} />);
-
-    await user.type(screen.getByPlaceholderText(/you@example.com/i), 'owner@example.com');
-    await user.type(screen.getByPlaceholderText(/2567/i), '256771234567');
-    await user.click(screen.getByRole('button', { name: /pay now/i }));
-
-    expect(gatewayMocks.mutate).toHaveBeenCalledWith({
-      gateway: 'pesapal',
-      data: expect.objectContaining({
-        subscription_id: 5,
-        payment_type: 'subscription',
-        amount: 39,
-        currency: 'USD',
-        email: 'owner@example.com',
-        phone_number: '256771234567',
-        target_plan_id: 9,
-      }),
-    });
-  });
-
-  it('drives the popup to the redirect URL on success', async () => {
-    const user = userEvent.setup();
-    render(<PesapalCheckout {...baseProps} />);
-
-    await user.type(screen.getByPlaceholderText(/you@example.com/i), 'owner@example.com');
-    await user.click(screen.getByRole('button', { name: /pay now/i }));
-
-    gatewayMocks.callbacks?.onSuccess?.({
-      data: { payment_id: 21, redirect_url: 'https://pay.example/trk-1' },
-    });
-
-    expect(activePopup?.location.href).toBe('https://pay.example/trk-1');
-  });
-
-  it('closes the popup and approves when status flips to approved', async () => {
-    const user = userEvent.setup();
-    const onApproved = vi.fn();
-    const { rerender } = render(<PesapalCheckout {...baseProps} onApproved={onApproved} />);
-
-    await user.type(screen.getByPlaceholderText(/you@example.com/i), 'owner@example.com');
-    await user.click(screen.getByRole('button', { name: /pay now/i }));
-    gatewayMocks.callbacks?.onSuccess?.({
-      data: { payment_id: 21, redirect_url: 'https://pay.example/trk-1' },
-    });
-
-    gatewayMocks.statusData = { data: { status: 'completed' } };
-    rerender(<PesapalCheckout {...baseProps} onApproved={onApproved} />);
-
-    await waitFor(() => expect(onApproved).toHaveBeenCalled());
-    expect(activePopup?.close).toHaveBeenCalled();
-    expect(toastSpy).toHaveBeenCalledWith('success', expect.stringContaining('confirmed'), expect.anything());
-  });
-
-  it('closes a blank popup in bypass mode with no redirect URL', async () => {
-    const user = userEvent.setup();
-    render(<PesapalCheckout {...baseProps} />);
-
-    await user.type(screen.getByPlaceholderText(/you@example.com/i), 'owner@example.com');
-    await user.click(screen.getByRole('button', { name: /pay now/i }));
-    gatewayMocks.callbacks?.onSuccess?.({ data: { payment_id: 22, redirect_url: null } });
-
-    expect(activePopup?.close).toHaveBeenCalled();
-  });
-
-  it('verify button forces a live re-check and shows pending state', async () => {
-    const user = userEvent.setup();
-    render(<PesapalCheckout {...baseProps} />);
-
-    await user.type(screen.getByPlaceholderText(/you@example.com/i), 'owner@example.com');
-    await user.click(screen.getByRole('button', { name: /pay now/i }));
-    gatewayMocks.callbacks?.onSuccess?.({ data: { payment_id: 23, redirect_url: 'https://pay.example/x' } });
-
-    gatewayMocks.statusData = { data: { status: 'pending' } };
-    const verifyBtn = await screen.findByRole('button', { name: /verify payment/i });
-    await user.click(verifyBtn);
-
-    expect(gatewayMocks.verifyRefetch).toHaveBeenCalled();
-    expect(await screen.findByText(/complete payment in the checkout window/i)).toBeInTheDocument();
+  it('shows retry on failure instead of stranding the user', () => {
+    flowState.paymentId = 21;
+    flowState.liveStatus = 'failed';
+    render(
+      <PaymentModal
+        theme="light"
+        params={{ subscriptionId: 5, paymentType: 'subscription', amount: 39, currency: 'USD' }}
+        onClose={vi.fn()}
+        onApproved={vi.fn()}
+      />,
+    );
+    expect(screen.getByText(/payment failed/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /try again/i })).toBeInTheDocument();
   });
 });

@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import {
-  FileText,
+  FileText, Clock, CheckCircle,
   ArrowLeft, CreditCard, RefreshCw,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -25,7 +25,6 @@ import { ADMINISTRATION_PLANS_SUBSCRIPTIONS_ROUTES } from '../../../../../app/ro
 import { ReceiptViewButton } from '../../../../../shared/components/billing/ReceiptViewButton';
 import { GatewayPendingBanner } from './GatewayPendingBanner';
 import { PesapalCheckout } from './PesapalCheckout';
-import { SubscriptionOutcomePill } from './SubscriptionOutcomePill';
 import { RestoreFacilityFunctionalityBanner } from '../../../../../shared/components/billing/RestoreFacilityFunctionalityBanner';
 import { useRestoreFacilityFunctionality } from '../../../../../shared/entitlements/useRestoreFacilityFunctionality';
 import {
@@ -331,15 +330,36 @@ export const Payments: React.FC<PaymentsProps> = ({ theme }) => {
         </div>
         {payments.length > 0 ? (
           <div className="divide-y" style={{ borderColor: isDark ? '#1f2a37' : '#e5e7eb' }}>
-            {payments.map((p: Payment) => (
-              <div key={p.id} className="p-4 flex items-center justify-between">
-                <div className="min-w-0">
-                  <p className="font-medium">${p.amount} {p.currency}</p>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className={cn('text-xs', isDark ? 'text-gray-400' : 'text-gray-500')}>{p.payment_type_label} · {p.method_label}</span>
-                    {p.transaction_reference && (
-                      <span className={cn('text-xs font-mono', isDark ? 'text-gray-500' : 'text-gray-400')}>Ref: {p.transaction_reference}</span>
-                    )}
+            {payments.map((p: Payment) => {
+              const isPending = p.status === PaymentStatus.PENDING;
+              const isFailed = p.status === PaymentStatus.FAILED || p.status === PaymentStatus.EXPIRED;
+              return (
+              <div key={p.id} className="p-4 flex items-center gap-3">
+                <span
+                  className={cn(
+                    'flex h-8 w-8 shrink-0 items-center justify-center rounded-full',
+                    isPending
+                      ? isDark ? 'bg-amber-900/30 text-amber-400' : 'bg-amber-50 text-amber-600'
+                      : isFailed
+                        ? isDark ? 'bg-red-900/30 text-red-400' : 'bg-red-50 text-red-500'
+                        : isDark ? 'bg-green-900/30 text-green-400' : 'bg-green-50 text-green-600',
+                  )}
+                >
+                  {isPending ? (
+                    <Clock className="h-4 w-4" />
+                  ) : isFailed ? (
+                    <RefreshCw className="h-4 w-4" />
+                  ) : (
+                    <CheckCircle className="h-4 w-4" />
+                  )}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium">{p.plan_name ?? p.payment_type_label}</p>
+                  <p className={cn('text-xs', isDark ? 'text-gray-400' : 'text-gray-500')}>
+                    {p.paid_at ? new Date(p.paid_at).toLocaleDateString() : new Date(p.created_at!).toLocaleDateString()}
+                    {p.method_label ? ` · ${p.method_label}` : ''}
+                    {isPending ? ' · awaiting confirmation' : ''}
+                    {(p.receipt_download_url || p.receipt_url) && ' · '}
                     {(p.receipt_download_url || p.receipt_url) && (
                       <ReceiptViewButton
                         receiptDownloadUrl={p.receipt_download_url}
@@ -348,19 +368,14 @@ export const Payments: React.FC<PaymentsProps> = ({ theme }) => {
                         className={isDark ? 'text-blue-400' : 'text-blue-600'}
                       />
                     )}
-                  </div>
-                  <p className={cn('text-xs', isDark ? 'text-gray-500' : 'text-gray-400')}>
-                    {p.paid_at ? new Date(p.paid_at).toLocaleDateString() : ''}
                   </p>
                 </div>
-                <SubscriptionOutcomePill
-                  subscriptionStatus={p.subscription_status}
-                  subscriptionStatusLabel={p.subscription_status_label}
-                  paymentStatus={p.status}
-                  paymentStatusLabel={p.status_label}
-                />
+                <span className={cn('shrink-0 text-sm font-semibold tabular-nums', isDark ? 'text-gray-100' : 'text-gray-900')}>
+                  ${p.amount} {p.currency}
+                </span>
               </div>
-            ))}
+              );
+            })}
           </div>
         ) : (
           <div className={cn('p-8 text-center text-sm', isDark ? 'text-gray-500' : 'text-gray-500')}>
