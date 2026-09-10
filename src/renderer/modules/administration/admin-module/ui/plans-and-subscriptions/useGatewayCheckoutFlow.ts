@@ -87,14 +87,16 @@ export function useGatewayCheckoutFlow({
   );
   const liveStatus = paymentId != null ? statusQuery.data?.data?.status : undefined;
 
+  // The payment window stays open until the USER closes it (Custosell
+  // standard) - approval refreshes the app behind it but never kills
+  // the window. Completion is toasted once.
   useEffect(() => {
     if (liveStatus === 'completed' && !approvedRef.current) {
       approvedRef.current = true;
-      closePaymentPopup();
       showToast('success', 'Payment confirmed. Subscription activated.', 7000);
       onApproved();
     }
-  }, [liveStatus, onApproved, showToast, closePaymentPopup]);
+  }, [liveStatus, onApproved, showToast]);
 
   const startPayment = (): boolean => {
     if (!email.trim()) {
@@ -148,6 +150,14 @@ export function useGatewayCheckoutFlow({
     }
   };
 
+  /** Drop a dead payment id (failed/expired elsewhere) and return to the
+      form without touching the server. */
+  const resetFlow = () => {
+    closePaymentPopup();
+    setPaymentId(null);
+    approvedRef.current = false;
+  };
+
   const busy = initiate.isPending || statusQuery.isFetching;
 
   return {
@@ -164,5 +174,6 @@ export function useGatewayCheckoutFlow({
     startPayment,
     verifyNow,
     cancelPayment,
+    resetFlow,
   };
 }

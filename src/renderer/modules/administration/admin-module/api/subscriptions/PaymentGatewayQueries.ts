@@ -135,13 +135,8 @@ export const useInitiateGatewayPayment = (
     },
 
     onSuccess: (data) => {
-      const flow = data.data?.type;
-      const fallback =
-        flow === 'redirect'
-          ? 'Payment initiated. Redirect to complete payment.'
-          : 'Payment initiated. Approve the USSD prompt on your phone.';
-
-      showToast('success', data.message || fallback, 7000);
+      // No opening toast (Custosell standard): the payment window opening
+      // IS the feedback. Toasts only report errors or final completion.
 
       if (facilityId) {
         // The initiation typically creates a new PENDING payment record.

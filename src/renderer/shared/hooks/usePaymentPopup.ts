@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 
 const POPUP_WIDTH = 600;
 const POPUP_HEIGHT = 760;
@@ -78,7 +78,11 @@ export function usePaymentPopup(): PaymentPopup {
     popupRef.current = null;
   }, []);
 
-  useEffect(() => closePaymentPopupRef, [closePaymentPopupRef]);
+  // NOTE (Custosell standard): no auto-close on unmount. The payment window
+  // belongs to the USER once opened - only explicit user actions
+  // (Done/Close buttons, cancel-and-retry, bypass cleanup) may close it.
+  // An orphaned window is a minor nuisance; a murdered checkout is lost
+  // revenue.
 
   const openPaymentPopup = useCallback((): boolean => {
     setPopupBlocked(false);
