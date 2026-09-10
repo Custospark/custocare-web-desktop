@@ -1,6 +1,6 @@
 /**
  * ============================================================================
- * PAYMENT GATEWAY — TYPE DEFINITIONS (Facility-based)
+ * PAYMENT GATEWAY - TYPE DEFINITIONS (Facility-based)
  * ============================================================================
  *
  * This module is an ADD-ON to the existing manual billing system.
@@ -83,6 +83,9 @@ export interface InitiateGatewayPaymentRequest {
   email?: string | null;
 
   customer_name?: string | null;
+
+  /** Required when payment_type is upgrade_proration. */
+  target_plan_id?: number | null;
 }
 
 export interface InitiateGatewayPaymentData {
@@ -130,6 +133,8 @@ export interface InitiateGatewayPaymentParams {
 export interface GatewayPaymentStatusParams {
   /** Reference can be payment_id, gateway_transaction_id, or transaction_reference (backend-dependent). */
   reference: number | string;
+  /** When true, backend live-verifies with the gateway (?verify=1) instead of reading the DB row. */
+  verify?: boolean;
 }
 
 /* -------------------------------------------------------------------------- */

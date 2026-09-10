@@ -1,7 +1,9 @@
 #!/usr/bin/env node
 /**
- * Vera Fast — ESLint on changed TS/TSX only (~seconds).
+ * Vera Fast - ESLint on changed .ts/.tsx + Vera Logic (repo rules/contracts).
+ * Usage: node scripts/vera-fast.mjs
  */
+import { execSync } from 'node:child_process';
 import { spawnSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
 
@@ -35,16 +37,37 @@ function collectChangedTsFiles() {
 
 const files = collectChangedTsFiles();
 
+let failed = false;
+
 if (files.length === 0) {
-  console.log('🧪 Vera fast: no changed TS/TSX files — skipped.');
-  process.exit(0);
+  console.log('🧪 Vera fast: no changed TS/TSX files - eslint skipped.');
+} else {
+  console.log(`🧪 Vera fast: eslint on ${files.length} file(s)`);
+  const eslint = spawnSync('npx', ['eslint', '--no-warn-ignored', ...files], {
+    stdio: 'inherit',
+    shell: true,
+  });
+  if ((eslint.status ?? 1) !== 0) {
+    console.log('❌ Vera fast: eslint failed');
+    failed = true;
+  } else {
+    console.log('✅ Vera fast: eslint passed');
+  }
 }
 
-console.log(`🧪 Vera fast: eslint on ${files.length} file(s)`);
+try {
+  execSync('node scripts/vera-logic.mjs', {
+    stdio: 'inherit',
+    encoding: 'utf8',
+  });
+} catch {
+  failed = true;
+}
 
-const eslint = spawnSync('npx', ['eslint', ...files], {
-  stdio: 'inherit',
-  shell: true,
-});
+if (failed) {
+  console.log('❌ Vera fast: failed');
+  process.exit(1);
+}
 
-process.exit(eslint.status ?? 1);
+console.log('✅ Vera fast: passed (eslint + logic)');
+process.exit(0);

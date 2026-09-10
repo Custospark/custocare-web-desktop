@@ -1,6 +1,6 @@
 /**
  * ============================================================================
- * PAYMENT GATEWAY — REACT QUERY HOOKS (TanStack React Query v5)
+ * PAYMENT GATEWAY - REACT QUERY HOOKS (TanStack React Query v5)
  * ============================================================================
  *
  * React Query v5 NOTE:
@@ -181,12 +181,13 @@ export const useGetGatewayPaymentStatus = (
   const queryClient = useQueryClient();
 
   const reference = params.reference;
+  const verify = params.verify === true;
 
   const queryKey = useMemo(() => {
-    return facilityId
-      ? paymentGatewayKeys.status.detail(facilityId, reference)
-      : paymentGatewayKeys.all;
-  }, [facilityId, reference]);
+    if (!facilityId) return paymentGatewayKeys.all;
+    const base = paymentGatewayKeys.status.detail(facilityId, reference);
+    return verify ? [...base, 'verify'] : base;
+  }, [facilityId, reference, verify]);
 
   const query = useQuery<GetGatewayPaymentStatusResponse, ApiAxiosError>({
     queryKey,
@@ -194,7 +195,7 @@ export const useGetGatewayPaymentStatus = (
 
     queryFn: async () => {
       const res = await axiosInstance.get<GetGatewayPaymentStatusResponse>(
-        `/facilities/${facilityId}/payments/gateway/${reference}/status`,
+        `/facilities/${facilityId}/payments/gateway/${reference}/status${verify ? '?verify=1' : ''}`,
       );
       return res.data;
     },

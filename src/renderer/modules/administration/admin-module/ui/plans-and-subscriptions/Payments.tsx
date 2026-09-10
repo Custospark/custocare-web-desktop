@@ -27,6 +27,7 @@ import { useToast } from '../../../../../app/store/contexts/toast/useToast';
 import LoadingSkeleton from '../../../../../shared/components/Loading/LoadingSkeletons';
 import { ADMINISTRATION_PLANS_SUBSCRIPTIONS_ROUTES } from '../../../../../app/routes/constants/administration.paths';
 import { ReceiptViewButton } from '../../../../../shared/components/billing/ReceiptViewButton';
+import { PesapalCheckout } from './PesapalCheckout';
 import { RestoreFacilityFunctionalityBanner } from '../../../../../shared/components/billing/RestoreFacilityFunctionalityBanner';
 import { useRestoreFacilityFunctionality } from '../../../../../shared/entitlements/useRestoreFacilityFunctionality';
 import {
@@ -80,7 +81,7 @@ export const Payments: React.FC<PaymentsProps> = ({ theme }) => {
   const needsPayment = subscriptionNeedsPayment(subscription);
   const pendingApproval = subscriptionHasPendingPaymentApproval(subscription);
 
-  // Derive payment message — fallback for suspended/cancelled where backend returns null
+  // Derive payment message - fallback for suspended/cancelled where backend returns null
   const paymentMessage = paymentAction?.message
     ?? (subscription?.status === 'suspended' ? 'Your subscription has been suspended. Submit payment to reactivate.'
       : subscription?.status === 'cancelled' ? 'Your subscription has been cancelled. Submit payment to reactivate.'
@@ -107,15 +108,17 @@ export const Payments: React.FC<PaymentsProps> = ({ theme }) => {
   const { data: quoteResp, isLoading: quoteLoading } = useGetPaymentQuote(paymentQuoteParams);
 
   const quote = quoteResp?.data ?? lastQuote;
-  const lineItems = quote?.line_items ?? [];
-  const total = quote?.total_usd ?? 0;
 
-  // Keep last quote visible when query refetches or is disabled
+  // Keep last quote visible when query refetches or is disabled.
+  // Syncing server cache into local state here is intentional (stale-while-refetch).
   useEffect(() => {
     if (quoteResp?.data) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional server-cache sync
       setLastQuote(quoteResp.data);
     }
   }, [quoteResp?.data]);
+  const lineItems = quote?.line_items ?? [];
+  const total = quote?.total_usd ?? 0;
   const noSubscription = !subscription;
 
   const paymentType = (() => {
@@ -323,7 +326,9 @@ export const Payments: React.FC<PaymentsProps> = ({ theme }) => {
         >
           <CreditCard className={cn('w-5 h-5 shrink-0', isDark ? 'text-blue-400' : 'text-blue-600')} />
           <p className={cn('text-sm', isDark ? 'text-blue-100' : 'text-blue-900')}>
-            {paymentAction?.message ?? 'Your payment proof is pending review by our accountants.'}
+            {pendingPayment?.method === 'gateway'
+              ? 'Your online payment is in progress. Complete it in the checkout window - activation is automatic.'
+              : (paymentAction?.message ?? 'Your payment is being processed.')}
           </p>
         </motion.div>
       )}
@@ -363,11 +368,28 @@ export const Payments: React.FC<PaymentsProps> = ({ theme }) => {
           <div className={cn('border-t pt-3 flex justify-between items-center', isDark ? 'border-gray-700' : 'border-gray-200')}>
             <span className="font-bold">Total due today</span>
             <span className="text-xl font-extrabold text-blue-600">
-              {quoteLoading ? '—' : `$${total.toFixed(2)} USD`}
+              {quoteLoading ? '-' : `$${total.toFixed(2)} USD`}
             </span>
           </div>
         </div>
       </div>
+      )}
+
+      {/* Online checkout - instant activation via PesaPal (hidden until gateways load) */}
+      {needsPayment && !pendingApproval && subscription && quoteRequiresPayment && (
+        <PesapalCheckout
+          theme={theme}
+          subscriptionId={subscription.id}
+          paymentType={paymentType}
+          amount={total}
+          currency="USD"
+          targetPlanId={targetPlanId ?? quote.target_plan_id ?? null}
+          disabled={quoteLoading}
+          onApproved={() => {
+            refetch();
+            refetchSubscription();
+          }}
+        />
       )}
 
       {/* Payment Method Selector */}
@@ -433,7 +455,7 @@ export const Payments: React.FC<PaymentsProps> = ({ theme }) => {
         </div>
       </div>
 
-      {/* Bank Transfer / Over-the-Counter Details — shown only when selected */}
+      {/* Bank Transfer / Over-the-Counter Details - shown only when selected */}
       <AnimatePresence>
         {(method === 'bank' || method === 'counter') && (
           <motion.div
@@ -564,7 +586,7 @@ export const Payments: React.FC<PaymentsProps> = ({ theme }) => {
           <CheckCircle className="w-8 h-8 text-green-500 mx-auto mb-2" />
           <p className="font-bold text-green-700 dark:text-green-300">Payment Submitted</p>
           <p className={cn('text-sm', isDark ? 'text-gray-400' : 'text-gray-600')}>
-            Your payment is pending admin approval. You will be notified once it is confirmed.
+            Your payment is being processed. You will be notified once it is confirmed.
           </p>
         </motion.div>
       )}
@@ -633,7 +655,7 @@ export const Payments: React.FC<PaymentsProps> = ({ theme }) => {
 
       <div className={cn('rounded-xl border border-dashed p-4 text-center', isDark ? 'border-gray-700 bg-gray-800/10' : 'border-gray-200 bg-gray-50/50')}>
         <p className={cn('text-xs', isDark ? 'text-gray-500' : 'text-gray-500')}>
-          More payment methods are being integrated — card payments, PayPal, and mobile money.
+          More payment methods are being integrated - card payments, PayPal, and mobile money.
         </p>
       </div>
     </div>
