@@ -18,12 +18,14 @@ const flowState = {
   paymentId: null as number | null,
   liveStatus: undefined as string | undefined,
   verifying: false,
+  cancelling: false,
   busy: false,
   popupBlocked: false,
   paymentUrl: null as string | null,
   initiating: false,
   startPayment: vi.fn(),
   verifyNow: vi.fn(),
+  cancelPayment: vi.fn(),
 };
 
 vi.mock('./useGatewayCheckoutFlow', () => ({
@@ -50,8 +52,8 @@ beforeEach(() => {
   flowState.paymentUrl = null;
 });
 
-describe('PesapalCheckout - presentation over shared flow', () => {
-  it('renders nothing extra and delegates pay to the flow', async () => {
+describe('PesapalCheckout - form and waiting views', () => {
+  it('delegates pay to the shared flow with email', async () => {
     const user = userEvent.setup();
     render(<PesapalCheckout {...baseProps} />);
 
@@ -61,14 +63,34 @@ describe('PesapalCheckout - presentation over shared flow', () => {
     expect(flowState.startPayment).toHaveBeenCalled();
   });
 
-  it('shows verify only while a payment is in flight', () => {
-    const { rerender } = render(<PesapalCheckout {...baseProps} />);
-    expect(screen.queryByRole('button', { name: /verify payment/i })).not.toBeInTheDocument();
+  it('refuses without email and never starts', async () => {
+    const user = userEvent.setup();
+    render(<PesapalCheckout {...baseProps} />);
+    expect(screen.queryByText(/waiting for payment/i)).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /pay now/i })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /pay now/i }));
+    expect(flowState.startPayment).toHaveBeenCalled();
+  });
 
+  it('shows the waiting view instead of a second form while pending', () => {
     flowState.paymentId = 21;
     flowState.liveStatus = 'pending';
-    rerender(<PesapalCheckout {...baseProps} />);
+    render(<PesapalCheckout {...baseProps} />);
+
+    expect(screen.getByText(/waiting for payment/i)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^pay now$/i })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: /verify payment/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /cancel and start over/i })).toBeInTheDocument();
+  });
+
+  it('cancel returns the flow to the form', async () => {
+    const user = userEvent.setup();
+    flowState.paymentId = 21;
+    flowState.liveStatus = 'pending';
+    render(<PesapalCheckout {...baseProps} />);
+
+    await user.click(screen.getByRole('button', { name: /cancel and start over/i }));
+    expect(flowState.cancelPayment).toHaveBeenCalled();
   });
 });
 

@@ -4,6 +4,7 @@ import { usePaymentPopup } from '../../../../../shared/hooks/usePaymentPopup';
 import {
   useInitiateGatewayPayment,
   useGetGatewayPaymentStatus,
+  useCancelGatewayPayment,
 } from '../../api/subscriptions/PaymentGatewayQueries';
 import type { PaymentType } from '../../api/subscriptions/SubscriptionTypes';
 
@@ -13,6 +14,8 @@ export interface CheckoutFlowParams {
   amount: number;
   currency: string;
   targetPlanId?: number | null;
+  /** Resume tracking an existing pending payment (e.g. after remount). */
+  resumedPaymentId?: number | null;
   onApproved: () => void;
 }
 
@@ -30,14 +33,26 @@ export function useGatewayCheckoutFlow({
   amount,
   currency,
   targetPlanId,
+  resumedPaymentId,
   onApproved,
 }: CheckoutFlowParams) {
   const { showToast } = useToast();
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
-  const [paymentId, setPaymentId] = useState<number | null>(null);
+  const [paymentId, setPaymentId] = useState<number | null>(resumedPaymentId ?? null);
   const [verifying, setVerifying] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
   const approvedRef = useRef(false);
+
+  const cancelRemote = useCancelGatewayPayment();
+
+  // Adopt a resumed pending payment (arrives async from the payments list).
+  // Never overwrites an in-flight payment owned by this flow instance.
+  useEffect(() => {
+    if (resumedPaymentId != null && paymentId == null) {
+      setPaymentId(resumedPaymentId);
+    }
+  }, [resumedPaymentId, paymentId]);
 
   const {
     popupBlocked,
@@ -117,6 +132,22 @@ export function useGatewayCheckoutFlow({
     }
   };
 
+  /** Give up on a stuck pending payment: it expires server-side (history
+      kept) and the flow returns to the form so a new payment can start. */
+  const cancelPayment = async () => {
+    if (paymentId == null) return;
+    setCancelling(true);
+    try {
+      await cancelRemote.mutateAsync(paymentId);
+      closePaymentPopup();
+      setPaymentId(null);
+      approvedRef.current = false;
+      onApproved();
+    } finally {
+      setCancelling(false);
+    }
+  };
+
   const busy = initiate.isPending || statusQuery.isFetching;
 
   return {
@@ -125,11 +156,13 @@ export function useGatewayCheckoutFlow({
     paymentId,
     liveStatus,
     verifying,
+    cancelling,
     busy,
     popupBlocked,
     paymentUrl,
     initiating: initiate.isPending,
     startPayment,
     verifyNow,
+    cancelPayment,
   };
 }

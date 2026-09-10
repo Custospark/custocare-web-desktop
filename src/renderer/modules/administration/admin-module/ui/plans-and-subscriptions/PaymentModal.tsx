@@ -98,6 +98,48 @@ const PaymentModalBody: React.FC<{
               </span>
             </div>
 
+            {flow.paymentId != null ? (
+              <div className="text-center space-y-4 py-2">
+                <Loader2 className="w-10 h-10 animate-spin text-emerald-600 mx-auto" />
+                <div>
+                  <p className={cn('text-lg font-bold', isDark ? 'text-white' : 'text-gray-900')}>Waiting for Payment</p>
+                  <p className={cn('text-sm mt-1', isDark ? 'text-gray-400' : 'text-gray-500')}>
+                    Complete the payment in the opened window.
+                  </p>
+                </div>
+                <PaymentPopupNotice theme={theme} popupBlocked={flow.popupBlocked} paymentUrl={flow.paymentUrl} />
+                <div className="flex flex-wrap items-center justify-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => flow.verifyNow()}
+                    disabled={flow.verifying}
+                    className={cn(
+                      'inline-flex items-center gap-2 px-4 py-2.5 rounded-lg font-semibold text-sm border transition-all disabled:opacity-50',
+                      isDark ? 'border-gray-600 hover:bg-gray-800 text-gray-200' : 'border-gray-300 hover:bg-gray-100 text-gray-700',
+                    )}
+                  >
+                    {flow.verifying ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+                    Verify payment
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => flow.cancelPayment()}
+                    disabled={flow.cancelling}
+                    className={cn('text-sm underline underline-offset-2 transition-all disabled:opacity-50', isDark ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-gray-800')}
+                  >
+                    {flow.cancelling ? 'Cancelling...' : 'Cancel and start over'}
+                  </button>
+                </div>
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className={cn('text-sm underline transition-all', isDark ? 'text-gray-500 hover:text-gray-300' : 'text-gray-400 hover:text-gray-600')}
+                >
+                  Close
+                </button>
+              </div>
+            ) : (
+            <>
             <div className="grid grid-cols-1 gap-3">
               <label className="block">
                 <span className={cn('text-xs font-medium', isDark ? 'text-gray-300' : 'text-gray-600')}>
@@ -141,22 +183,8 @@ const PaymentModalBody: React.FC<{
                 className="inline-flex items-center gap-2 px-6 py-2.5 rounded-lg font-bold text-sm bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white shadow-lg transition-all"
               >
                 {flow.initiating ? <Loader2 className="w-4 h-4 animate-spin" /> : <CreditCard className="w-4 h-4" />}
-                {flow.paymentId ? 'Reopen checkout' : 'Pay now'}
+                Pay now
               </button>
-              {flow.paymentId != null && (
-                <button
-                  type="button"
-                  onClick={() => flow.verifyNow()}
-                  disabled={flow.verifying}
-                  className={cn(
-                    'inline-flex items-center gap-2 px-4 py-2.5 rounded-lg font-semibold text-sm border transition-all disabled:opacity-50',
-                    isDark ? 'border-gray-600 hover:bg-gray-800 text-gray-200' : 'border-gray-300 hover:bg-gray-100 text-gray-700',
-                  )}
-                >
-                  {flow.verifying ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
-                  Verify payment
-                </button>
-              )}
               <button
                 type="button"
                 onClick={onClose}
@@ -166,11 +194,7 @@ const PaymentModalBody: React.FC<{
                 Close
               </button>
             </div>
-
-            {flow.paymentId != null && flow.liveStatus === 'pending' && (
-              <p className={cn('text-xs', isDark ? 'text-gray-400' : 'text-gray-500')}>
-                Complete payment in the checkout window - this dialog checks automatically.
-              </p>
+            </>
             )}
           </div>
         )}

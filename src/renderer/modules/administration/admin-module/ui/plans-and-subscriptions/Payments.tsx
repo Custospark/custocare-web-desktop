@@ -23,7 +23,6 @@ import { useToast } from '../../../../../app/store/contexts/toast/useToast';
 import LoadingSkeleton from '../../../../../shared/components/Loading/LoadingSkeletons';
 import { ADMINISTRATION_PLANS_SUBSCRIPTIONS_ROUTES } from '../../../../../app/routes/constants/administration.paths';
 import { ReceiptViewButton } from '../../../../../shared/components/billing/ReceiptViewButton';
-import { GatewayPendingBanner } from './GatewayPendingBanner';
 import { PesapalCheckout } from './PesapalCheckout';
 import { RestoreFacilityFunctionalityBanner } from '../../../../../shared/components/billing/RestoreFacilityFunctionalityBanner';
 import { useRestoreFacilityFunctionality } from '../../../../../shared/entitlements/useRestoreFacilityFunctionality';
@@ -225,20 +224,7 @@ export const Payments: React.FC<PaymentsProps> = ({ theme }) => {
         </div>
       </div>
 
-      {/* Gateway pending: driven by the payments list so it persists across
-          refetches for as long as the payment is pending. */}
-      {pendingPayment?.method === 'gateway' && (
-        <GatewayPendingBanner
-          theme={theme}
-          paymentId={pendingPayment.id}
-          onApproved={() => {
-            refetch();
-            refetchSubscription();
-          }}
-        />
-      )}
-
-      {pendingApproval && pendingPayment?.method !== 'gateway' && (
+      {pendingApproval && (
         <motion.div
           initial={{ opacity: 0, y: -8 }}
           animate={{ opacity: 1, y: 0 }}
@@ -296,9 +282,11 @@ export const Payments: React.FC<PaymentsProps> = ({ theme }) => {
       </div>
       )}
 
-      {/* Online checkout - hidden while any payment is pending (backend
-          rejects duplicates) and until gateways load. */}
-      {needsPayment && !pendingPayment && subscription && quoteRequiresPayment && (
+      {/* Online checkout stays mounted for the whole flow (Custosell
+          standard): it shows the form when idle and the waiting view
+          while its payment is pending, so polling can never be orphaned
+          by a refetch. A resumed pending payment is picked up by id. */}
+      {needsPayment && subscription && quoteRequiresPayment && (
         <PesapalCheckout
           theme={theme}
           subscriptionId={subscription.id}
@@ -307,6 +295,7 @@ export const Payments: React.FC<PaymentsProps> = ({ theme }) => {
           currency="USD"
           targetPlanId={targetPlanId ?? quote.target_plan_id ?? null}
           disabled={quoteLoading}
+          resumedPaymentId={pendingPayment?.method === 'gateway' ? pendingPayment.id : null}
           onApproved={() => {
             refetch();
             refetchSubscription();

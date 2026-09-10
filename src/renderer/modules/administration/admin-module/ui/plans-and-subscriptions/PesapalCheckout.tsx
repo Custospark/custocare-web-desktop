@@ -1,5 +1,5 @@
 import React from 'react';
-import { CreditCard, Loader2, ExternalLink, RefreshCw, CheckCircle } from 'lucide-react';
+import { CreditCard, Loader2, ExternalLink, RefreshCw } from 'lucide-react';
 import { cn } from '../../../../../shared/types/cn';
 import { useGatewayCheckoutFlow } from './useGatewayCheckoutFlow';
 import { PaymentPopupNotice } from './PaymentPopupNotice';
@@ -13,6 +13,7 @@ interface PesapalCheckoutProps {
   currency: string;
   targetPlanId?: number | null;
   disabled?: boolean;
+  resumedPaymentId?: number | null;
   onApproved: () => void;
 }
 
@@ -28,12 +29,62 @@ export const PesapalCheckout: React.FC<PesapalCheckoutProps> = ({
   currency,
   targetPlanId,
   disabled,
+  resumedPaymentId,
   onApproved,
 }) => {
   const isDark = theme === 'dark';
   const flow = useGatewayCheckoutFlow({
-    subscriptionId, paymentType, amount, currency, targetPlanId, onApproved,
+    subscriptionId, paymentType, amount, currency, targetPlanId, resumedPaymentId, onApproved,
   });
+
+  // Waiting view: a payment is in flight (fresh or resumed). The form stays
+  // hidden so a second payment can never be started by accident.
+  if (flow.paymentId != null) {
+    return (
+      <div
+        className={cn(
+          'rounded-xl border-2 p-5 text-center space-y-4',
+          isDark ? 'border-emerald-700 bg-emerald-900/10' : 'border-emerald-200 bg-emerald-50/60',
+        )}
+      >
+        <Loader2 className="w-10 h-10 animate-spin text-emerald-600 mx-auto" />
+        <div>
+          <p className={cn('text-lg font-bold', isDark ? 'text-white' : 'text-gray-900')}>Waiting for Payment</p>
+          <p className={cn('text-sm mt-1', isDark ? 'text-gray-400' : 'text-gray-500')}>
+            Complete the payment in the opened window.
+          </p>
+        </div>
+        <PaymentPopupNotice theme={theme} popupBlocked={flow.popupBlocked} paymentUrl={flow.paymentUrl} />
+        <div className="flex flex-wrap items-center justify-center gap-3">
+          <button
+            type="button"
+            onClick={() => flow.verifyNow()}
+            disabled={flow.verifying}
+            className={cn(
+              'inline-flex items-center gap-2 px-4 py-2.5 rounded-lg font-semibold text-sm border transition-all disabled:opacity-50',
+              isDark ? 'border-gray-600 hover:bg-gray-800 text-gray-200' : 'border-gray-300 hover:bg-gray-100 text-gray-700',
+            )}
+          >
+            {flow.verifying ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+            Verify payment
+          </button>
+          <button
+            type="button"
+            onClick={() => flow.cancelPayment()}
+            disabled={flow.cancelling}
+            className={cn('text-xs underline underline-offset-2 transition-all disabled:opacity-50', isDark ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-gray-800')}
+          >
+            {flow.cancelling ? 'Cancelling...' : 'Cancel and start over'}
+          </button>
+        </div>
+        {flow.liveStatus && flow.liveStatus !== 'pending' && (
+          <p className={cn('text-xs font-semibold', flow.liveStatus === 'completed' ? 'text-emerald-600' : 'text-amber-600')}>
+            Status: {flow.liveStatus}
+          </p>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div
@@ -105,49 +156,9 @@ export const PesapalCheckout: React.FC<PesapalCheckoutProps> = ({
           ) : (
             <ExternalLink className="w-4 h-4" />
           )}
-          {flow.paymentId ? 'Reopen checkout' : 'Pay now'}
+          Pay now
         </button>
-
-        {flow.paymentId != null && (
-          <button
-            type="button"
-            onClick={() => flow.verifyNow()}
-            disabled={flow.verifying || flow.liveStatus === 'completed'}
-            className={cn(
-              'inline-flex items-center gap-2 px-4 py-2.5 rounded-lg font-semibold text-sm border transition-all disabled:opacity-50',
-              isDark
-                ? 'border-gray-600 hover:bg-gray-800 text-gray-200'
-                : 'border-gray-300 hover:bg-gray-100 text-gray-700',
-            )}
-          >
-            {flow.verifying ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <RefreshCw className="w-4 h-4" />
-            )}
-            Verify payment
-          </button>
-        )}
-
-        {flow.liveStatus && (
-          <span
-            className={cn(
-              'inline-flex items-center gap-1.5 text-xs font-semibold',
-              flow.liveStatus === 'completed' ? 'text-emerald-600' : isDark ? 'text-amber-300' : 'text-amber-700',
-            )}
-          >
-            {flow.liveStatus === 'completed' && <CheckCircle className="w-4 h-4" />}
-            Status: {flow.liveStatus}
-          </span>
-        )}
       </div>
-
-      {flow.paymentId != null && flow.liveStatus === 'pending' && (
-        <p className={cn('text-xs mt-3', isDark ? 'text-gray-400' : 'text-gray-500')}>
-          Complete payment in the checkout window - this page checks automatically. If you already
-          paid, press <strong>Verify payment</strong>.
-        </p>
-      )}
     </div>
   );
 };
