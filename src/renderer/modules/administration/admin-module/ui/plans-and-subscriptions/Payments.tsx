@@ -1,21 +1,18 @@
 import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import {
-  Landmark, Smartphone, CheckCircle, Copy,
-  CheckCheck, Upload, Loader2, FileText,
-  Building2, ArrowLeft, AlertCircle, CreditCard, RefreshCw,
+  FileText,
+  ArrowLeft, AlertCircle, CreditCard, RefreshCw,
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import {
   useGetFacilitySubscription,
   useGetFacilityPayments,
   useGetPaymentQuote,
   useGetPlans,
-  useRecordPayment,
 } from '../../api/subscriptions/SubscriptionQueries';
 import {
   PaymentStatus,
-  PaymentMethod,
   PaymentType,
   SubscriptionStatus,
   type Payment,
@@ -41,21 +38,9 @@ interface PaymentsProps {
   theme: 'light' | 'dark';
 }
 
-const BANK_DETAILS = {
-  bank: 'Stanbic Bank Uganda',
-  accountName: 'Custospark Company Ltd',
-  accountNumber: '9030027316580',
-};
-
 export const Payments: React.FC<PaymentsProps> = ({ theme }) => {
   const isDark = theme === 'dark';
   const { showToast } = useToast();
-  const [method, setMethod] = useState<'bank' | 'counter' | null>(null);
-  const [file, setFile] = useState<File | null>(null);
-  const [reference, setReference] = useState('');
-  const [notes, setNotes] = useState('');
-  const [copied, setCopied] = useState<string | null>(null);
-  const [submitted, setSubmitted] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [lastQuote, setLastQuote] = useState<PaymentQuote | null>(null);
   const navigate = useNavigate();
@@ -67,14 +52,6 @@ export const Payments: React.FC<PaymentsProps> = ({ theme }) => {
   const payments = paymentsResp?.data || [];
   const pendingPayment = payments.find((p) => p.status === PaymentStatus.PENDING) ?? null;
   const hasPendingProof = Boolean(pendingPayment);
-  const canSubmitProof = !hasPendingProof;
-  const recordPayment = useRecordPayment({
-    onSuccess: () => {
-      setSubmitted(true);
-      refetch();
-      refetchSubscription();
-    },
-  });
 
   const subscription = subResp?.data;
   const paymentAction = getSubscriptionPaymentAction(subscription);
@@ -164,40 +141,11 @@ export const Payments: React.FC<PaymentsProps> = ({ theme }) => {
       ? 'trial'
       : 'active';
 
-  const copy = (val: string, key: string) => {
-    navigator.clipboard.writeText(val).then(() => {
-      setCopied(key);
-      setTimeout(() => setCopied(null), 2000);
-    });
-  };
-
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
     await Promise.all([refetch(), refetchSubscription()]);
     setRefreshing(false);
   }, [refetch, refetchSubscription]);
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files?.[0]) setFile(e.target.files[0]);
-  };
-
-  const handleSubmitPayment = () => {
-    if (!file || hasPendingProof || quoteLoading || !quote) return;
-    recordPayment.mutate({
-      data: {
-        amount: total,
-        currency: 'USD',
-        method: PaymentMethod.BANK_TRANSFER,
-        payment_type: paymentType,
-        quote_intent: quoteIntent,
-        target_plan_id: targetPlanId ?? quote.target_plan_id ?? undefined,
-        transaction_reference: reference,
-        receipt_notes: notes,
-        paid_at: new Date().toISOString(),
-      },
-      receipt: file,
-    });
-  };
 
   if (subLoading) {
     return (
@@ -307,8 +255,8 @@ export const Payments: React.FC<PaymentsProps> = ({ theme }) => {
               </p>
               <ol className={cn('text-xs list-decimal list-inside space-y-1', isDark ? 'text-amber-200/80' : 'text-amber-900/80')}>
                 <li>Review the amount due below.</li>
-                <li>Transfer to our bank account (select Bank Transfer).</li>
-                <li>Upload your receipt and transaction reference, then submit.</li>
+                <li>Pay online instantly with mobile money or card.</li>
+                <li>Your subscription activates automatically once payment completes.</li>
               </ol>
             </div>
           </div>
@@ -392,204 +340,6 @@ export const Payments: React.FC<PaymentsProps> = ({ theme }) => {
         />
       )}
 
-      {/* Payment Method Selector */}
-      {needsPayment && !pendingApproval && (
-      <>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <button
-          type="button"
-          onClick={() => setMethod(method === 'bank' ? null : 'bank')}
-          className={cn(
-            'relative rounded-xl border-2 p-5 text-left transition-all cursor-pointer',
-            method === 'bank'
-              ? isDark ? 'border-blue-500 bg-blue-500/10 shadow-lg' : 'border-blue-500 bg-blue-50 shadow-lg'
-              : isDark ? 'border-gray-700 bg-gray-800/40 hover:border-gray-600' : 'border-gray-200 bg-white hover:border-gray-300'
-          )}
-        >
-          <div className="flex items-center gap-3 mb-2">
-            <div className={cn('w-10 h-10 rounded-lg flex items-center justify-center',
-              method === 'bank' ? 'bg-blue-600 text-white' : isDark ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-600'
-            )}>
-              <Landmark className="w-5 h-5" />
-            </div>
-            <div>
-              <h3 className={cn('font-bold text-sm', isDark ? 'text-white' : 'text-gray-900')}>Bank Transfer</h3>
-              <p className={cn('text-xs', isDark ? 'text-gray-400' : 'text-gray-500')}>Transfer directly to our bank account</p>
-            </div>
-          </div>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setMethod(method === 'counter' ? null : 'counter')}
-          className={cn(
-            'relative rounded-xl border-2 p-5 text-left transition-all cursor-pointer',
-            method === 'counter'
-              ? isDark ? 'border-blue-500 bg-blue-500/10 shadow-lg' : 'border-blue-500 bg-blue-50 shadow-lg'
-              : isDark ? 'border-gray-700 bg-gray-800/40 hover:border-gray-600' : 'border-gray-200 bg-white hover:border-gray-300'
-          )}
-        >
-          <div className="flex items-center gap-3 mb-2">
-            <div className={cn('w-10 h-10 rounded-lg flex items-center justify-center',
-              method === 'counter' ? 'bg-blue-600 text-white' : isDark ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-600'
-            )}>
-              <Building2 className="w-5 h-5" />
-            </div>
-            <div>
-              <h3 className={cn('font-bold text-sm', isDark ? 'text-white' : 'text-gray-900')}>Bank Over the Counter</h3>
-              <p className={cn('text-xs', isDark ? 'text-gray-400' : 'text-gray-500')}>Deposit cash at any branch</p>
-            </div>
-          </div>
-        </button>
-
-        <div className={cn('rounded-xl border-2 border-dashed p-5', isDark ? 'border-gray-700 bg-gray-800/20' : 'border-gray-300 bg-gray-50/50')}>
-          <div className="flex items-center gap-3 mb-2">
-            <div className={cn('w-10 h-10 rounded-lg flex items-center justify-center', isDark ? 'bg-gray-700 text-gray-400' : 'bg-gray-100 text-gray-400')}>
-              <Smartphone className="w-5 h-5" />
-            </div>
-            <div>
-              <h3 className={cn('font-bold text-sm', isDark ? 'text-gray-400' : 'text-gray-500')}>Mobile Money</h3>
-              <p className={cn('text-xs', isDark ? 'text-gray-500' : 'text-gray-400')}>Coming soon</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Bank Transfer / Over-the-Counter Details - shown only when selected */}
-      <AnimatePresence>
-        {(method === 'bank' || method === 'counter') && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            className={cn('rounded-2xl border-2 overflow-hidden', isDark ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200')}
-          >
-            <div className={cn('px-6 py-4 border-b flex items-center gap-2', isDark ? 'border-gray-800 bg-gray-800/40' : 'border-gray-200 bg-gray-50')}>
-              <Building2 className="w-4 h-4 text-blue-600" />
-              <span className={cn('font-semibold text-sm', isDark ? 'text-gray-200' : 'text-gray-800')}>
-                {method === 'counter' ? 'Deposit at Bank Branch' : 'Bank Account Details'}
-              </span>
-            </div>
-            <div className="p-6 space-y-4">
-              {method === 'counter' && (
-                <div className={cn('rounded-lg px-4 py-3 text-sm', isDark ? 'bg-blue-900/20 text-blue-200' : 'bg-blue-50 text-blue-800')}>
-                  Visit any <strong>{BANK_DETAILS.bank}</strong> branch and deposit cash into the account below. Keep the deposit slip and upload it as proof of payment.
-                </div>
-              )}
-              {[
-                { label: 'Bank', value: BANK_DETAILS.bank, key: 'bank' },
-                { label: 'Account Name', value: BANK_DETAILS.accountName, key: 'name' },
-                { label: 'Account Number', value: BANK_DETAILS.accountNumber, key: 'num' },
-              ].map(({ label, value, key }) => (
-                <div key={key} className="flex items-center justify-between">
-                  <div>
-                    <p className={cn('text-xs', isDark ? 'text-gray-400' : 'text-gray-500')}>{label}</p>
-                    <p className="font-semibold">{value}</p>
-                  </div>
-                  <button type="button" onClick={() => copy(value, key)}
-                    className={cn('p-1.5 rounded-lg', isDark ? 'hover:bg-gray-800 text-gray-400' : 'hover:bg-gray-100 text-gray-500')}>
-                    {copied === key ? <CheckCheck className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
-                  </button>
-                </div>
-              ))}
-            </div>
-
-            <div className={cn('px-6 py-4 border-t', isDark ? 'border-gray-800' : 'border-gray-200')}>
-              <h3 className={cn('font-semibold text-sm mb-3', isDark ? 'text-gray-200' : 'text-gray-800')}>Upload Proof of Payment <span className="text-red-500">*</span></h3>
-              {hasPendingProof && (
-                <div className={cn('mb-3 rounded-lg border px-4 py-3 text-sm', isDark ? 'border-amber-800 bg-amber-900/20 text-amber-200' : 'border-amber-200 bg-amber-50 text-amber-900')}>
-                  A payment proof is already pending review. You can submit again only after it is approved or rejected.
-                </div>
-              )}
-              <div className="space-y-3">
-                <div className={cn(
-                  'rounded-xl border-2 border-dashed p-6 text-center cursor-pointer transition-colors',
-                  isDark ? 'border-gray-700 hover:border-blue-500 bg-gray-800/40' : 'border-gray-300 hover:border-blue-500 bg-gray-50'
-                )}>
-                  <input type="file" accept="image/*,.pdf" onChange={handleFileChange} className="hidden" id="receipt-upload" disabled={!canSubmitProof} />
-                  <label htmlFor="receipt-upload" className={cn('block', canSubmitProof ? 'cursor-pointer' : 'cursor-not-allowed opacity-60')}>
-                    {file ? (
-                      <div className="flex items-center justify-center gap-2">
-                        <CheckCircle className="w-5 h-5 text-green-500" />
-                        <span className={cn('text-sm font-medium', isDark ? 'text-gray-200' : 'text-gray-800')}>{file.name}</span>
-                      </div>
-                    ) : (
-                      <div className="flex flex-col items-center gap-1">
-                        <Upload className={cn('w-6 h-6', isDark ? 'text-gray-500' : 'text-gray-400')} />
-                        <span className={cn('text-sm font-medium', isDark ? 'text-gray-300' : 'text-gray-700')}>Upload receipt or screenshot</span>
-                        <span className={cn('text-xs', isDark ? 'text-gray-500' : 'text-gray-400')}>PNG, JPG or PDF</span>
-                      </div>
-                    )}
-                  </label>
-                </div>
-
-                <input
-                  type="text"
-                  placeholder="Transaction reference (e.g. 1253498....)"
-                  value={reference}
-                  onChange={(e) => setReference(e.target.value)}
-                  disabled={!canSubmitProof}
-                  className={cn(
-                    'w-full px-4 py-2.5 rounded-lg border text-sm',
-                    isDark ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-500' : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400',
-                    'focus:outline-none focus:ring-2 focus:ring-blue-500',
-                    !canSubmitProof && 'opacity-60 cursor-not-allowed',
-                  )}
-                />
-
-                <textarea
-                  placeholder="Additional notes (optional)"
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  disabled={!canSubmitProof}
-                  rows={2}
-                  className={cn(
-                    'w-full px-4 py-2.5 rounded-lg border text-sm',
-                    isDark ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-500' : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400',
-                    'focus:outline-none focus:ring-2 focus:ring-blue-500',
-                    !canSubmitProof && 'opacity-60 cursor-not-allowed',
-                  )}
-                />
-
-                <button
-                  type="button"
-                  onClick={handleSubmitPayment}
-                  disabled={!file || recordPayment.isPending || !canSubmitProof || quoteLoading || !quote}
-                  className={cn(
-                    'w-full py-3 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2',
-                    'bg-gradient-to-r from-blue-600 to-emerald-600 text-white shadow-lg hover:shadow-xl hover:scale-[1.02]',
-                    (!file || recordPayment.isPending || !canSubmitProof) && 'opacity-60 cursor-not-allowed',
-                  )}
-                >
-                  {recordPayment.isPending ? (
-                    <><Loader2 className="w-4 h-4 animate-spin" /> Submitting…</>
-                  ) : hasPendingProof || submitted ? (
-                    <><CheckCircle className="w-4 h-4" /> Payment Submitted</>
-                  ) : (
-                    'Submit Payment'
-                  )}
-                </button>
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-      </>
-      )}
-
-      {(submitted || hasPendingProof) && needsPayment && (
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className={cn('rounded-xl p-4 border text-center', isDark ? 'bg-green-900/20 border-green-800' : 'bg-green-50 border-green-200')}
-        >
-          <CheckCircle className="w-8 h-8 text-green-500 mx-auto mb-2" />
-          <p className="font-bold text-green-700 dark:text-green-300">Payment Submitted</p>
-          <p className={cn('text-sm', isDark ? 'text-gray-400' : 'text-gray-600')}>
-            Your payment is being processed. You will be notified once it is confirmed.
-          </p>
-        </motion.div>
-      )}
 
       {showRestoreOption && (
         <RestoreFacilityFunctionalityBanner
@@ -648,16 +398,11 @@ export const Payments: React.FC<PaymentsProps> = ({ theme }) => {
           </div>
         ) : (
           <div className={cn('p-8 text-center text-sm', isDark ? 'text-gray-500' : 'text-gray-500')}>
-            No payment records yet. Submit a payment above to get started.
+            No payment records yet. Pay online above to get started.
           </div>
         )}
       </div>
 
-      <div className={cn('rounded-xl border border-dashed p-4 text-center', isDark ? 'border-gray-700 bg-gray-800/10' : 'border-gray-200 bg-gray-50/50')}>
-        <p className={cn('text-xs', isDark ? 'text-gray-500' : 'text-gray-500')}>
-          More payment methods are being integrated - card payments, PayPal, and mobile money.
-        </p>
-      </div>
     </div>
   );
 };
