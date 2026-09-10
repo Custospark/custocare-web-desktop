@@ -50,6 +50,7 @@ export enum PaymentStatus {
   PENDING  = 'pending',
   COMPLETED = 'completed',
   FAILED = 'failed',
+  EXPIRED = 'expired',
   REFUNDED = 'refunded',
 }
 
@@ -172,7 +173,9 @@ export interface Payment {
   payment_type: PaymentType | string;
   payment_type_label: string;   // e.g. 'Subscription'
   status: PaymentStatus | string;
-  status_label: string;         // e.g. 'Pending Review'
+  status_label: string;         // e.g. 'Pending Payment'
+  subscription_status?: SubscriptionStatus | string | null;
+  subscription_status_label?: string | null;
   transaction_reference: string | null;
   receipt_number?: string | null;
   invoice_id?: number | null;
@@ -917,6 +920,7 @@ export const PAYMENT_STATUS_LABELS: Record<PaymentStatus, string> = {
   [PaymentStatus.PENDING]:  'Pending Payment',
   [PaymentStatus.COMPLETED]: 'Completed',
   [PaymentStatus.FAILED]: 'Failed',
+  [PaymentStatus.EXPIRED]: 'Expired',
   [PaymentStatus.REFUNDED]: 'Refunded',
 };
 

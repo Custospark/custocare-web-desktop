@@ -13,6 +13,7 @@ const bannerMocks = {
   statusData: undefined as undefined | { data: { status: string } },
   refetch: vi.fn(async () => ({})),
   verifyRefetch: vi.fn(async () => ({})),
+  cancelMutate: vi.fn(),
 };
 
 vi.mock('../../api/subscriptions/PaymentGatewayQueries', () => ({
@@ -22,6 +23,7 @@ vi.mock('../../api/subscriptions/PaymentGatewayQueries', () => ({
     }
     return { data: bannerMocks.statusData, isFetching: false, refetch: bannerMocks.refetch };
   },
+  useCancelGatewayPayment: () => ({ mutate: bannerMocks.cancelMutate, isPending: false }),
 }));
 
 beforeEach(() => {
@@ -51,6 +53,18 @@ describe('GatewayPendingBanner - persistence', () => {
 
     expect(bannerMocks.verifyRefetch).toHaveBeenCalled();
     expect(bannerMocks.refetch).toHaveBeenCalled();
+  });
+
+  it('offers cancel-and-retry without leaving the page', async () => {
+    const user = userEvent.setup();
+    const { container } = render(
+      <GatewayPendingBanner theme="light" paymentId={21} onApproved={vi.fn()} />,
+    );
+
+    expect(container).not.toBeEmptyDOMElement();
+    expect(screen.getByRole('button', { name: /cancel and start over/i })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /cancel and start over/i }));
+    expect(bannerMocks.cancelMutate).toHaveBeenCalledWith(21);
   });
 
   it('disappears only when the payment leaves pending, firing approved once', async () => {

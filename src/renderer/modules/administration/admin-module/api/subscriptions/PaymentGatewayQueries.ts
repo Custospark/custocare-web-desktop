@@ -167,6 +167,57 @@ export const useInitiateGatewayPayment = (
 };
 
 /* ========================================================================== */
+/* POST /facilities/{facility}/payments/gateway/{reference}/cancel (auth)      */
+/* Cancel a stuck pending payment so a new one can start. History is kept.     */
+/* ========================================================================== */
+
+export const useCancelGatewayPayment = (
+  callbacks: MutationCallbacks<
+    { success: boolean; message?: string },
+    ApiAxiosError
+  > = {},
+): UseMutationResult<
+  { success: boolean; message?: string },
+  ApiAxiosError,
+  number | string
+> => {
+  const { showToast } = useToast();
+  const queryClient = useQueryClient();
+  const facilityId = useActiveFacilityId();
+
+  return useMutation<
+    { success: boolean; message?: string },
+    ApiAxiosError,
+    number | string
+  >({
+    mutationFn: async (reference: number | string) => {
+      if (!facilityId) throw new Error('No active facility selected.');
+      const res = await axiosInstance.post<{ success: boolean; message?: string }>(
+        `/facilities/${facilityId}/payments/gateway/${reference}/cancel`,
+      );
+      return res.data;
+    },
+    onSuccess: (data) => {
+      showToast('success', data.message || 'Payment cancelled. You can start a new payment.', 6000);
+      if (facilityId) {
+        queryClient.invalidateQueries({
+          queryKey: subscriptionKeys.payments.facilityList(facilityId),
+        });
+        queryClient.invalidateQueries({
+          queryKey: subscriptionKeys.subscriptions.facility(facilityId),
+        });
+      }
+      callbacks.onSuccess?.(data);
+    },
+    onError: (error: unknown) => {
+      const axiosErr = error as ApiAxiosError;
+      showToast('error', extractErrorMessage(axiosErr, 'Could not cancel the payment.'), 7000);
+      callbacks.onError?.(axiosErr);
+    },
+  });
+};
+
+/* ========================================================================== */
 /*  GET /facilities/{facility}/payments/gateway/{reference}/status (auth)      */
 /* ========================================================================== */
 
