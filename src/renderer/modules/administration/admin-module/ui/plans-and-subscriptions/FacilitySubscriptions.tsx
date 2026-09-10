@@ -34,18 +34,22 @@ import {
   SubscriptionStatus,
   PaymentStatus,
 } from '../../api/subscriptions/SubscriptionTypes';
-import { subscriptionStatusMeta } from '../../utils/subscriptionMatrix';
+import { paymentStatusMeta, subscriptionStatusMeta } from '../../utils/subscriptionMatrix';
 import LoadingSkeleton from '../../../../../shared/components/Loading/LoadingSkeletons';
 import { ADMINISTRATION_PLANS_SUBSCRIPTIONS_ROUTES } from '../../../../../app/routes/constants/administration.paths';
 import { cn } from '../../../../../shared/utils/classNameUtils';
 import {
   getSubscriptionPaymentAction,
+  resolvePaymentQuoteParams,
   subscriptionHasPendingPaymentApproval,
   subscriptionNeedsPayment,
 } from '../../utils/subscriptionPaymentUtils';
 import { RestoreFacilityFunctionalityBanner } from '../../../../../shared/components/billing/RestoreFacilityFunctionalityBanner';
+import { PaymentModal, type PaymentModalParams } from './PaymentModal';
 import { useRestoreFacilityFunctionality } from '../../../../../shared/entitlements/useRestoreFacilityFunctionality';
 import { useToast } from '../../../../../app/store/contexts/toast/useToast';
+import { useAppSelector } from '../../../../../app/store/hooks/useApp';
+import { axiosInstance } from '../../../../../app/api/axiosConfig';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface FacilitySubscriptionsProps {
@@ -290,14 +294,6 @@ const InactiveSubscriptionBanner: React.FC<{
         </div>
       </div>
 
-      {/* Bank Details */}
-      {!isCancelled && (
-        <div className="max-w-md">
-          <p className={cn('text-sm', isDark ? 'text-gray-400' : 'text-gray-600')}>
-            Go to Payments to submit a payment and restore access.
-          </p>
-        </div>
-      )}
     </div>
   );
 };
@@ -312,6 +308,9 @@ export const FacilitySubscriptions: React.FC<FacilitySubscriptionsProps> = ({
   const { showToast } = useToast();
 
   const [showTimeline, setShowTimeline]     = useState(false);
+  const [paymentModal, setPaymentModal] = useState<PaymentModalParams | null>(null);
+  const [openingPayment, setOpeningPayment] = useState(false);
+  const activeFacilityId = useAppSelector((s) => s.activeContext.activeFacilityId);
 
   const { data: subResp, isLoading: subLoading, error: subError, refetch: refetchSub } = useGetFacilitySubscription();
   const { data: paymentsResp } = useGetFacilityPayments({ per_page: 20 });
@@ -335,6 +334,47 @@ export const FacilitySubscriptions: React.FC<FacilitySubscriptionsProps> = ({
       return;
     }
     showToast('error', 'Could not restore functionality yet. Please try again in a moment.', 5000);
+  };
+
+  /**
+   * Guided payment: open the payment modal for this subscription instead of
+   * navigating away. Falls back to the Payments route when nothing is due.
+   */
+  const openPaymentModal = async () => {
+    if (!activeFacilityId || !subscription?.id || openingPayment) return;
+    const quoteParams = resolvePaymentQuoteParams(subscription);
+    if (!quoteParams) {
+      navigate(paymentsUrl);
+      return;
+    }
+    setOpeningPayment(true);
+    try {
+      const res = await axiosInstance.get(
+        `/facilities/${activeFacilityId}/subscription/payment-quote`,
+        { params: quoteParams },
+      );
+      const quote = res.data?.data;
+      if (quote && Number(quote.total_usd) > 0.01) {
+        setPaymentModal({
+          subscriptionId: subscription.id,
+          paymentType: quote.payment_type ?? 'subscription',
+          amount: Number(quote.total_usd),
+          currency: 'USD',
+          targetPlanId: quote.target_plan_id ?? null,
+          title: 'Complete payment',
+        });
+      } else {
+        navigate(paymentsUrl);
+      }
+    } catch {
+      showToast('error', 'Could not load the payment amount. Please try again.', 6000);
+    } finally {
+      setOpeningPayment(false);
+    }
+  };
+
+  const refreshAfterPayment = async () => {
+    await Promise.all([refetchSub(), refetchUsage()]);
   };
 
   // ── Loading ──────────────────────────────────────────────────────────────────
@@ -398,7 +438,7 @@ export const FacilitySubscriptions: React.FC<FacilitySubscriptionsProps> = ({
           theme={theme}
           subscription={subscription}
           onViewPlans={() => navigate(ADMINISTRATION_PLANS_SUBSCRIPTIONS_ROUTES.AVAILABLE_PLANS)}
-          onMakePayment={() => navigate(paymentsUrl)}
+          onMakePayment={() => { void openPaymentModal(); }}
         />
       </div>
     );
@@ -667,14 +707,15 @@ export const FacilitySubscriptions: React.FC<FacilitySubscriptionsProps> = ({
                       </div>
                     )}
 
-                    {/* Go to Payments */}
+                    {/* Pay now - guided modal, no redirect */}
                     <div className="pt-2">
                       <button
-                        onClick={() => navigate(paymentsUrl)}
-                        className="w-full py-2.5 rounded-lg font-medium flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white transition-all shadow-lg"
+                        onClick={() => { void openPaymentModal(); }}
+                        disabled={openingPayment}
+                        className="w-full py-2.5 rounded-lg font-medium flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white transition-all shadow-lg disabled:opacity-60"
                       >
                         <CreditCard className="w-4 h-4" />
-                        Go to Payments
+                        {openingPayment ? 'Loading payment...' : 'Pay now'}
                       </button>
                     </div>
                   </div>
@@ -693,18 +734,28 @@ export const FacilitySubscriptions: React.FC<FacilitySubscriptionsProps> = ({
                 </button>
               </div>
               <div className="divide-y" style={{ borderColor: isDark ? '#1f2a37' : '#e5e7eb' }}>
-                {payments.slice(0, 5).map((payment) => (
+                {payments.slice(0, 5).map((payment) => {
+                  // Subscription outcome narrates the row; payment plumbing
+                  // only fills in when subscription context is absent.
+                  const outcomeTone = payment.subscription_status
+                    ? subscriptionStatusMeta(payment.subscription_status).tone
+                    : paymentStatusMeta(payment.status).tone;
+                  const outcomeLabel = payment.subscription_status_label
+                    ?? payment.status_label;
+                  const isGood = outcomeTone === 'active' || outcomeTone === 'completed';
+                  const isWaiting = outcomeTone === 'trial' || outcomeTone === 'pending';
+                  return (
                   <div key={payment.id} className="p-4 flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <div className={cn('p-2 rounded-lg',
-                        payment.status === PaymentStatus.COMPLETED
+                        isGood
                           ? isDark ? 'bg-green-900/30' : 'bg-green-100'
-                          : payment.status === PaymentStatus.PENDING
+                          : isWaiting
                           ? isDark ? 'bg-yellow-900/30' : 'bg-yellow-100'
                           : isDark ? 'bg-gray-800' : 'bg-gray-100')}>
-                        {payment.status === PaymentStatus.COMPLETED
+                        {isGood
                           ? <CheckCircle className="w-4 h-4 text-green-500" />
-                          : payment.status === PaymentStatus.PENDING
+                          : isWaiting
                           ? <Clock className="w-4 h-4 text-yellow-500" />
                           : <XCircle className="w-4 h-4 text-red-500" />}
                       </div>
@@ -717,9 +768,9 @@ export const FacilitySubscriptions: React.FC<FacilitySubscriptionsProps> = ({
                     </div>
                     <div className="text-right">
                       <p className={cn('text-sm font-medium',
-                        payment.status === PaymentStatus.COMPLETED ? 'text-green-500' :
-                        payment.status === PaymentStatus.PENDING  ? 'text-yellow-500' : 'text-red-500')}>
-                        {payment.status_label}
+                        isGood ? 'text-green-500' :
+                        isWaiting  ? 'text-yellow-500' : 'text-red-500')}>
+                        {outcomeLabel}
                       </p>
                       <p className={cn('text-xs', isDark ? 'text-gray-400' : 'text-gray-500')}>
                         {payment.paid_at
@@ -728,7 +779,8 @@ export const FacilitySubscriptions: React.FC<FacilitySubscriptionsProps> = ({
                       </p>
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}
@@ -780,6 +832,15 @@ export const FacilitySubscriptions: React.FC<FacilitySubscriptionsProps> = ({
               })}
             </div>
           </div>
+
+          <PaymentModal
+            theme={theme}
+            params={paymentModal}
+            onClose={() => setPaymentModal(null)}
+            onApproved={() => {
+              void refreshAfterPayment();
+            }}
+          />
 
           {/* Support */}
           <div className={cn(

@@ -41,6 +41,12 @@ describe('subscriptionMatrix - status metadata', () => {
     expect(paymentStatusMeta(PaymentStatus.FAILED).label).toBe('Failed');
   });
 
+  it('expired payments reopen initiation while staying in history', () => {
+    expect(PAYMENT_STATUS_MATRIX[PaymentStatus.EXPIRED].allowsNewPayment).toBe(true);
+    expect(PAYMENT_STATUS_MATRIX[PaymentStatus.EXPIRED].isTerminal).toBe(true);
+    expect(paymentStatusMeta(PaymentStatus.EXPIRED).label).toBe('Expired');
+  });
+
   it('falls back safely for unknown statuses instead of crashing', () => {
     expect(subscriptionStatusMeta('weird').label).toBe('weird');
     expect(paymentStatusMeta('weird').allowsNewPayment).toBe(true);

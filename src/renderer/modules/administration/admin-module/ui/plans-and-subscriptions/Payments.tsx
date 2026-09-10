@@ -25,6 +25,7 @@ import { ADMINISTRATION_PLANS_SUBSCRIPTIONS_ROUTES } from '../../../../../app/ro
 import { ReceiptViewButton } from '../../../../../shared/components/billing/ReceiptViewButton';
 import { GatewayPendingBanner } from './GatewayPendingBanner';
 import { PesapalCheckout } from './PesapalCheckout';
+import { SubscriptionOutcomePill } from './SubscriptionOutcomePill';
 import { RestoreFacilityFunctionalityBanner } from '../../../../../shared/components/billing/RestoreFacilityFunctionalityBanner';
 import { useRestoreFacilityFunctionality } from '../../../../../shared/entitlements/useRestoreFacilityFunctionality';
 import {
@@ -352,16 +353,12 @@ export const Payments: React.FC<PaymentsProps> = ({ theme }) => {
                     {p.paid_at ? new Date(p.paid_at).toLocaleDateString() : ''}
                   </p>
                 </div>
-                <span className={cn(
-                  'shrink-0 px-2 py-0.5 rounded-full text-xs font-bold',
-                  p.status === PaymentStatus.COMPLETED
-                    ? 'bg-emerald-200 dark:bg-emerald-800 text-emerald-900 dark:text-emerald-100'
-                    : p.status === PaymentStatus.PENDING
-                    ? 'bg-amber-200 dark:bg-amber-800 text-amber-900 dark:text-amber-100'
-                    : 'bg-red-200 dark:bg-red-800 text-red-900 dark:text-red-100'
-                )}>
-                  {p.status_label}
-                </span>
+                <SubscriptionOutcomePill
+                  subscriptionStatus={p.subscription_status}
+                  subscriptionStatusLabel={p.subscription_status_label}
+                  paymentStatus={p.status}
+                  paymentStatusLabel={p.status_label}
+                />
               </div>
             ))}
           </div>

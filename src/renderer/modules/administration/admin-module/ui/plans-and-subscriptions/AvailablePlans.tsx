@@ -23,6 +23,9 @@ import {
 } from '../../api/subscriptions/SubscriptionQueries';
 import { useConfirm } from '../../../../../shared/components/Feedback/ConfirmDialog/ConfirmContext';
 import { useToast } from '../../../../../app/store/contexts/toast/useToast';
+import { useQueryClient } from '@tanstack/react-query';
+import { axiosInstance } from '../../../../../app/api/axiosConfig';
+import { PaymentModal, type PaymentModalParams } from './PaymentModal';
 import { useRestoreFacilityFunctionality } from '../../../../../shared/entitlements/useRestoreFacilityFunctionality';
 import { ADMINISTRATION_PLANS_SUBSCRIPTIONS_ROUTES } from '../../../../../app/routes/constants/administration.paths';
 import {
@@ -84,6 +87,7 @@ export const AvailablePlans: React.FC<AvailablePlansProps> = ({ theme }) => {
   const {
     data: subscriptionResponse,
     isLoading: subLoading,
+    refetch: refetchSubscription,
   } = useGetFacilitySubscription();
 
   const scheduleChange = useScheduleSubscriptionChange();
@@ -97,8 +101,55 @@ export const AvailablePlans: React.FC<AvailablePlansProps> = ({ theme }) => {
     subscription,
   );
 
+  const queryClient = useQueryClient();
+  const [paymentModal, setPaymentModal] = useState<PaymentModalParams | null>(null);
+  const [openingPayment, setOpeningPayment] = useState(false);
+
+  /**
+   * Guided payment: fetch the server quote for this subscription and open
+   * the payment modal when money is due. Falls back to the subscription
+   * page when nothing is due (e.g. free trial).
+   */
+  const openPaymentModalFor = async (
+    subscriptionId: number,
+    intent: string,
+    planId?: number | null,
+    title?: string,
+  ) => {
+    if (!activeFacilityId) return;
+    setOpeningPayment(true);
+    try {
+      const res = await axiosInstance.get(
+        `/facilities/${activeFacilityId}/subscription/payment-quote`,
+        { params: { intent, ...(planId ? { plan_id: planId } : {}) } },
+      );
+      const quote = res.data?.data;
+      if (quote && Number(quote.total_usd) > 0.01) {
+        setPaymentModal({
+          subscriptionId,
+          paymentType: quote.payment_type ?? 'subscription',
+          amount: Number(quote.total_usd),
+          currency: 'USD',
+          targetPlanId: planId ?? quote.target_plan_id ?? null,
+          title,
+        });
+      } else {
+        navigate(ADMINISTRATION_PLANS_SUBSCRIPTIONS_ROUTES.SUBSCRIPTIONS);
+      }
+    } catch {
+      showToast('error', 'Could not load the payment amount. Please try again.', 6000);
+    } finally {
+      setOpeningPayment(false);
+    }
+  };
+
+  const refreshBilling = async () => {
+    await Promise.all([refetchPlans(), refetchSubscription()]);
+    queryClient.invalidateQueries();
+  };
+
   const createSubscription = useCreateSubscription({
-    onSuccess: async () => {
+    onSuccess: async (data) => {
       setSubscribingPlanId(null);
       const restored = await restoreFacilityFunctionality();
       if (restored) {
@@ -106,12 +157,18 @@ export const AvailablePlans: React.FC<AvailablePlansProps> = ({ theme }) => {
         showToast(
           'success',
           isReturning
-            ? 'Subscription updated — all functionalities restored.'
-            : 'Trial started — all functionalities restored.',
+            ? 'Subscription updated - all functionalities restored.'
+            : 'Trial started - all functionalities restored.',
           5000,
         );
       }
-      navigate(ADMINISTRATION_PLANS_SUBSCRIPTIONS_ROUTES.SUBSCRIPTIONS);
+      const freshId = (data as { data?: { id?: number } })?.data?.id
+        ?? subscriptionResponse?.data?.id;
+      if (freshId) {
+        await openPaymentModalFor(freshId, 'subscription', undefined, 'Complete payment');
+      } else {
+        navigate(ADMINISTRATION_PLANS_SUBSCRIPTIONS_ROUTES.SUBSCRIPTIONS);
+      }
     },
     onError: () => setSubscribingPlanId(null),
   });
@@ -172,7 +229,7 @@ export const AvailablePlans: React.FC<AvailablePlansProps> = ({ theme }) => {
         ? `Billed once per year at ${plan.pricing.annual_usd ?? Math.round(plan.pricing.usd * 10)} USD.`
         : `Billed ${plan.pricing.usd} USD per month.`;
       const confirmed = await confirm({
-        title: `Switch to ${plan.name} — ${cycleLabel}`,
+        title: `Switch to ${plan.name} - ${cycleLabel}`,
         message: `Switch to ${plan.name} and complete payment for that plan.\n\n${cycleDesc}`,
         confirmText: 'Switch & pay',
         cancelText: 'Cancel',
@@ -209,7 +266,7 @@ export const AvailablePlans: React.FC<AvailablePlansProps> = ({ theme }) => {
     const trialDays = plan.trial_days ?? 0;
     const showTrialMsg = !hasExistingSubscription && trialDays > 0;
     const confirmed = await confirm({
-      title: `Subscribe — ${cycleLabel} Plan`,
+      title: `Subscribe - ${cycleLabel} Plan`,
       message: showTrialMsg
         ? `Start a ${plan.name} subscription with a ${trialDays}-day free trial.\n\n${cycleDesc}\n\nYou can switch or cancel anytime before the billing date.`
         : `Subscribe to the ${plan.name} plan.\n\n${cycleDesc}`,
@@ -235,7 +292,7 @@ export const AvailablePlans: React.FC<AvailablePlansProps> = ({ theme }) => {
 
     const confirmed = await confirm({
       title: changeType === 'upgrade' ? 'Schedule Upgrade' : 'Schedule Downgrade',
-      message: `Your plan will change to ${plan.name} on ${effectiveLabel}. No charge today — the new price applies at renewal.`,
+      message: `Your plan will change to ${plan.name} on ${effectiveLabel}. No charge today - the new price applies at renewal.`,
       confirmText: 'Schedule Change',
       cancelText: 'Cancel',
       variant: changeType === 'upgrade' ? 'info' : 'warning',
@@ -247,7 +304,7 @@ export const AvailablePlans: React.FC<AvailablePlansProps> = ({ theme }) => {
 
   const handleUpgradeNow = async (planId: number) => {
     const plan = sorted.find(p => p.id === planId);
-    if (!plan) return;
+    if (!plan || !subscription?.id) return;
 
     const confirmed = await confirm({
       title: 'Upgrade Now',
@@ -259,14 +316,8 @@ export const AvailablePlans: React.FC<AvailablePlansProps> = ({ theme }) => {
     });
     if (!confirmed) return;
 
-    upgradeNow.mutate(
-      { data: { plan_id: planId, billing_cycle: annual ? 'yearly' : 'monthly' } },
-      {
-        onSuccess: () => {
-          navigate(ADMINISTRATION_PLANS_SUBSCRIPTIONS_ROUTES.PAYMENTS);
-        },
-      },
-    );
+    // Money first: the backend upgrades the plan when the payment completes.
+    await openPaymentModalFor(subscription.id, 'upgrade_now', planId, `Upgrade to ${plan.name}`);
   };
 
   if (isLoading) {
@@ -419,7 +470,7 @@ export const AvailablePlans: React.FC<AvailablePlansProps> = ({ theme }) => {
         >
           {CURRENCIES.map((c) => (
             <option key={c.code} value={c.code}>
-              {c.code} — {c.symbol}
+              {c.code} - {c.symbol}
             </option>
           ))}
         </select>
@@ -530,7 +581,7 @@ export const AvailablePlans: React.FC<AvailablePlansProps> = ({ theme }) => {
                       </span>
                       {annual && (
                         <p className={cn("text-[10px] mt-0.5", theme === 'dark' ? "text-emerald-400" : "text-emerald-600")}>
-                          ${annualTotal}/yr — save ${(monthlyPrice * 12 - annualTotal).toFixed(2)}/yr
+                          ${annualTotal}/yr - save ${(monthlyPrice * 12 - annualTotal).toFixed(2)}/yr
                         </p>
                       )}
                       {displayCurrency !== 'USD' && convertPrice(displayPrice) !== null && (
@@ -589,7 +640,7 @@ export const AvailablePlans: React.FC<AvailablePlansProps> = ({ theme }) => {
                     )}>
                       <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
                       <span className="text-center leading-tight">
-                        Trial<span className="hidden sm:inline"> —</span>
+                        Trial<span className="hidden sm:inline"> -</span>
                         <span className="block sm:inline">{subscription?.days_remaining ?? 0} days remaining</span>
                       </span>
                     </span>
@@ -655,7 +706,7 @@ export const AvailablePlans: React.FC<AvailablePlansProps> = ({ theme }) => {
                     'w-full py-2.5 px-2 rounded-lg text-xs font-medium text-center',
                     theme === 'dark' ? 'bg-cyan-900/30 text-cyan-300' : 'bg-cyan-50 text-cyan-700',
                   )}>
-                    {subscription?.scheduled_change?.change_type === 'downgrade' ? 'Downgrade' : 'Upgrade'} scheduled — starts {new Date(effectiveAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' })}
+                    {subscription?.scheduled_change?.change_type === 'downgrade' ? 'Downgrade' : 'Upgrade'} scheduled - starts {new Date(effectiveAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' })}
                   </p>
                 )}
 
@@ -690,11 +741,11 @@ export const AvailablePlans: React.FC<AvailablePlansProps> = ({ theme }) => {
                   <>
                     <button
                       onClick={() => handleUpgradeNow(plan.id)}
-                      disabled={upgradeNow.isPending}
+                      disabled={upgradeNow.isPending || openingPayment}
                       className="w-full py-2.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer bg-gradient-to-r from-blue-600 to-cyan-600 text-white shadow-lg hover:shadow-xl hover:scale-[1.02]"
                     >
                       <CreditCard className="w-3.5 h-3.5" />
-                      Upgrade now
+                      {openingPayment ? 'Loading payment...' : 'Upgrade now'}
                     </button>
                     <button
                       onClick={() => handleScheduleChange(plan.id, 'upgrade')}
@@ -738,6 +789,14 @@ export const AvailablePlans: React.FC<AvailablePlansProps> = ({ theme }) => {
         })}
       </div>
 
+      <PaymentModal
+        theme={theme}
+        params={paymentModal}
+        onClose={() => setPaymentModal(null)}
+        onApproved={() => {
+          refreshBilling();
+        }}
+      />
       <PlanDetailsModal
         plan={detailPlan ? { ...detailPlan, features: TIER_FEATURES[detailPlan.slug]?.features || [] } : null}
         allPlans={sorted.map((p) => ({ ...p, features: (TIER_FEATURES[p.slug]?.features) || [] }))}

@@ -130,6 +130,13 @@ export const PAYMENT_STATUS_MATRIX: Record<PaymentStatus, PaymentStatusMeta> = {
     isTerminal: true,
     allowsNewPayment: true,
   },
+  [PaymentStatus.EXPIRED]: {
+    label: 'Expired',
+    tone: 'failed',
+    description: 'Payment was cancelled or timed out. Start a new payment to retry.',
+    isTerminal: true,
+    allowsNewPayment: true,
+  },
   [PaymentStatus.REFUNDED]: {
     label: 'Refunded',
     tone: 'refunded',

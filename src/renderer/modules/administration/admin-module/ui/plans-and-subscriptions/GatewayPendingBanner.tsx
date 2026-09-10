@@ -2,7 +2,10 @@ import React, { useEffect, useRef, useState } from 'react';
 import { CreditCard, Loader2, RefreshCw } from 'lucide-react';
 import { cn } from '../../../../../shared/types/cn';
 import { useToast } from '../../../../../app/store/contexts/toast/useToast';
-import { useGetGatewayPaymentStatus } from '../../api/subscriptions/PaymentGatewayQueries';
+import {
+  useCancelGatewayPayment,
+  useGetGatewayPaymentStatus,
+} from '../../api/subscriptions/PaymentGatewayQueries';
 
 interface GatewayPendingBannerProps {
   theme: 'light' | 'dark';
@@ -33,6 +36,9 @@ export const GatewayPendingBanner: React.FC<GatewayPendingBannerProps> = ({
     { reference: paymentId, verify: true },
     { enabled: false },
   );
+  const cancelPayment = useCancelGatewayPayment({
+    onSuccess: () => onApproved(),
+  });
   const status = statusQuery.data?.data?.status;
 
   useEffect(() => {
@@ -89,6 +95,17 @@ export const GatewayPendingBanner: React.FC<GatewayPendingBannerProps> = ({
                 <RefreshCw className="w-4 h-4" />
               )}
               {verifying ? 'Verifying...' : 'Verify payment'}
+            </button>
+            <button
+              type="button"
+              onClick={() => cancelPayment.mutate(paymentId)}
+              disabled={cancelPayment.isPending}
+              className={cn(
+                'inline-flex items-center gap-1.5 text-xs font-semibold underline underline-offset-2 transition-all disabled:opacity-50',
+                isDark ? 'text-blue-300 hover:text-blue-100' : 'text-blue-700 hover:text-blue-900',
+              )}
+            >
+              {cancelPayment.isPending ? 'Cancelling...' : 'Cancel and start over'}
             </button>
             <span
               className={cn(
