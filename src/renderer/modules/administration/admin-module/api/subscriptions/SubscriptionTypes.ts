@@ -63,11 +63,11 @@ export enum PaymentMethod {
   MOBILE_MONEY  = 'mobile_money',
   BANK_TRANSFER = 'bank_transfer',
   CASH          = 'cash',
-  GATEWAY       = 'gateway',   // reserved — not yet active on the backend
+  GATEWAY       = 'gateway',   // reserved - not yet active on the backend
 }
 
 /**
- * Payment classification — what a payment covers.
+ * Payment classification - what a payment covers.
  *
  * Mirrors: app/Enums/Billing/PaymentType.php
  */
@@ -184,9 +184,9 @@ export interface Payment {
   approved_at: string | null;
   approved_by: PaymentApprovedBy | null;
   rejection_reason: string | null;
-  /** Gateway name — null until payment gateway integration is active. */
+  /** Gateway name - null until payment gateway integration is active. */
   gateway_name: string | null;
-  /** Gateway transaction ID — null until integration is active. */
+  /** Gateway transaction ID - null until integration is active. */
   gateway_transaction_id: string | null;
   created_at: string | null;
 }
@@ -402,7 +402,7 @@ export type GetPaymentResponse = ApiSuccessResponse<Payment>;
 /** POST /facilities/{facility}/payments */
 export type RecordPaymentResponse = ApiSuccessResponse<Payment>;
 
-/** GET /admin/billing/plans — paginated */
+/** GET /admin/billing/plans - paginated */
 export type PaginatedPlansResponse = PaginatedResponse<Plan>;
 
 /** Admin plan create / update */
@@ -411,13 +411,13 @@ export type AdminPlanResponse = ApiSuccessResponse<Plan>;
 /** Admin plan delete */
 export type AdminDeletePlanResponse = ApiSuccessResponse<null>;
 
-/** GET /admin/billing/subscriptions — paginated */
+/** GET /admin/billing/subscriptions - paginated */
 export type PaginatedSubscriptionsResponse = PaginatedResponse<Subscription>;
 
 /** Admin subscription show / activate / suspend / cancel */
 export type AdminSubscriptionResponse = ApiSuccessResponse<Subscription>;
 
-/** GET /admin/billing/payments — paginated */
+/** GET /admin/billing/payments - paginated */
 export type PaginatedPaymentsResponse = PaginatedResponse<Payment>;
 
 /** Admin payment show / approve / reject */
@@ -440,7 +440,7 @@ export interface StoreSubscriptionRequest {
 
 /**
  * DELETE /facilities/{facility}/subscription
- * Body is optional — controller does nullable validation on reason.
+ * Body is optional - controller does nullable validation on reason.
  */
 export interface CancelSubscriptionRequest {
   reason?: string | null;
@@ -492,7 +492,7 @@ export interface StorePaymentRequest {
  */
 export interface StorePlanRequest {
   name: string;
-  /** URL-friendly, lowercase, hyphens only — e.g. 'professional'. */
+  /** URL-friendly, lowercase, hyphens only - e.g. 'professional'. */
   slug: string;
   description?: string | null;
   price_usd: number;
@@ -500,7 +500,7 @@ export interface StorePlanRequest {
   onboarding_fee_usd?: number | null;
   onboarding_fee_ugx?: number | null;
   billing_cycle: BillingCycle | 'monthly';
-  /** 0–90 days; defaults to 7 on the backend. */
+  /** 0-90 days; defaults to 7 on the backend. */
   trial_days?: number | null;
   features?: Record<string, boolean | unknown> | null;
   max_staff?: number | null;
@@ -914,7 +914,7 @@ export const SUBSCRIPTION_STATUS_LABELS: Record<SubscriptionStatus, string> = {
 
 /** UI labels for payment statuses (mirrors backend PaymentStatus::label()). */
 export const PAYMENT_STATUS_LABELS: Record<PaymentStatus, string> = {
-  [PaymentStatus.PENDING]:  'Pending Review',
+  [PaymentStatus.PENDING]:  'Pending Payment',
   [PaymentStatus.APPROVED]: 'Approved',
   [PaymentStatus.REJECTED]: 'Rejected',
   [PaymentStatus.REFUNDED]: 'Refunded',

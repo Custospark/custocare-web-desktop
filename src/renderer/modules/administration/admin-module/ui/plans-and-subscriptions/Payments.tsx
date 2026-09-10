@@ -24,6 +24,7 @@ import { useToast } from '../../../../../app/store/contexts/toast/useToast';
 import LoadingSkeleton from '../../../../../shared/components/Loading/LoadingSkeletons';
 import { ADMINISTRATION_PLANS_SUBSCRIPTIONS_ROUTES } from '../../../../../app/routes/constants/administration.paths';
 import { ReceiptViewButton } from '../../../../../shared/components/billing/ReceiptViewButton';
+import { GatewayPendingBanner } from './GatewayPendingBanner';
 import { PesapalCheckout } from './PesapalCheckout';
 import { RestoreFacilityFunctionalityBanner } from '../../../../../shared/components/billing/RestoreFacilityFunctionalityBanner';
 import { useRestoreFacilityFunctionality } from '../../../../../shared/entitlements/useRestoreFacilityFunctionality';
@@ -230,7 +231,20 @@ export const Payments: React.FC<PaymentsProps> = ({ theme }) => {
         </div>
       </div>
 
-      {pendingApproval && (
+      {/* Gateway pending: driven by the payments list so it persists across
+          refetches for as long as the payment is pending. */}
+      {pendingPayment?.method === 'gateway' && (
+        <GatewayPendingBanner
+          theme={theme}
+          paymentId={pendingPayment.id}
+          onApproved={() => {
+            refetch();
+            refetchSubscription();
+          }}
+        />
+      )}
+
+      {pendingApproval && pendingPayment?.method !== 'gateway' && (
         <motion.div
           initial={{ opacity: 0, y: -8 }}
           animate={{ opacity: 1, y: 0 }}
@@ -241,14 +255,12 @@ export const Payments: React.FC<PaymentsProps> = ({ theme }) => {
         >
           <CreditCard className={cn('w-5 h-5 shrink-0', isDark ? 'text-blue-400' : 'text-blue-600')} />
           <p className={cn('text-sm', isDark ? 'text-blue-100' : 'text-blue-900')}>
-            {pendingPayment?.method === 'gateway'
-              ? 'Your online payment is in progress. Complete it in the checkout window - activation is automatic.'
-              : (paymentAction?.message ?? 'Your payment is being processed.')}
+            {paymentAction?.message ?? 'Your payment is being processed.'}
           </p>
         </motion.div>
       )}
 
-      {!needsPayment && !pendingApproval && (
+      {!needsPayment && !pendingApproval && !pendingPayment && (
         <div className={cn('rounded-xl border p-4 text-sm', isDark ? 'border-gray-700 text-gray-400' : 'border-gray-200 text-gray-600')}>
           No payment is required right now. You can still review past payments below or return to your subscription.
         </div>
@@ -290,8 +302,9 @@ export const Payments: React.FC<PaymentsProps> = ({ theme }) => {
       </div>
       )}
 
-      {/* Online checkout - instant activation via PesaPal (hidden until gateways load) */}
-      {needsPayment && !pendingApproval && subscription && quoteRequiresPayment && (
+      {/* Online checkout - hidden while any payment is pending (backend
+          rejects duplicates) and until gateways load. */}
+      {needsPayment && !pendingPayment && subscription && quoteRequiresPayment && (
         <PesapalCheckout
           theme={theme}
           subscriptionId={subscription.id}
@@ -318,13 +331,8 @@ export const Payments: React.FC<PaymentsProps> = ({ theme }) => {
       )}
 
       <div className={cn('rounded-2xl border overflow-hidden', isDark ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200')}>
-        <div className={cn('p-4 border-b font-semibold flex items-center justify-between', isDark ? 'border-gray-800' : 'border-gray-200')}>
+        <div className={cn('p-4 border-b font-semibold', isDark ? 'border-gray-800' : 'border-gray-200')}>
           <span>Payment History</span>
-          {payments.length > 0 && (
-            <span className={cn('text-xs font-normal', isDark ? 'text-gray-400' : 'text-gray-500')}>
-              {payments.filter(p => p.status === PaymentStatus.APPROVED).length} approved · {payments.filter(p => p.status === PaymentStatus.PENDING).length} pending
-            </span>
-          )}
         </div>
         {payments.length > 0 ? (
           <div className="divide-y" style={{ borderColor: isDark ? '#1f2a37' : '#e5e7eb' }}>
