@@ -8,6 +8,7 @@ import {
 import { useAppSelector } from '../../../../../app/store/hooks/useApp';
 import { cn } from '../../../../../shared/types/cn';
 import { LandingLayout } from './LandingLayout';
+import { PrivacyNoticeSection } from './PrivacyNoticeSection';
 
 const sections = [
   {
@@ -216,6 +217,9 @@ export const PrivacyPage: React.FC = () => {
             </div>
           ))}
         </motion.div>
+
+        {/* Live privacy notice (versioned, from the API) */}
+        <PrivacyNoticeSection />
 
         {/* Content sections */}
         <div className="space-y-6 mb-14">
