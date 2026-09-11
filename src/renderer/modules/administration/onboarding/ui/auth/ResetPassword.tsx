@@ -14,6 +14,7 @@ import {
 import { useAppSelector } from '../../../../../app/store/hooks/useApp';
 import AuthLayout from './AuthLayout';
 import { cn } from '../../../../../shared/types/cn';
+import { isPasswordCompliant, PASSWORD_RULE_TEXT } from '../../../../../shared/utils/passwordRules';
 
 // ── AccountQueries & authSlice integration ───────────────────────────────────
 import { useResetPassword } from '../../../../account/api/AccountQueries';
@@ -165,10 +166,8 @@ export const ResetPassword: React.FC = () => {
         },
         password: () => {
           if (!value) return { isValid: false, error: 'New password is required' };
-          if (value.length < 8) 
-            return { isValid: false, error: 'Password must be at least 8 characters' };
-          if (getPasswordStrength(value).score < 2)
-            return { isValid: false, error: 'Password is too weak. Add more characters, numbers, or symbols' };
+          if (!isPasswordCompliant(value))
+            return { isValid: false, error: PASSWORD_RULE_TEXT };
           return { isValid: true };
         },
         confirmPassword: () => {

@@ -53,6 +53,7 @@ import {
 /* auth-slice wiring */
 import { useAppSelector } from '../../../../app/store/hooks/useApp';
 import { selectUser } from '../../../../app/store/slices/authSlice';
+import { isPasswordCompliant, PASSWORD_RULE_TEXT } from '../../../../shared/utils/passwordRules';
 
 /* -------------------------------------------------------------------------- */
 /*                              Helper functions                              */
@@ -380,8 +381,8 @@ const UserSecurity: React.FC<UserSecurityProps> = ({ userId: propUserId }) => {
 
     if (!passwordForm.password) {
       errors.password = 'New password is required.';
-    } else if (passwordForm.password.length < 8) {
-      errors.password = 'Password must be at least 8 characters long.';
+    } else if (!isPasswordCompliant(passwordForm.password)) {
+      errors.password = PASSWORD_RULE_TEXT;
     }
 
     if (passwordForm.password !== passwordForm.password_confirmation) {

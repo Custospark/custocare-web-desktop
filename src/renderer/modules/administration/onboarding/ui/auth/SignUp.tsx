@@ -16,6 +16,7 @@ import AuthLayout from './AuthLayout';
 import { cn } from '../../../../../shared/types/cn';
 import heroSmilingNurse from '/assets/smiling_nurse.jpg';
 import { countryCodes } from './countryCodes';
+import { isPasswordCompliant, PASSWORD_RULE_TEXT } from '../../../../../shared/utils/passwordRules';
 
 // ── AccountQueries integration ──────────────────────────────────────────────
 import { useRegister } from '../../../../account/api/AccountQueries';
@@ -109,9 +110,8 @@ export const SignUp: React.FC = () => {
         },
         password: () => {
           if (!value) return { isValid: false, error: 'Password is required' };
-          if (value.length < 8) return { isValid: false, error: 'Minimum 8 characters required' };
-          if (getPasswordStrength(value).score < 2)
-            return { isValid: false, error: 'Password is too weak' };
+          if (!isPasswordCompliant(value))
+            return { isValid: false, error: PASSWORD_RULE_TEXT };
           return { isValid: true };
         },
         confirmPassword: () => {
